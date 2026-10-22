@@ -1,6 +1,6 @@
 # Tin Nhan macOS implementation
 
-Date: 2026-10-22. Approved personal app, Apple Silicon, Electron 45. Source is isolated in this projectless non-Git directory. Planning and session-source probes are recorded in ../../outputs/desktop-plan.md and macos-session-check.md.
+Date: 2026-10-22. Approved personal app, Apple Silicon, Electron 45. Source is isolated in this projectless directory and now tracked in its own Git repository. Planning and session-source probes are recorded in ../../outputs/desktop-plan.md and macos-session-check.md.
 
 ## Goal and status
 
@@ -58,4 +58,4 @@ Limit: current Messenger web UI exposes no reliable overall count; shows — unt
 
 ## GitHub publication 2026-10-22
 
-User requested Git initialization and upload. Source repository root is this desktop-app directory; branch main, destination private GitHub repository mhfed/tin-nhan-desktop. Only source, tests, build configuration, development scripts and brand/icon assets are tracked. Built apps, ZIPs, dependencies, caches, environment files and all external account/session data are excluded. Preflight source scan: 48 files, no credential-pattern findings; npm run typecheck PASS; npm test20/20 PASS. Publication verification will compare local HEAD with remote main. Phase rework0; actual token usage unavailable.
+User requested Git initialization and upload. Source repository root is this desktop-app directory; branch main, destination private GitHub repository mhfed/tin-nhan-desktop. Only source, tests, build configuration, development scripts and brand/icon assets are tracked. Built apps, ZIPs, dependencies, caches, environment files and all external account/session data are excluded. Preflight source scan: 48 files, no credential-pattern findings; npm run typecheck PASS; npm test20/20 PASS. Publication PASS: initial snapshot71876c6 pushed to https://github.com/mhfed/tin-nhan-desktop; repo privacy and main default branch verified through gh repo view; git ls-remote matched local HEAD. Final documentation commit is pushed on the same branch and its remote hash checked at delivery. Phase rework0; actual token usage unavailable.
