@@ -41,7 +41,16 @@ export interface UnreadInfo {
   approximate: boolean;
   source: "platform" | "loaded" | "unavailable";
 }
+export interface ShellTheme {
+  mode: "light" | "dark";
+  background: string;
+  surface: string;
+  line: string;
+  text: string;
+  muted: string;
+}
 export interface AppState {
+  themes: Record<ProviderId, ShellTheme | null>;
   collapsed: boolean;
   unread: Record<ProviderId, UnreadInfo>;
   active: ProviderId;

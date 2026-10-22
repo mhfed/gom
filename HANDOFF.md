@@ -77,3 +77,13 @@ Changed: src/main/main.ts, scripts/window-lifecycle-check.mjs, package.json, pac
 Rework1 (fixture appData isolation); actual token usage unavailable. No new public Release uploaded in this phase; 0.2.0 asset remains the prior version. Next gate: packaged ZIP/signature verification and source push.
 
 Packaging gate: npm run make PASS; codesign --verify --deep --strict 'out-release/Tin Nhan-darwin-arm64/Tin Nhan.app' PASS; unzip -tq outputs/TinNhan-macOS-arm64-0.2.1.zip PASS. Delivered local ZIP0.2.1; source committed/pushed to main. Existing README download remains the published0.2.0 asset, explicitly versioned.
+
+## Active platform shell colors 0.2.2
+
+Goal/status: sidebar and header follow the active platform's computed neutral navigation background. Derive validated hex-only surface, border, readable text and muted colors; preserve original logos and dimensions. Cache per provider in memory; refresh on load, selection and existing4s poll. Missing sample uses macOS prefers-color-scheme fallback; no DOM text, credentials or message content returned. Sample a small fixed left-side grid, walk transparent/colorful ancestors, choose repeated neutral opaque background. Settings shares the active palette.
+
+Changed paths: src/main/theme.ts, src/main/main.ts, src/shared.ts, src/renderer/shell.ts, src/renderer/shell.css, tests/theme.test.ts, scripts/theme-check.mjs, package*.json, README.md, HANDOFF.md.
+
+Verification: node --test --experimental-strip-types tests/theme.test.ts initially failed for missing module, then PASS2/2; npm run typecheck PASS; npm test PASS22/22; npm run build PASS; node scripts/theme-check.mjs PASS (isolated appData and intercepted fixture pages for all3 platforms, expected exact colors, same sidebar/header backgrounds, runtime dark-to-light change, collapsed screenshot); node scripts/window-lifecycle-check.mjs PASS (hide/restore retained view ids, quit exits). Inspected light, dark and collapsed fixture screenshots; allowed140ms button transitions to settle before final screenshots. npm run make PASS; codesign --verify --deep --strict on output app PASS. ZIP integrity and hash checked at delivery.
+
+Risks: real signed-in provider theme layouts not exercised this phase; platform DOM/custom backgrounds may require sampling adjustments. No claim that settings/canvas-only custom themes always expose a suitable sampled surface. Electron page screenshot captures shell, not a composite of native hosted views. Existing public release still0.2.0; local ZIP0.2.2 includes Cmd+W fix. Next action: user try0.2.2 with current platform themes; investigate any reported mismatch before release update. Rework0; actual token usage unavailable.

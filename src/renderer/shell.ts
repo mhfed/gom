@@ -47,6 +47,21 @@ for (const id of Object.keys(PROVIDERS) as ProviderId[]) {
 }
 function render(state: AppState) {
   current = state;
+  const theme = state.themes[state.active];
+  const root = document.documentElement;
+  root.dataset.theme =
+    theme?.mode ||
+    (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  for (const [key, value] of Object.entries({
+    cream: theme?.background,
+    paper: theme?.surface,
+    line: theme?.line,
+    ink: theme?.text,
+    muted: theme?.muted,
+  })) {
+    if (value) root.style.setProperty("--" + key, value);
+    else root.style.removeProperty("--" + key);
+  }
   document.body.classList.toggle("collapsed", state.collapsed);
   const toggle = $("sidebar-toggle");
   toggle.setAttribute("aria-expanded", String(!state.collapsed));
@@ -106,3 +121,7 @@ $("import").onclick = () =>
   void window.desktop.importMessenger($<HTMLSelectElement>("profiles").value);
 window.desktop.changed(render);
 void window.desktop.state().then(render);
+
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (current) render(current);
+});

@@ -1,3 +1,4 @@
+import { normalizeTheme, themeScript } from "./theme.ts";
 import { layoutViews } from "./layout.ts";
 import { normalizeUnread } from "./unread.ts";
 import { unreadScript } from "./unread-snapshot.ts";
@@ -46,6 +47,7 @@ const configured = new Set<Session>();
 const imports = new OperationGate();
 const popups = new Set<BrowserWindow>();
 const state: AppState = {
+  themes: { zalo: null, messenger: null, telegram: null },
   collapsed: false,
   unread: {
     zalo: normalizeUnread({ global: null, loaded: null, kind: "messages" }),
@@ -205,6 +207,7 @@ function activate(id: ProviderId) {
   const view = views.activate(id);
   if (!known) win.contentView.addChildView(view);
   layout();
+  void detect(id, view.webContents);
   publish();
 }
 
@@ -216,6 +219,8 @@ async function detect(id: ProviderId, contents: WebContents) {
   )
     return;
   try {
+    const theme = normalizeTheme(await contents.executeJavaScript(themeScript));
+    if (theme) state.themes[id] = theme;
     const result = await contents.executeJavaScript(authScript);
     if (["ready", "needs-login", "authenticated"].includes(result))
       status(id, result);

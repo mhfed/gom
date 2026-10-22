@@ -442,3 +442,49 @@ body.collapsed .sidebar-bottom button {
 body.collapsed #sidebar-toggle svg path {
   transform: translateX(24px) scaleX(-1);
 }
+
+/* The active provider supplies validated opaque colors through the local shell. */
+:root {
+  --cream: #ffffff;
+  --paper: #ededed;
+  --ink: #181818;
+  --muted: #565d66;
+  --line: #d6d6d6;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --cream: #202124;
+  --paper: #303134;
+  --ink: #f5f5f5;
+  --muted: #b7bdc5;
+  --line: #44464a;
+  --green: #79ac89;
+  color-scheme: dark;
+}
+button:hover,
+.tools button,
+nav .unread.unknown,
+select {
+  background: var(--paper);
+  color: var(--ink);
+}
+.tools button:hover {
+  background: var(--line);
+}
+.eyebrow,
+.sidebar-bottom p,
+.settings-heading .eyebrow,
+footer,
+#sidebar-toggle {
+  color: var(--muted);
+}
+nav button.active,
+article {
+  box-shadow: 0 2px 0 var(--line);
+}
+select {
+  border-color: var(--line);
+}
+#notice {
+  color: var(--ink);
+}
