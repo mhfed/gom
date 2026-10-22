@@ -2,6 +2,14 @@
 
 Ứng dụng cá nhân bọc giao diện web chính thức của Zalo, Messenger và Telegram. Sidebar chuyển giữa ba khung độc lập; mỗi khung dùng một partition cố định và không bị tạo lại khi đổi nền tảng.
 
+## Tải app
+
+[Tải Tin Nhan 0.2.0 cho macOS Apple Silicon (arm64)](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.2.0/TinNhan-macOS-arm64-0.2.0.zip)
+
+Giải nén ZIP, kéo `Tin Nhan.app` vào Applications rồi mở app. Bản cá nhân ký ad-hoc, chưa có Developer ID / notarization. Repository hiện private nên cần đăng nhập GitHub bằng tài khoản có quyền truy cập để tải.
+
+Chi tiết và SHA-256 nằm trong [Release 0.2.0](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.2.0).
+
 ## Chạy và đóng gói
 
 Yêu cầu macOS Apple Silicon, Node.js 24+ và npm. Electron được tải từ bản phát hành chính thức.

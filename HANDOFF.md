@@ -59,3 +59,11 @@ Limit: current Messenger web UI exposes no reliable overall count; shows — unt
 ## GitHub publication 2026-10-22
 
 User requested Git initialization and upload. Source repository root is this desktop-app directory; branch main, destination private GitHub repository mhfed/tin-nhan-desktop. Only source, tests, build configuration, development scripts and brand/icon assets are tracked. Built apps, ZIPs, dependencies, caches, environment files and all external account/session data are excluded. Preflight source scan: 48 files, no credential-pattern findings; npm run typecheck PASS; npm test20/20 PASS. Publication PASS: initial snapshot71876c6 pushed to https://github.com/mhfed/tin-nhan-desktop; repo privacy and main default branch verified through gh repo view; git ls-remote matched local HEAD. Final documentation commit is pushed on the same branch and its remote hash checked at delivery. Phase rework0; actual token usage unavailable.
+
+## Release 0.2.0 publication 2026-10-22
+
+Goal/status: published v0.2.0 with TinNhan-macOS-arm64-0.2.0.zip (118598197 bytes); README adds direct download, release notes link and installation/access requirements. Release targets b070d026f2590d6abcfc78f677ecc1654e3210cc. No runtime changes or account data included.
+
+Changed paths: README.md, HANDOFF.md. Verification: gh release create v0.2.0 with ZIP and notes file PASS; gh api repos/mhfed/tin-nhan-desktop/releases/tags/v0.2.0 PASS (draft=false, expected asset URL, SHA-256 d5adabcac142e21724e73db4e88d3205955ee975062f4bd0854700a3d843128b matches original archive). git diff --check required before commit; remote README link and HEAD checked after push. Runtime tests not rerun for documentation/release-only work; prior 20/20 result unchanged.
+
+Limits: repository private; download requires authorized GitHub account. App arm64 and ad-hoc signed, not notarized. Next gate: documentation commit pushed and remote contents verified. Rework0; actual token usage unavailable.
