@@ -67,3 +67,13 @@ Goal/status: published v0.2.0 with TinNhan-macOS-arm64-0.2.0.zip (118598197 byte
 Changed paths: README.md, HANDOFF.md. Verification: gh release create v0.2.0 with ZIP and notes file PASS; gh api repos/mhfed/tin-nhan-desktop/releases/tags/v0.2.0 PASS (draft=false, expected asset URL, SHA-256 d5adabcac142e21724e73db4e88d3205955ee975062f4bd0854700a3d843128b matches original archive). git diff --check required before commit; remote README link and HEAD checked after push. Runtime tests not rerun for documentation/release-only work; prior 20/20 result unchanged.
 
 Limits: repository private; download requires authorized GitHub account. App arm64 and ad-hoc signed, not notarized. Next gate: documentation commit pushed and remote contents verified. Rework0; actual token usage unavailable.
+
+## macOS window lifecycle 0.2.1
+
+Goal/status: Cmd+W/window close hides the main window without destroying service views; Dock activation restores the same window; Cmd+Q retains the existing import wait, save, session flush and exit sequence. Explicit Close menu role provides the native shortcut. Background polling remains active while hidden. README also reflects public repository access.
+
+Changed: src/main/main.ts, scripts/window-lifecycle-check.mjs, package.json, package-lock.json, README.md, HANDOFF.md. Verification: npm run build PASS; npm run typecheck PASS; npm test PASS20/20; node scripts/window-lifecycle-check.mjs observed RED for close quitting, then PASS for hide, activation retaining window/view ids, and app.quit exiting. Integration fixture sets appData in a test-only bootstrap before loading production code; no personal session used. Initial harness launch hit the running app lock because production fixes userData; corrected fixture isolation. Native menu/key behavior wired via Electron close role; physical keyboard/Dock click not manually tested. npm run make retried with network permission after sandbox fetch failed. Output signature and archive checks recorded at delivery.
+
+Rework1 (fixture appData isolation); actual token usage unavailable. No new public Release uploaded in this phase; 0.2.0 asset remains the prior version. Next gate: packaged ZIP/signature verification and source push.
+
+Packaging gate: npm run make PASS; codesign --verify --deep --strict 'out-release/Tin Nhan-darwin-arm64/Tin Nhan.app' PASS; unzip -tq outputs/TinNhan-macOS-arm64-0.2.1.zip PASS. Delivered local ZIP0.2.1; source committed/pushed to main. Existing README download remains the published0.2.0 asset, explicitly versioned.

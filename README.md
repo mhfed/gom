@@ -6,7 +6,7 @@
 
 [Tải Tin Nhan 0.2.0 cho macOS Apple Silicon (arm64)](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.2.0/TinNhan-macOS-arm64-0.2.0.zip)
 
-Giải nén ZIP, kéo `Tin Nhan.app` vào Applications rồi mở app. Bản cá nhân ký ad-hoc, chưa có Developer ID / notarization. Repository hiện private nên cần đăng nhập GitHub bằng tài khoản có quyền truy cập để tải.
+Giải nén ZIP, kéo `Tin Nhan.app` vào Applications rồi mở app. Bản cá nhân ký ad-hoc, chưa có Developer ID / notarization. Repository public, có thể tải trực tiếp.
 
 Chi tiết và SHA-256 nằm trong [Release 0.2.0](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.2.0).
 
@@ -31,7 +31,7 @@ Bản app nằm trong `out-release/Tin Nhan-darwin-arm64/`; ZIP trong `out-relea
 - Phiên được thử trong cửa sổ tạm trước; chỉ chấp nhận sau khi Messenger đích đã xác minh đăng nhập. Thất bại sẽ khôi phục cặp cookie cũ. Đóng app trong lúc nhập sẽ đợi giao dịch kết thúc.
 - Zalo và Telegram: đăng nhập QR trực tiếp trên giao diện chính thức. Nếu nền tảng thu hồi hoặc hết hạn phiên, phải đăng nhập lại.
 - Dữ liệu của app lưu tại `~/Library/Application Support/TinNhanDesktop`. Không sao chép toàn bộ Chrome profile; không xuất token ra log hoặc renderer.
-- Đóng cửa sổ hoặc Cmd+Q sẽ thoát app sau khi ghi dữ liệu. Chuyển sidebar giữ nguyên view và bản nháp đang mở; khôi phục bản nháp sau thoát phụ thuộc chính nền tảng.
+- Cmd+W hoặc nút đóng cửa sổ chỉ ẩn cửa sổ; app vẫn chạy và giữ các trang đang mở. Bấm icon Dock để mở lại. Cmd+Q mới thoát app sau khi ghi dữ liệu. Chuyển sidebar giữ nguyên view và bản nháp đang mở; khôi phục bản nháp sau thoát phụ thuộc chính nền tảng.
 
 ## Kiểm thử
 

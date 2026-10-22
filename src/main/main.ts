@@ -384,6 +384,13 @@ async function quit() {
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
+  app.on("activate", () => {
+    if (win && !win.isDestroyed() && !closing) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    }
+  });
   app.on("second-instance", () => {
     if (win) {
       if (win.isMinimized()) win.restore();
@@ -501,14 +508,23 @@ else {
             click: () => activate(id),
           })),
         },
-        { role: "windowMenu" },
+        {
+          label: "Cửa sổ",
+          submenu: [
+            { role: "close" },
+            { role: "minimize" },
+            { role: "zoom" },
+            { type: "separator" },
+            { role: "front" },
+          ],
+        },
       ]),
     );
     win.on("resize", layout);
     win.on("close", (event) => {
       if (!closed) {
         event.preventDefault();
-        void quit();
+        win.hide();
       }
     });
     await win.loadFile(join(__dirname, "index.html"));
