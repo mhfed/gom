@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'"
+    />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tin nhắn</title>
+    <link rel="stylesheet" href="shell.css" />
+  </head>
+  <body>
+    <aside>
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">👋</span>
+        <div>Tin nhắn<small>Ghé vào, cùng trò chuyện.</small></div>
+      </div>
+      <p class="eyebrow">GÓC TRÒ CHUYỆN</p>
+      <nav id="providers"></nav>
+      <div class="sidebar-bottom">
+        <button
+          id="settings"
+          title="Tài khoản & cài đặt"
+          aria-label="Tài khoản & cài đặt"
+        >
+          <span aria-hidden="true">⚙</span> <span>Tài khoản & cài đặt</span>
+        </button>
+        <p><i></i> Phiên lưu trên máy này</p>
+      </div>
+    </aside>
+    <main>
+      <header>
+        <div class="header-main">
+          <button
+            id="sidebar-toggle"
+            aria-label="Thu gọn sidebar"
+            aria-expanded="true"
+            title="Thu gọn sidebar"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="3" />
+              <path d="M9 4v16M15 9l-3 3 3 3" />
+            </svg>
+          </button>
+          <div>
+            <h1 id="title">Zalo</h1>
+            <p id="subtitle">Đang mở không gian trò chuyện…</p>
+          </div>
+        </div>
+        <div class="tools">
+          <button id="reload" title="Tải lại">↻</button
+          ><button id="browser" title="Mở trong trình duyệt">↗</button>
+        </div>
+      </header>
+      <section id="settings-panel" hidden>
+        <div class="settings-heading">
+          <span class="eyebrow">CHÀO ANH 👋</span>
+          <h2>Góc trò chuyện của anh.</h2>
+          <p>Mỗi nền tảng giữ một phiên đăng nhập riêng trên máy của anh.</p>
+        </div>
+        <article>
+          <img class="logo" src="logos/messenger.svg" alt="Messenger" />
+          <div>
+            <h3>Messenger</h3>
+            <p>Dùng tài khoản đang có trong Chrome. Chọn đúng hồ sơ của anh.</p>
+            <select id="profiles" aria-label="Hồ sơ Chrome"></select
+            ><button class="primary" id="import">Dùng phiên có sẵn</button>
+            <p class="hint">
+              macOS có thể yêu cầu cho phép truy cập Chrome Safe Storage.
+            </p>
+          </div>
+        </article>
+        <article>
+          <img class="logo" src="logos/zalo.png" alt="Zalo" />
+          <div>
+            <h3>Zalo & Telegram</h3>
+            <p>
+              Mở từng nền tảng ở sidebar và quét QR bằng điện thoại. Phiên được
+              giữ cho lần mở sau.
+            </p>
+          </div>
+        </article>
+        <p id="notice" role="status"></p>
+        <footer>
+          Tin nhắn <span id="version"></span> · Dữ liệu đăng nhập không gửi lên
+          máy chủ riêng.
+        </footer>
+      </section>
+      <div id="service-loading">Đang kết nối…</div>
+    </main>
+    <script src="shell.js"></script>
+  </body>
+</html>

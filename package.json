@@ -1,0 +1,36 @@
+{
+  "name": "tin-nhan-desktop",
+  "type": "module",
+  "productName": "Tin Nhan",
+  "version": "0.2.0",
+  "description": "Không gian nhắn tin cá nhân cho macOS",
+  "author": "Tin Nhan",
+  "license": "UNLICENSED",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "start": "npm run build && electron .",
+    "package": "npm run build && electron-forge package --platform=darwin --arch=arm64",
+    "make": "npm run build && electron-forge make --platform=darwin --arch=arm64",
+    "test:persistence": "node scripts/persistence-check.mjs",
+    "test:live": "node scripts/live-check.mjs",
+    "format": "prettier --write src tests scripts forge.config.cjs"
+  },
+  "config": {
+    "forge": "./forge.config.cjs"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "8.0.1",
+    "@electron-forge/maker-zip": "8.0.1",
+    "@types/node": "24.19.2",
+    "electron": "45.0.0",
+    "esbuild": "0.28.2",
+    "linkedom": "0.18.14",
+    "playwright-core": "1.64.1",
+    "prettier": "3.9.10",
+    "sharp": "0.35.5",
+    "typescript": "7.0.2"
+  }
+}
