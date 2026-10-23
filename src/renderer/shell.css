@@ -553,3 +553,214 @@ select {
 .connection-card .hint {
   font-size: 11px;
 }
+/* Account groups retain the native 208 / 80px shell geometry. */
+#providers {
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  padding: 0 2px;
+}
+.provider-group {
+  margin-bottom: 12px;
+}
+.provider-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 9px 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+}
+.provider-group-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+nav .group-add {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  margin: 0 0 0 auto;
+  padding: 0;
+  font-size: 18px;
+  color: var(--muted);
+}
+nav .account-button {
+  margin-bottom: 5px;
+  padding: 10px;
+  gap: 8px;
+  font-size: 12px;
+}
+.account-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 11px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  font-size: 12px;
+  font-weight: 750;
+  color: #fff;
+  overflow: hidden;
+}
+.avatar-zalo {
+  background: #346ee8;
+}
+.avatar-messenger {
+  background: #7655cf;
+}
+.avatar-telegram {
+  background: #248bb5;
+}
+.provider-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-bottom {
+  padding-top: 10px;
+}
+body.collapsed .provider-group-heading {
+  justify-content: center;
+  padding: 6px 0;
+}
+body.collapsed .provider-group-label,
+body.collapsed .group-add {
+  display: none;
+}
+body.collapsed nav .account-button {
+  height: 56px;
+  padding: 10px;
+  margin-bottom: 6px;
+}
+body.collapsed .account-avatar {
+  width: 32px;
+  height: 32px;
+}
+.account-manager-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.account-manager-heading h3 {
+  margin: 0;
+}
+.account-manage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.account-identity {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+.account-identity strong {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.account-identity small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.account-actions {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.account-actions button {
+  padding: 7px 10px;
+  font-size: 10px;
+}
+#archived-accounts h4 {
+  margin-bottom: 8px;
+}
+#archived-accounts .archived {
+  color: var(--muted);
+  font-size: 12px;
+}
+.field-label {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 14px;
+}
+.catalog-warning {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  color: var(--ink);
+  max-width: 720px;
+}
+#account-editor {
+  width: min(460px, 90vw);
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 30px;
+  box-shadow: 0 24px 90px #0005;
+}
+#account-editor::backdrop {
+  background: #0007;
+}
+#account-editor h2 {
+  font-size: 26px;
+}
+#account-editor .eyebrow {
+  padding: 0;
+}
+#account-editor input {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background: var(--cream);
+  color: var(--ink);
+  font: inherit;
+  margin-top: 8px;
+}
+#account-editor select {
+  margin: 8px 0;
+}
+#account-editor .hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 22px;
+}
+.header-main {
+  flex: 1;
+}
+.header-main > div {
+  min-width: 0;
+}
+header h1 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tools {
+  flex: none;
+}
+header {
+  gap: 16px;
+}

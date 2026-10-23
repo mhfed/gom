@@ -75,3 +75,25 @@ node scripts/theme-check.mjs
 ```
 
 `test:desktop` kiểm tra quyền thực trong renderer, khung lạ bị từ chối, phím tắt/xung đột (mock OS), thông báo/click (mock delivery), mất mạng/wake giữ bản nháp trang khác, crash renderer thật trong fixture, retry và lưu lựa chọn sau mở lại. Kiểm tra thông báo thật cần bản app ký trên macOS, cấp quyền rồi thử nhận tin từ thiết bị khác. Không tự thay đổi mục đăng nhập macOS trong các fixture.
+
+## Multi-account 0.4.0
+
+Sidebar nhóm tài khoản theo Zalo, Messenger và Telegram. Bấm dấu + ở nhóm hoặc **Thêm tài khoản** để tạo phiên riêng; đặt tên và chữ/emoji để phân biệt. Trong Cài đặt có Mở, Đổi tên, sắp xếp ↑/↓, Gỡ khỏi sidebar và Khôi phục. Avatar là ký hiệu cục bộ, không tự lấy ảnh hồ sơ từ nội dung chat.
+
+Ba tài khoản có sẵn được giữ nguyên ID và partition `persist:zalo`, `persist:messenger`, `persist:telegram` tại userData cũ. Không sao chép hoặc xóa cookie để nâng cấp. Tài khoản mới dùng ID UUID cố định và partition mới riêng; đổi tên/sắp xếp không đổi partition. App tự giữ một bản sao **cài đặt cửa sổ** trước nâng cấp (`window.json.pre-0.4`), không tạo bản xuất dữ liệu đăng nhập.
+
+Danh sách nằm trong `accounts.json` (chỉ ID/nền tảng/tên/ký hiệu/trạng thái ẩn), ghi nguyên tử và có bản metadata trước đó ở `accounts.json.backup`. Nếu danh sách lỗi, app dùng danh sách nhận diện được ở chế độ bảo vệ và khóa các thay đổi metadata để tránh ghi đè; dữ liệu phiên không bị xóa. Không chỉnh ID/nền tảng bằng tay vì đây là khóa liên kết tới phiên cũ.
+
+**Gỡ khỏi sidebar không đăng xuất:** trang của tài khoản sẽ đóng, dữ liệu đăng nhập/localStorage/IndexedDB vẫn giữ trên máy và có thể Khôi phục với cùng ID. Việc giữ bản nháp qua đóng trang tùy nền tảng. Không cho gỡ tài khoản đang dùng cuối cùng. Các tài khoản còn lại giữ nguyên trang/bản nháp đang mở.
+
+Mỗi tài khoản có unread, màu giao diện, quyền thông báo và phục hồi lỗi riêng. Bấm thông báo mở đúng tài khoản phát ra, không nhảy về tài khoản mặc định cùng nền tảng. Các giới hạn thông báo gốc/service worker ở0.3 vẫn áp dụng. Cmd+1/2/3 trở về tài khoản vừa chọn gần nhất của nền tảng tương ứng; menu bar liệt kê tên từng tài khoản.
+
+Zalo/Telegram thêm bằng QR trong phiên mới. Messenger có thể đăng nhập trực tiếp hoặc chọn rõ **Tài khoản Messenger đích** và hồ sơ Chrome nguồn trong Cài đặt. Tài khoản đích được giữ cố định suốt giao dịch nhập; app kiểm tra trực tiếp trước và sau bước xác minh nguồn; nếu đích đang tải hoặc đã có cookie đăng nhập thì từ chối nhập để giữ phiên cũ, kể cả khi trạng thái giao diện chưa kịp cập nhật. App không thay phiên của tài khoản đã xác thực và không cho gỡ/sửa danh sách khi đang nhập. Phiên còn hiệu lực phụ thuộc chính sách/expiry của nền tảng.
+
+Mọi tài khoản chưa gỡ được mở nền khi khởi động để duy trì thông báo và unread; số tài khoản tăng sẽ dùng thêm RAM. Chưa có chế độ ngủ tài khoản trong0.4.
+
+```sh
+npm run test:multi-account
+```
+
+Fixture cách ly seeding dữ liệu kiểu0.3 rồi chạy0.4, kiểm tra6 tài khoản/2 mỗi nền tảng, cookie/localStorage/IndexedDB riêng, giữ dữ liệu cũ, nhập Messenger đúng đích khi chuyển tài khoản trong lúc chờ, unread/quyền thông báo/click riêng, gỡ/khôi phục, nhãn an toàn và thoát/mở lại. Chrome/Keychain/thông báo trong fixture dùng dữ liệu giả; không gửi tin nhắn thật. Đăng nhập đồng thời hai tài khoản thật của từng nền tảng cần kiểm tra thêm bằng tài khoản phụ của chủ máy.

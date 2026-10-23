@@ -1,11 +1,11 @@
 import type { ProviderId } from "../shared.ts";
-export class ViewRegistry<T> {
-  private readonly views = new Map<ProviderId, T>();
-  private readonly create: (id: ProviderId) => T;
-  constructor(create: (id: ProviderId) => T) {
+export class ViewRegistry<T, K extends string = ProviderId> {
+  private readonly views = new Map<K, T>();
+  private readonly create: (id: K) => T;
+  constructor(create: (id: K) => T) {
     this.create = create;
   }
-  activate(id: ProviderId): T {
+  activate(id: K): T {
     let view = this.views.get(id);
     if (!view) {
       view = this.create(id);
@@ -13,10 +13,18 @@ export class ViewRegistry<T> {
     }
     return view;
   }
-  ids(): ProviderId[] {
+  peek(id: K): T | undefined {
+    return this.views.get(id);
+  }
+  remove(id: K): T | undefined {
+    const view = this.views.get(id);
+    this.views.delete(id);
+    return view;
+  }
+  ids(): K[] {
     return [...this.views.keys()];
   }
-  entries(): IterableIterator<[ProviderId, T]> {
+  entries(): IterableIterator<[K, T]> {
     return this.views.entries();
   }
 }

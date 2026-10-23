@@ -20,6 +20,13 @@
       <nav id="providers"></nav>
       <div class="sidebar-bottom">
         <button
+          id="add-account-sidebar"
+          title="Thêm tài khoản"
+          aria-label="Thêm tài khoản"
+        >
+          <span aria-hidden="true">＋</span><span>Thêm tài khoản</span>
+        </button>
+        <button
           id="settings"
           title="Tài khoản & cài đặt"
           aria-label="Tài khoản & cài đặt"
@@ -72,11 +79,42 @@
           <h2>Góc trò chuyện của anh.</h2>
           <p>Mỗi nền tảng giữ một phiên đăng nhập riêng trên máy của anh.</p>
         </div>
+        <p
+          id="catalog-warning"
+          class="catalog-warning"
+          role="status"
+          hidden
+        ></p>
+        <article>
+          <div class="preferences-card">
+            <div class="account-manager-heading">
+              <h3>Các tài khoản của anh</h3>
+              <button id="add-account-settings" class="secondary">
+                ＋ Thêm tài khoản
+              </button>
+            </div>
+            <p>
+              Mỗi tài khoản giữ phiên riêng. Chữ/emoji giúp anh phân biệt nhanh
+              trong sidebar.
+            </p>
+            <div id="account-manager"></div>
+            <div id="archived-accounts"></div>
+            <p id="account-feedback" class="hint" role="status"></p>
+          </div>
+        </article>
         <article>
           <img class="logo" src="logos/messenger.svg" alt="Messenger" />
           <div>
             <h3>Messenger</h3>
             <p>Dùng tài khoản đang có trong Chrome. Chọn đúng hồ sơ của anh.</p>
+            <label class="field-label" for="messenger-target"
+              >Tài khoản Messenger sẽ nhận phiên</label
+            >
+            <select
+              id="messenger-target"
+              aria-label="Tài khoản Messenger đích"
+            ></select>
+            <label class="field-label" for="profiles">Hồ sơ Chrome nguồn</label>
             <select id="profiles" aria-label="Hồ sơ Chrome"></select
             ><button class="primary" id="import">Dùng phiên có sẵn</button>
             <p class="hint">
@@ -164,6 +202,47 @@
       </section>
       <div id="service-loading">Đang kết nối…</div>
     </main>
+    <dialog id="account-editor">
+      <form id="account-form">
+        <span class="eyebrow">TÀI KHOẢN RIÊNG</span>
+        <h2 id="account-editor-title">Thêm tài khoản</h2>
+        <label class="field-label" for="account-provider">Nền tảng</label>
+        <select id="account-provider">
+          <option value="zalo">Zalo</option>
+          <option value="messenger">Messenger</option>
+          <option value="telegram">Telegram</option>
+        </select>
+        <label class="field-label" for="account-name">Tên để phân biệt</label>
+        <input
+          id="account-name"
+          maxlength="40"
+          required
+          placeholder="Ví dụ: Cá nhân, Công việc"
+          autocomplete="off"
+        />
+        <label class="field-label" for="account-avatar"
+          >Chữ hoặc emoji (tùy chọn)</label
+        >
+        <input
+          id="account-avatar"
+          maxlength="12"
+          placeholder="Ví dụ: 💼, A"
+          autocomplete="off"
+        />
+        <p class="hint">
+          Tài khoản mới đăng nhập riêng trong app. Các tài khoản đang dùng vẫn
+          giữ nguyên phiên.
+        </p>
+        <p id="account-editor-error" class="hint" role="status"></p>
+        <div class="dialog-actions">
+          <button id="account-editor-cancel" type="button" class="secondary">
+            Hủy</button
+          ><button id="account-editor-save" type="submit" class="primary">
+            Thêm tài khoản
+          </button>
+        </div>
+      </form>
+    </dialog>
     <script src="shell.js"></script>
   </body>
 </html>

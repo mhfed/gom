@@ -1,13 +1,18 @@
 import { mkdir, writeFile, rename } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Preferences } from "../shared.ts";
-export const defaultPreferences = (): Preferences => ({
+export const defaultPreferences = (
+  ids: string[] = ["zalo", "messenger", "telegram"],
+): Preferences => ({
   paused: false,
   shortcut: false,
-  notifications: { zalo: "ask", messenger: "ask", telegram: "ask" },
+  notifications: Object.fromEntries(ids.map((id) => [id, "ask"])),
 });
-export function normalizePreferences(raw: unknown): Preferences {
-  const out = defaultPreferences();
+export function normalizePreferences(
+  raw: unknown,
+  ids: string[] = ["zalo", "messenger", "telegram"],
+): Preferences {
+  const out = defaultPreferences(ids);
   if (!raw || typeof raw !== "object") return out;
   const r = raw as Record<string, unknown>;
   out.paused = r.paused === true;
@@ -17,7 +22,7 @@ export function normalizePreferences(raw: unknown): Preferences {
     typeof r.notifications === "object" &&
     !Array.isArray(r.notifications)
   ) {
-    for (const id of ["zalo", "messenger", "telegram"] as const) {
+    for (const id of ids) {
       const v = (r.notifications as Record<string, unknown>)[id];
       if (v === "allow" || v === "mute" || v === "ask")
         out.notifications[id] = v;

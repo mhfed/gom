@@ -1,3 +1,13 @@
+import {
+  defaultAccounts,
+  accountPartition,
+  AccountCatalogStore,
+  createAccount,
+  editAccount as editCatalogAccount,
+  archiveAccount as archiveCatalogAccount,
+  restoreAccount as restoreCatalogAccount,
+  moveAccount as moveCatalogAccount,
+} from "./accounts.ts";
 import { RecoveryPolicy, type FailureReason } from "./recovery.ts";
 import {
   defaultPreferences,
@@ -36,10 +46,14 @@ import {
 } from "electron";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { readFile } from "node:fs/promises";
+import { readFile, copyFile } from "node:fs/promises";
+import { constants } from "node:fs";
 import {
   PROVIDERS,
   type ProviderId,
+  type AccountId,
+  type Account,
+  type AccountResult,
   type AppState,
   type ProviderStatus,
 } from "../shared.ts";
@@ -63,22 +77,27 @@ let closing = false,
 let poll: ReturnType<typeof setInterval>;
 const configured = new Set<Session>();
 const imports = new OperationGate();
+const accountOps = new OperationGate();
+const lastAccounts = new Map<ProviderId, AccountId>();
 const popups = new Set<BrowserWindow>();
-const popupProviders = new Map<WebContents, ProviderId>();
-const recovery = new RecoveryPolicy();
-const detecting = new Set<ProviderId>();
-const navigationFailed = new Set<ProviderId>();
-const epochs = new Map<ProviderId, number>();
+const popupProviders = new Map<WebContents, AccountId>();
+const recovery = new RecoveryPolicy<AccountId>();
+const detecting = new Set<AccountId>();
+const navigationFailed = new Set<AccountId>();
+const epochs = new Map<AccountId, number>();
 let tray: Tray | undefined;
 let traySignature = "";
 let sleeping = false;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let wakeTimer: ReturnType<typeof setTimeout> | undefined;
-let lastNotificationClick = 0;
-const permissionPrompts = new Set<ProviderId>();
-const testAlerts = new Map<ProviderId, Notification>();
+const lastNotificationClicks = new Map<AccountId, number>();
+const permissionPrompts = new Set<AccountId>();
+const testAlerts = new Map<AccountId, Notification>();
 const SHORTCUT = "CommandOrControl+Shift+Space";
 const state: AppState = {
+  accounts: defaultAccounts(),
+  accountBusy: false,
+  catalogWarning: "",
   preferences: defaultPreferences(),
   connections: {
     zalo: { phase: "connecting", reason: null, retryAt: null },
@@ -115,8 +134,49 @@ const state: AppState = {
 };
 const settingsPath = join(app.getPath("userData"), "window.json");
 const settingsWriter = new SettingsWriter(settingsPath);
-const views = new ViewRegistry<WebContentsView>(createView);
-const partition = (id: ProviderId) => session.fromPartition("persist:" + id);
+const catalogStore = new AccountCatalogStore(
+  join(app.getPath("userData"), "accounts.json"),
+);
+const views = new ViewRegistry<WebContentsView, AccountId>(createView);
+function findAccount(
+  id: unknown,
+  includeArchived = false,
+): Account | undefined {
+  return typeof id === "string"
+    ? state.accounts.find(
+        (a) => a.id === id && (includeArchived || !a.archived),
+      )
+    : undefined;
+}
+function providerFor(id: AccountId): ProviderId {
+  const account = findAccount(id, true);
+  if (!account) throw new Error("unknown-account");
+  return account.provider;
+}
+function accountLabel(id: AccountId) {
+  const a = findAccount(id, true)!;
+  return `${PROVIDERS[a.provider].label} · ${a.name}`;
+}
+function isCurrent(id: AccountId, contents: WebContents) {
+  return !!findAccount(id) && views.peek(id)?.webContents === contents;
+}
+const partition = (id: AccountId) =>
+  session.fromPartition(accountPartition(findAccount(id, true)!));
+function initializeAccount(a: Account) {
+  state.themes[a.id] ??= null;
+  state.statuses[a.id] ??= "idle";
+  state.connections[a.id] ??= {
+    phase: "connecting",
+    reason: null,
+    retryAt: null,
+  };
+  state.unread[a.id] ??= normalizeUnread({
+    global: null,
+    loaded: null,
+    kind: a.provider === "zalo" ? "messages" : "conversations",
+  });
+  state.preferences.notifications[a.id] ??= "ask";
+}
 const publish = () => {
   if (win && !win.isDestroyed()) {
     const active = [...views.entries()].find(
@@ -127,17 +187,26 @@ const publish = () => {
       !active.webContents.isDestroyed() &&
       active.webContents.navigationHistory.canGoBack();
     win.webContents.send("state", state);
-    app.dock?.setBadge(hasUnread(Object.values(state.unread)) ? "•" : "");
+    app.dock?.setBadge(
+      hasUnread(
+        state.accounts
+          .filter((a) => !a.archived)
+          .map((a) => state.unread[a.id]),
+      )
+        ? "•"
+        : "",
+    );
     updateTray();
   }
 };
-function status(id: ProviderId, value: ProviderStatus) {
+function status(id: AccountId, value: ProviderStatus) {
+  if (!findAccount(id)) return;
   state.statuses[id] = value;
   if (value !== "authenticated")
     state.unread[id] = normalizeUnread({
       global: null,
       loaded: null,
-      kind: id === "zalo" ? "messages" : "conversations",
+      kind: providerFor(id) === "zalo" ? "messages" : "conversations",
     });
   publish();
 }
@@ -153,7 +222,7 @@ async function external(url: string) {
   });
   if (answer.response === 1) await shell.openExternal(url);
 }
-function setupSession(ses: Session, id: ProviderId) {
+function setupSession(ses: Session, id: AccountId) {
   if (configured.has(ses)) return;
   configured.add(ses);
   const owned = (contents: WebContents | null) =>
@@ -165,15 +234,18 @@ function setupSession(ses: Session, id: ProviderId) {
         (popup) =>
           !popup.isDestroyed() &&
           popup.webContents === contents &&
-          navigationPolicy(id, contents.getURL()) === "internal",
+          popupProviders.get(contents) === id &&
+          navigationPolicy(providerFor(id), contents.getURL()) === "internal",
       ));
   ses.setPermissionRequestHandler((contents, permission, callback, details) => {
-    const valid = validNotificationFrame(
-      id,
-      details.requestingUrl,
-      details.isMainFrame,
-      owned(contents),
-    );
+    const valid =
+      !!findAccount(id) &&
+      validNotificationFrame(
+        providerFor(id),
+        details.requestingUrl,
+        details.isMainFrame,
+        owned(contents),
+      );
     if (!valid || closing || !["notifications", "media"].includes(permission)) {
       callback(false);
       return;
@@ -199,19 +271,26 @@ function setupSession(ses: Session, id: ProviderId) {
     void dialog
       .showMessageBox(win, {
         type: "question",
-        message: `Cho phép ${PROVIDERS[id].label} ${permission === "media" ? "dùng camera / mic" : "gửi thông báo"}?`,
+        message: `Cho phép ${accountLabel(id)} ${permission === "media" ? "dùng camera / mic" : "gửi thông báo"}?`,
         buttons: ["Không cho phép", "Cho phép"],
         defaultId: 0,
         cancelId: 0,
       })
       .then(async (r) => {
-        if (permission === "notifications" && !closing) {
+        if (
+          permission === "notifications" &&
+          !closing &&
+          findAccount(id) &&
+          owned(contents)
+        ) {
           state.preferences.notifications[id] =
             r.response === 1 ? "allow" : "mute";
           await persist();
         }
         callback(
           !closing &&
+            !!findAccount(id) &&
+            owned(contents) &&
             r.response === 1 &&
             (permission !== "notifications" ||
               notificationAllowed(state.preferences, id)),
@@ -224,8 +303,9 @@ function setupSession(ses: Session, id: ProviderId) {
     (contents, permission, origin, details) =>
       permission === "notifications" &&
       !closing &&
+      !!findAccount(id) &&
       validNotificationFrame(
-        id,
+        providerFor(id),
         details.requestingUrl || origin,
         details.isMainFrame,
         owned(contents),
@@ -233,18 +313,20 @@ function setupSession(ses: Session, id: ProviderId) {
       notificationAllowed(state.preferences, id),
   );
   ses.on("will-download", (_event, item) => {
-    item.setSaveDialogOptions({ title: "Lưu tệp từ " + PROVIDERS[id].label });
+    item.setSaveDialogOptions({
+      title: "Lưu tệp từ " + PROVIDERS[providerFor(id)].label,
+    });
   });
 }
-function guard(contents: WebContents, id: ProviderId) {
+function guard(contents: WebContents, id: AccountId) {
   contents.on("will-navigate", (event, url) => {
-    if (navigationPolicy(id, url) !== "internal") {
+    if (navigationPolicy(providerFor(id), url) !== "internal") {
       event.preventDefault();
       void external(url);
     }
   });
   contents.on("will-redirect", (event, url, _inPlace, isMainFrame) => {
-    if (navigationPolicy(id, event.url ?? url) !== "internal") {
+    if (navigationPolicy(providerFor(id), event.url ?? url) !== "internal") {
       event.preventDefault();
       const principal = [...views.entries()].some(
         ([provider, view]) => provider === id && view.webContents === contents,
@@ -253,7 +335,7 @@ function guard(contents: WebContents, id: ProviderId) {
     }
   });
   contents.setWindowOpenHandler(({ url }) => {
-    if (navigationPolicy(id, url) === "internal")
+    if (navigationPolicy(providerFor(id), url) === "internal")
       return {
         action: "allow",
         overrideBrowserWindowOptions: {
@@ -282,7 +364,9 @@ function guard(contents: WebContents, id: ProviderId) {
     });
   });
 }
-function createView(id: ProviderId) {
+function createView(id: AccountId) {
+  if (!findAccount(id)) throw Error("unknown-account");
+  state.statuses[id] = "loading";
   const ses = partition(id);
   setupSession(ses, id);
   const view = new WebContentsView({
@@ -301,13 +385,14 @@ function createView(id: ProviderId) {
   view.webContents.on(
     "did-start-navigation",
     (_e, _url, inPlace, isMainFrame) => {
-      if (isMainFrame && !inPlace) {
+      if (isCurrent(id, view.webContents) && isMainFrame && !inPlace) {
         navigationFailed.delete(id);
         epochs.set(id, (epochs.get(id) ?? 0) + 1);
       }
     },
   );
   view.webContents.on("did-start-loading", () => {
+    if (!isCurrent(id, view.webContents)) return;
     state.connections[id] = {
       phase: isOnline() ? "connecting" : "offline",
       reason: null,
@@ -317,7 +402,7 @@ function createView(id: ProviderId) {
   });
   view.webContents.on("did-navigate-in-page", () => publish());
   view.webContents.on("did-finish-load", () => {
-    if (navigationFailed.has(id)) return;
+    if (!isCurrent(id, view.webContents) || navigationFailed.has(id)) return;
     recovery.loaded(id, Date.now());
     state.connections[id] = {
       phase: isOnline() ? "connected" : "offline",
@@ -329,7 +414,7 @@ function createView(id: ProviderId) {
     void detect(id, view.webContents);
   });
   view.webContents.on("did-fail-load", (_e, code, _desc, _url, main) => {
-    if (main && code !== -3)
+    if (isCurrent(id, view.webContents) && main && code !== -3)
       fail(
         id,
         [-106, -105, -102, -101, -100, -118].includes(code)
@@ -338,10 +423,13 @@ function createView(id: ProviderId) {
       );
   });
   view.webContents.on("render-process-gone", () => {
+    if (!isCurrent(id, view.webContents)) return;
     epochs.set(id, (epochs.get(id) ?? 0) + 1);
     fail(id, "crashed");
   });
-  void view.webContents.loadURL(PROVIDERS[id].entry).catch(() => {});
+  void view.webContents
+    .loadURL(PROVIDERS[providerFor(id)].entry)
+    .catch(() => {});
   return view;
 }
 function layout() {
@@ -358,7 +446,10 @@ function layout() {
       : state.panel,
   );
 }
-function activate(id: ProviderId) {
+function activate(id: AccountId) {
+  const account = findAccount(id);
+  if (!account || closing) return;
+  lastAccounts.set(account.provider, id);
   state.active = id;
   state.panel = "service";
   const known = views.ids().includes(id);
@@ -369,21 +460,23 @@ function activate(id: ProviderId) {
   publish();
 }
 
-async function detect(id: ProviderId, contents: WebContents) {
+async function detect(id: AccountId, contents: WebContents) {
   if (
     closing ||
     sleeping ||
+    !isCurrent(id, contents) ||
     detecting.has(id) ||
     recovery.reason(id) ||
     contents.isDestroyed() ||
     contents.isLoadingMainFrame() ||
-    navigationPolicy(id, contents.getURL()) !== "internal"
+    navigationPolicy(providerFor(id), contents.getURL()) !== "internal"
   )
     return;
   detecting.add(id);
   const epoch = epochs.get(id) ?? 0;
   const valid = () =>
     !closing &&
+    isCurrent(id, contents) &&
     !contents.isDestroyed() &&
     !contents.isLoadingMainFrame() &&
     epoch === (epochs.get(id) ?? 0) &&
@@ -397,7 +490,7 @@ async function detect(id: ProviderId, contents: WebContents) {
         : {
             global: null,
             loaded: null,
-            kind: id === "zalo" ? "messages" : "conversations",
+            kind: providerFor(id) === "zalo" ? "messages" : "conversations",
           },
     );
     if (!valid()) return;
@@ -416,8 +509,8 @@ async function detect(id: ProviderId, contents: WebContents) {
 function isOnline() {
   return !sleeping && net.isOnline();
 }
-function fail(id: ProviderId, reason: FailureReason) {
-  if (closing) return;
+function fail(id: AccountId, reason: FailureReason) {
+  if (closing || !findAccount(id)) return;
   navigationFailed.add(id);
   epochs.set(id, (epochs.get(id) ?? 0) + 1);
   recovery.fail(id, reason, Date.now());
@@ -429,14 +522,19 @@ function fail(id: ProviderId, reason: FailureReason) {
   status(id, "error");
   layout();
 }
-function reloadProvider(id: ProviderId, manual = false, home = false) {
-  if (closing || state.importing) return;
+function reloadProvider(id: AccountId, manual = false, home = false) {
+  if (closing || state.importing || !findAccount(id)) return;
   const view = views.activate(id);
   if (view.webContents.isDestroyed()) return;
   if (manual) recovery.reset(id);
   epochs.set(id, (epochs.get(id) ?? 0) + 1);
-  if (home || navigationPolicy(id, view.webContents.getURL()) !== "internal")
-    void view.webContents.loadURL(PROVIDERS[id].entry).catch(() => {});
+  if (
+    home ||
+    navigationPolicy(providerFor(id), view.webContents.getURL()) !== "internal"
+  )
+    void view.webContents
+      .loadURL(PROVIDERS[providerFor(id)].entry)
+      .catch(() => {});
   else view.webContents.reload();
 }
 function tick() {
@@ -478,23 +576,31 @@ function toggleWindow() {
 }
 function updateTray() {
   if (!tray || tray.isDestroyed()) return;
-  const signature = `${state.preferences.paused}:${hasUnread(Object.values(state.unread))}`;
+  const signature = `${state.preferences.paused}:${hasUnread(state.accounts.filter((a) => !a.archived).map((a) => state.unread[a.id]))}:${JSON.stringify(state.accounts)}`;
   if (signature === traySignature) return;
   traySignature = signature;
   tray.setToolTip(
     "Tin Nhan" +
-      (hasUnread(Object.values(state.unread)) ? " · Có mục chưa đọc" : ""),
+      (hasUnread(
+        state.accounts
+          .filter((a) => !a.archived)
+          .map((a) => state.unread[a.id]),
+      )
+        ? " · Có mục chưa đọc"
+        : ""),
   );
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: "Mở Tin Nhan", click: showWindow },
-      ...(["zalo", "messenger", "telegram"] as ProviderId[]).map((id) => ({
-        label: PROVIDERS[id].label,
-        click: () => {
-          activate(id);
-          showWindow();
-        },
-      })),
+      ...state.accounts
+        .filter((a) => !a.archived)
+        .map(({ id }) => ({
+          label: accountLabel(id),
+          click: () => {
+            activate(id);
+            showWindow();
+          },
+        })),
       { type: "separator" },
       {
         label: "Tạm dừng thông báo",
@@ -541,8 +647,8 @@ function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => void persist(), 500);
 }
-function testNotification(id: ProviderId) {
-  if (!notificationAllowed(state.preferences, id)) {
+function testNotification(id: AccountId) {
+  if (!findAccount(id) || !notificationAllowed(state.preferences, id)) {
     state.notificationStatus =
       "Anh chọn Cho phép và bỏ tạm dừng trước khi thử thông báo.";
     publish();
@@ -555,13 +661,13 @@ function testNotification(id: ProviderId) {
   }
   testAlerts.get(id)?.close();
   const notification = new Notification({
-    title: PROVIDERS[id].label + " · Tin Nhan",
+    title: accountLabel(id) + " · Tin Nhan",
     body: "Thông báo thử. Bấm để mở nền tảng này.",
     silent: true,
   });
   testAlerts.set(id, notification);
   notification.on("click", () => {
-    if (!closing) {
+    if (!closing && findAccount(id)) {
       activate(id);
       showWindow();
     }
@@ -596,7 +702,32 @@ async function verifyMessenger(contents: WebContents) {
   }
   return false;
 }
-async function importMessenger(sourceId: string) {
+async function messengerDestination(targetId: AccountId) {
+  const contents = views.peek(targetId)?.webContents;
+  const epoch = epochs.get(targetId) ?? 0;
+  const valid = () =>
+    contents &&
+    !contents.isDestroyed() &&
+    isCurrent(targetId, contents) &&
+    !contents.isLoadingMainFrame() &&
+    epoch === (epochs.get(targetId) ?? 0) &&
+    navigationPolicy("messenger", contents.getURL()) === "internal";
+  if (!valid() || !contents) return "target-not-ready";
+  const auth = await contents
+    .executeJavaScript(authScript)
+    .catch(() => "ready");
+  if (!valid()) return "target-not-ready";
+  if (auth === "authenticated") return "already-connected";
+  const cookies = await partition(targetId).cookies.get({
+    domain: "facebook.com",
+  });
+  if (cookies.some((c) => ["c_user", "xs"].includes(c.name)))
+    return "already-connected";
+  return valid() && auth === "needs-login" ? undefined : "target-not-ready";
+}
+async function importMessenger(sourceId: string, targetId: AccountId) {
+  if (!findAccount(targetId) || providerFor(targetId) !== "messenger")
+    return { status: "invalid-account" };
   if (state.importing) return { status: "busy" };
   state.importing = true;
   state.notice = "Đang kiểm tra phiên Messenger từ hồ sơ đã chọn…";
@@ -604,9 +735,13 @@ async function importMessenger(sourceId: string) {
   let stage: BrowserWindow | undefined;
   let stageSession: Session | undefined;
   try {
-    if (state.statuses.messenger === "authenticated") {
-      state.notice = "Messenger đã kết nối. Phiên hiện tại được giữ nguyên.";
-      return { status: "already-connected" };
+    const destination = await messengerDestination(targetId);
+    if (destination) {
+      state.notice =
+        destination === "already-connected"
+          ? "Messenger đã có phiên. Phiên hiện tại được giữ nguyên."
+          : "Tài khoản Messenger chưa tải xong. Đợi trang đăng nhập hiện ra rồi thử lại.";
+      return { status: destination };
     }
     const cookies = await sources.loginCookies(sourceId);
     stageSession = session.fromPartition("import-" + crypto.randomUUID());
@@ -649,18 +784,27 @@ async function importMessenger(sourceId: string) {
           ? { expirationDate: c.expirationDate }
           : {}),
       }));
-    const target = views.activate("messenger");
+    const finalDestination = await messengerDestination(targetId);
+    if (finalDestination) {
+      state.notice =
+        "Phiên Messenger hiện tại được giữ nguyên. Đợi tài khoản tải xong hoặc dùng tài khoản mới để nhập phiên.";
+      return { status: finalDestination };
+    }
+    const target = views.activate(targetId);
     if (!win.contentView.children.includes(target))
       win.contentView.addChildView(target);
     layout();
     target.webContents.stop();
-    await replaceLoginCookies(partition("messenger").cookies, verified, () =>
-      verifyMessenger(target.webContents),
+    await replaceLoginCookies(
+      partition(targetId).cookies,
+      verified,
+      () => verifyMessenger(target.webContents),
+      true,
     );
     cookies.forEach((c) => (c.value = ""));
     verified.forEach((c) => (c.value = ""));
-    activate("messenger");
-    status("messenger", "authenticated");
+    activate(targetId);
+    status(targetId, "authenticated");
     state.notice =
       "Đã dùng phiên Messenger có sẵn. Anh có thể đọc và trả lời ngay.";
     return { status: "imported" };
@@ -668,9 +812,11 @@ async function importMessenger(sourceId: string) {
     const code =
       error instanceof ImportFailure
         ? error.code
-        : error instanceof Error && error.message === "rollback-failed"
-          ? "rollback-failed"
-          : "import-failed";
+        : error instanceof Error && error.message === "destination-has-session"
+          ? "already-connected"
+          : error instanceof Error && error.message === "rollback-failed"
+            ? "rollback-failed"
+            : "import-failed";
     const messages: Record<string, string> = {
       "needs-login":
         "Hồ sơ này chưa có phiên Facebook còn hiệu lực. Anh đăng nhập Facebook trên Chrome rồi thử lại.",
@@ -695,10 +841,133 @@ async function importMessenger(sourceId: string) {
     publish();
   }
 }
+function activateProvider(provider: ProviderId) {
+  const last = lastAccounts.get(provider);
+  const target =
+    (last ? findAccount(last) : undefined) ||
+    state.accounts.find((a) => a.provider === provider && !a.archived);
+  if (target) activate(target.id);
+  else showSettings();
+}
+async function changeAccount(
+  command: string,
+  arg: unknown,
+): Promise<AccountResult> {
+  if (state.importing || state.accountBusy || closing)
+    return {
+      ok: false,
+      message: "App đang xử lý tài khoản. Anh thử lại sau một chút.",
+    };
+  if (state.catalogWarning) return { ok: false, message: state.catalogWarning };
+  const data = arg as Record<string, unknown> | undefined;
+  if (!data || typeof data !== "object")
+    return { ok: false, message: "Thông tin tài khoản chưa hợp lệ." };
+  return (
+    accountOps.run(async () => {
+      state.accountBusy = true;
+      publish();
+      try {
+        let next = state.accounts.slice();
+        let added: Account | undefined;
+        const id = typeof data.id === "string" ? data.id : "";
+        if (command === "account-add") {
+          if (
+            !validProviderId(data.provider) ||
+            typeof data.name !== "string" ||
+            typeof data.avatar !== "string"
+          )
+            throw Error("invalid-account-name");
+          added = createAccount(data.provider, data.name, data.avatar);
+          next.push(added);
+        } else if (command === "account-edit") {
+          if (typeof data.name !== "string" || typeof data.avatar !== "string")
+            throw Error("invalid-account-name");
+          next = editCatalogAccount(next, id, data.name, data.avatar);
+        } else if (command === "account-move") {
+          if (data.direction !== -1 && data.direction !== 1)
+            throw Error("invalid-direction");
+          next = moveCatalogAccount(next, id, data.direction);
+        } else if (command === "account-archive") {
+          next = archiveCatalogAccount(next, id);
+          const answer = await dialog.showMessageBox(win, {
+            type: "question",
+            message: `Gỡ ${accountLabel(id)} khỏi sidebar?`,
+            detail:
+              "Dữ liệu đăng nhập vẫn được giữ trên máy. Anh có thể khôi phục tài khoản trong Cài đặt; thao tác này không đăng xuất hoặc xóa tin nhắn.",
+            buttons: ["Hủy", "Gỡ khỏi sidebar"],
+            defaultId: 0,
+            cancelId: 0,
+          });
+          if (answer.response !== 1 || closing)
+            return { ok: false, message: "Đã hủy." };
+          const view = views.peek(id);
+          if (view && !(await flushBeforeClose([view.webContents.session])))
+            throw Error("flush-failed");
+        } else if (command === "account-restore")
+          next = restoreCatalogAccount(next, id);
+        else throw Error("invalid-command");
+        if (closing) return { ok: false, message: "App đang thoát." };
+        await catalogStore.commit(next);
+        state.accounts = next;
+        for (const a of next) initializeAccount(a);
+        if (command === "account-archive") {
+          epochs.set(id, (epochs.get(id) ?? 0) + 1);
+          for (const popup of [...popups])
+            if (
+              !popup.isDestroyed() &&
+              popupProviders.get(popup.webContents) === id
+            )
+              popup.destroy();
+          testAlerts.get(id)?.close();
+          testAlerts.delete(id);
+          const view = views.remove(id);
+          if (view) {
+            win.contentView.removeChildView(view);
+            if (!view.webContents.isDestroyed()) view.webContents.close();
+          }
+          recovery.reset(id);
+          lastNotificationClicks.delete(id);
+          navigationFailed.delete(id);
+          state.statuses[id] = "idle";
+          state.unread[id] = normalizeUnread({
+            global: null,
+            loaded: null,
+            kind: providerFor(id) === "zalo" ? "messages" : "conversations",
+          });
+          if (state.active === id) {
+            state.active = (next.find(
+              (a) => !a.archived && a.provider === providerFor(id),
+            ) || next.find((a) => !a.archived))!.id;
+            if (!views.peek(state.active))
+              win.contentView.addChildView(views.activate(state.active));
+          }
+        }
+        if (command === "account-restore") {
+          const view = views.activate(id);
+          win.contentView.addChildView(view);
+        }
+        layout();
+        await persist();
+        return { ok: true, accountId: added?.id ?? id };
+      } catch {
+        const message =
+          "Chưa cập nhật được tài khoản. Anh kiểm tra tên, bảo đảm còn ít nhất một tài khoản đang dùng và thử lại. Các phiên đăng nhập vẫn được giữ.";
+        state.notice = message;
+        publish();
+        return { ok: false, message };
+      } finally {
+        state.accountBusy = false;
+        publish();
+      }
+    }) ?? { ok: false, message: "App đang xử lý tài khoản." }
+  );
+}
 async function save() {
   if (!win || win.isDestroyed()) return;
   await settingsWriter.write({
-    active: state.active,
+    active: providerFor(state.active),
+    activeAccount: state.active,
+    lastAccounts: Object.fromEntries(lastAccounts),
     collapsed: state.collapsed,
     bounds: win.getNormalBounds(),
     preferences: state.preferences,
@@ -714,6 +983,7 @@ async function quit() {
   tray?.destroy();
   for (const alert of testAlerts.values()) alert.close();
   await imports.close();
+  await accountOps.close();
   await save().catch(() => {});
   const ok = await flushBeforeClose([...configured]);
   if (!ok) {
@@ -751,8 +1021,31 @@ else {
     } catch {}
     if (typeof stored.collapsed === "boolean")
       state.collapsed = stored.collapsed;
-    if (validProviderId(stored.active)) state.active = stored.active;
-    state.preferences = normalizePreferences(stored.preferences);
+    const catalog = await catalogStore.load();
+    state.accounts = catalog.accounts;
+    state.catalogWarning = catalog.warning;
+    state.preferences = normalizePreferences(
+      stored.preferences,
+      state.accounts.map((a) => a.id),
+    );
+    for (const a of state.accounts) initializeAccount(a);
+    const selected =
+      findAccount(stored.activeAccount) ||
+      findAccount(stored.active) ||
+      state.accounts.find((a) => !a.archived)!;
+    state.active = selected.id;
+    if (stored.lastAccounts && typeof stored.lastAccounts === "object")
+      for (const provider of Object.keys(PROVIDERS) as ProviderId[]) {
+        const id = (stored.lastAccounts as Record<string, unknown>)[provider];
+        if (findAccount(id)?.provider === provider)
+          lastAccounts.set(provider, id as AccountId);
+      }
+    if (!stored.activeAccount)
+      await copyFile(
+        settingsPath,
+        settingsPath + ".pre-0.4",
+        constants.COPYFILE_EXCL,
+      ).catch(() => {});
     const bounds = restoreBounds(
       stored.bounds,
       screen.getAllDisplays().map((d) => d.workArea),
@@ -781,23 +1074,20 @@ else {
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     win.webContents.on("will-navigate", (event) => event.preventDefault());
     ipcMain.on("provider-notification-click", (event) => {
-      if (
-        closing ||
-        Date.now() - lastNotificationClick < 1000 ||
-        event.senderFrame !== event.sender.mainFrame
-      )
-        return;
+      if (closing || event.senderFrame !== event.sender.mainFrame) return;
       const provider =
         [...views.entries()].find(
           ([, v]) => v.webContents === event.sender,
         )?.[0] ?? popupProviders.get(event.sender);
       if (
         !provider ||
-        navigationPolicy(provider, event.sender.getURL()) !== "internal" ||
-        !notificationAllowed(state.preferences, provider)
+        navigationPolicy(providerFor(provider), event.sender.getURL()) !==
+          "internal" ||
+        !notificationAllowed(state.preferences, provider) ||
+        Date.now() - (lastNotificationClicks.get(provider) ?? 0) < 1000
       )
         return;
-      lastNotificationClick = Date.now();
+      lastNotificationClicks.set(provider, Date.now());
       activate(provider);
       showWindow();
     });
@@ -816,7 +1106,7 @@ else {
         case "state":
           return structuredClone(state);
         case "activate":
-          if (validProviderId(arg)) activate(arg);
+          if (findAccount(arg)) activate(arg);
           return;
         case "toggle-sidebar":
           state.collapsed = !state.collapsed;
@@ -858,15 +1148,15 @@ else {
         case "notification":
           if (
             arg &&
-            validProviderId(arg.id) &&
+            findAccount(arg.id) &&
             ["ask", "allow", "mute"].includes(arg.choice)
           ) {
-            state.preferences.notifications[arg.id as ProviderId] = arg.choice;
+            state.preferences.notifications[arg.id as AccountId] = arg.choice;
             await persist();
           }
           return;
         case "test-notification":
-          if (validProviderId(arg)) testNotification(arg);
+          if (findAccount(arg)) testNotification(arg);
           return;
         case "notification-settings":
           await shell.openExternal(
@@ -874,13 +1164,32 @@ else {
           );
           return;
         case "browser":
-          return external(PROVIDERS[state.active].entry);
-        case "import":
-          if (typeof arg === "string" && arg.length < 100)
+          return external(PROVIDERS[providerFor(state.active)].entry);
+        case "account-add":
+        case "account-edit":
+        case "account-move":
+        case "account-archive":
+        case "account-restore":
+          return changeAccount(command, arg);
+        case "import": {
+          const sourceId = typeof arg === "string" ? arg : arg?.sourceId;
+          const targetId =
+            typeof arg === "object" && arg?.accountId
+              ? arg.accountId
+              : "messenger";
+          if (
+            typeof sourceId === "string" &&
+            sourceId.length < 100 &&
+            findAccount(targetId)?.provider === "messenger" &&
+            !state.accountBusy
+          )
             return (
-              imports.run(() => importMessenger(arg)) ?? { status: "busy" }
+              imports.run(() => importMessenger(sourceId, targetId)) ?? {
+                status: "busy",
+              }
             );
-          return;
+          return { status: "invalid-account" };
+        }
         default:
           throw new Error("invalid-command");
       }
@@ -909,7 +1218,7 @@ else {
               label: PROVIDERS[id].label,
               accelerator: "CmdOrCtrl+" + (i + 1),
               click: () => {
-                activate(id);
+                activateProvider(id);
                 showWindow();
               },
             })),
@@ -960,7 +1269,7 @@ else {
     });
     await win.loadFile(join(__dirname, "index.html"));
     activate(state.active);
-    for (const id of Object.keys(PROVIDERS) as ProviderId[]) {
+    for (const { id } of state.accounts.filter((a) => !a.archived)) {
       if (!views.ids().includes(id))
         win.contentView.addChildView(views.activate(id));
     }

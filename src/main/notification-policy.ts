@@ -1,6 +1,6 @@
-import type { Preferences, ProviderId } from "../shared.ts";
+import type { Preferences, ProviderId, AccountId } from "../shared.ts";
 import { navigationPolicy } from "./security.ts";
-export function notificationAllowed(p: Preferences, id: ProviderId) {
+export function notificationAllowed(p: Preferences, id: AccountId) {
   return !p.paused && p.notifications[id] === "allow";
 }
 export function validNotificationFrame(

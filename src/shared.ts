@@ -1,4 +1,17 @@
 export type ProviderId = "zalo" | "messenger" | "telegram";
+export type AccountId = string;
+export interface Account {
+  id: AccountId;
+  provider: ProviderId;
+  name: string;
+  avatar: string;
+  archived: boolean;
+}
+export interface AccountResult {
+  ok: boolean;
+  accountId?: AccountId;
+  message?: string;
+}
 export type ProviderStatus =
   "idle" | "loading" | "ready" | "needs-login" | "authenticated" | "error";
 export const PROVIDERS = {
@@ -53,7 +66,7 @@ export type NotificationChoice = "ask" | "allow" | "mute";
 export interface Preferences {
   paused: boolean;
   shortcut: boolean;
-  notifications: Record<ProviderId, NotificationChoice>;
+  notifications: Record<AccountId, NotificationChoice>;
 }
 export interface ConnectionState {
   phase: "connecting" | "connected" | "offline" | "error";
@@ -61,18 +74,21 @@ export interface ConnectionState {
   retryAt: number | null;
 }
 export interface AppState {
+  accounts: Account[];
+  accountBusy: boolean;
+  catalogWarning: string;
   preferences: Preferences;
-  connections: Record<ProviderId, ConnectionState>;
+  connections: Record<AccountId, ConnectionState>;
   canGoBack: boolean;
   openAtLogin: boolean;
   startupAvailable: boolean;
   notificationStatus: string;
-  themes: Record<ProviderId, ShellTheme | null>;
+  themes: Record<AccountId, ShellTheme | null>;
   collapsed: boolean;
-  unread: Record<ProviderId, UnreadInfo>;
-  active: ProviderId;
+  unread: Record<AccountId, UnreadInfo>;
+  active: AccountId;
   panel: "service" | "settings";
-  statuses: Record<ProviderId, ProviderStatus>;
+  statuses: Record<AccountId, ProviderStatus>;
   profiles: ProfileSource[];
   importing: boolean;
   notice: string;
@@ -80,7 +96,20 @@ export interface AppState {
 }
 export interface DesktopBridge {
   state(): Promise<AppState>;
-  activate(id: ProviderId): Promise<void>;
+  activate(id: AccountId): Promise<void>;
+  addAccount(
+    provider: ProviderId,
+    name: string,
+    avatar: string,
+  ): Promise<AccountResult>;
+  editAccount(
+    id: AccountId,
+    name: string,
+    avatar: string,
+  ): Promise<AccountResult>;
+  moveAccount(id: AccountId, direction: -1 | 1): Promise<AccountResult>;
+  archiveAccount(id: AccountId): Promise<AccountResult>;
+  restoreAccount(id: AccountId): Promise<AccountResult>;
   reload(): Promise<void>;
   openBrowser(): Promise<void>;
   settings(): Promise<void>;
@@ -91,9 +120,12 @@ export interface DesktopBridge {
     key: "paused" | "shortcut" | "openAtLogin",
     value: boolean,
   ): Promise<void>;
-  setNotification(id: ProviderId, choice: NotificationChoice): Promise<void>;
-  testNotification(id: ProviderId): Promise<void>;
+  setNotification(id: AccountId, choice: NotificationChoice): Promise<void>;
+  testNotification(id: AccountId): Promise<void>;
   notificationSettings(): Promise<void>;
-  importMessenger(sourceId: string): Promise<{ status: string }>;
+  importMessenger(
+    sourceId: string,
+    accountId?: AccountId,
+  ): Promise<{ status: string }>;
   changed(callback: (state: AppState) => void): () => void;
 }

@@ -173,3 +173,37 @@ test("destination verification failure restores the old pair after a successful 
   assert.equal(values.get("c_user"), "old-user");
   assert.equal(values.get("xs"), "old-session");
 });
+
+for (const phase of ["existing session at commit"]) {
+  test(`protected import preserves ${phase} destination before any writes`, async () => {
+    const existing = [
+      cookie("c_user", "own-user"),
+      cookie("xs", "own-session"),
+    ];
+    let writes = 0;
+    const jar = {
+      get: async () => existing,
+      set: async () => {
+        writes++;
+      },
+      remove: async () => {
+        writes++;
+      },
+      flushStore: async () => {},
+    };
+    await assert.rejects(
+      replaceLoginCookies(
+        jar,
+        [cookie("c_user", "source-user"), cookie("xs", "source-session")],
+        undefined,
+        true,
+      ),
+      /destination-has-session/,
+    );
+    assert.equal(writes, 0);
+    assert.deepEqual(
+      existing.map((c) => c.value),
+      ["own-user", "own-session"],
+    );
+  });
+}

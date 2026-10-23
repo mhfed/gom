@@ -30,6 +30,7 @@ export async function replaceLoginCookies(
   jar: Jar,
   incoming: LoginCookie[],
   verify?: () => Promise<boolean>,
+  requireEmptyDestination = false,
 ): Promise<void> {
   if (
     incoming.length !== 2 ||
@@ -49,6 +50,8 @@ export async function replaceLoginCookies(
       ["facebook.com", ".facebook.com"].includes(x.domain ?? "") &&
       x.path === "/",
   );
+  if (requireEmptyDestination && before.length)
+    throw new Error("destination-has-session");
   try {
     for (const cookie of incoming) await jar.set(cookie);
     await jar.flushStore();

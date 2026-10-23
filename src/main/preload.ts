@@ -3,6 +3,16 @@ import type { DesktopBridge, AppState } from "../shared.ts";
 const bridge: DesktopBridge = {
   state: () => ipcRenderer.invoke("desktop", "state"),
   activate: (id) => ipcRenderer.invoke("desktop", "activate", id),
+  addAccount: (provider, name, avatar) =>
+    ipcRenderer.invoke("desktop", "account-add", { provider, name, avatar }),
+  editAccount: (id, name, avatar) =>
+    ipcRenderer.invoke("desktop", "account-edit", { id, name, avatar }),
+  moveAccount: (id, direction) =>
+    ipcRenderer.invoke("desktop", "account-move", { id, direction }),
+  archiveAccount: (id) =>
+    ipcRenderer.invoke("desktop", "account-archive", { id }),
+  restoreAccount: (id) =>
+    ipcRenderer.invoke("desktop", "account-restore", { id }),
   reload: () => ipcRenderer.invoke("desktop", "reload"),
   openBrowser: () => ipcRenderer.invoke("desktop", "browser"),
   back: () => ipcRenderer.invoke("desktop", "back"),
@@ -17,7 +27,8 @@ const bridge: DesktopBridge = {
     ipcRenderer.invoke("desktop", "notification-settings"),
   toggleSidebar: () => ipcRenderer.invoke("desktop", "toggle-sidebar"),
   settings: () => ipcRenderer.invoke("desktop", "settings"),
-  importMessenger: (id) => ipcRenderer.invoke("desktop", "import", id),
+  importMessenger: (sourceId, accountId) =>
+    ipcRenderer.invoke("desktop", "import", { sourceId, accountId }),
   changed(callback) {
     const listener = (_: unknown, state: AppState) => callback(state);
     ipcRenderer.on("state", listener);
