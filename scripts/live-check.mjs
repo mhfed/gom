@@ -29,13 +29,18 @@ async function run(command) {
       profiles: s.profiles.map((p) => ({ id: p.id, preferred: p.preferred })),
     };
   }
-  if (action === "check") {
+  if (action === "check" || action === "check-legacy") {
     for (const id of ["messenger", "telegram", "zalo"])
       await page.evaluate((id) => window.desktop.activate(id), id);
     const deadline = Date.now() + 45000;
     while (Date.now() < deadline) {
       const s = await state();
-      if (Object.values(s.statuses).every((value) => value === "authenticated"))
+      if (
+        (action === "check-legacy"
+          ? ["zalo", "messenger", "telegram"].map((id) => s.statuses[id])
+          : Object.values(s.statuses)
+        ).every((value) => value === "authenticated")
+      )
         return { passed: true, statuses: s.statuses };
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
@@ -112,7 +117,7 @@ async function run(command) {
     return {
       passed:
         changed.collapsed !== initial &&
-        geometry.width === (changed.collapsed ? 80 : 208) &&
+        geometry.width === (changed.collapsed ? 72 : 224) &&
         native[0]?.x === geometry.width &&
         JSON.stringify(before) === JSON.stringify(after),
       collapsed: changed.collapsed,
