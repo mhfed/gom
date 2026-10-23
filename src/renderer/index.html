@@ -49,7 +49,20 @@
           </div>
         </div>
         <div class="tools">
-          <button id="reload" title="Tải lại">↻</button
+          <button id="back" title="Quay lại (Cmd+[)" aria-label="Quay lại">
+            ‹</button
+          ><button
+            id="home"
+            title="Trang đầu nền tảng"
+            aria-label="Trang đầu nền tảng"
+          >
+            ⌂</button
+          ><button
+            id="reload"
+            title="Tải lại nền tảng (Cmd+R)"
+            aria-label="Tải lại nền tảng"
+          >
+            ↻</button
           ><button id="browser" title="Mở trong trình duyệt">↗</button>
         </div>
       </header>
@@ -81,11 +94,73 @@
             </p>
           </div>
         </article>
+        <article>
+          <div class="preferences-card">
+            <h3>Dùng trên macOS</h3>
+            <label class="setting-row"
+              ><span
+                >Chạy cùng macOS<small
+                  >Mở Tin Nhan khi anh đăng nhập máy.</small
+                ></span
+              ><input id="open-at-login" type="checkbox"
+            /></label>
+            <p id="startup-hint" class="hint"></p>
+            <label class="setting-row"
+              ><span
+                >Phím tắt hiện / ẩn<small
+                  >Cmd + Shift + Space · giữ nguyên các trang đang mở.</small
+                ></span
+              ><input id="global-shortcut" type="checkbox"
+            /></label>
+            <p class="hint">
+              Cmd+W ẩn cửa sổ · Cmd+Q thoát hẳn · Cmd+1/2/3 chuyển nền tảng. Tin
+              Nhan cũng có trong menu bar.
+            </p>
+          </div>
+        </article>
+        <article>
+          <div class="preferences-card">
+            <h3>Thông báo</h3>
+            <p>
+              Thông báo gốc do nền tảng gửi. Bấm thông báo để trở về nền tảng;
+              macOS có thể ẩn thông báo khi bật Tập trung.
+            </p>
+            <label class="setting-row"
+              ><span
+                >Tạm dừng thông báo<small
+                  >Áp dụng cho cả ba nền tảng.</small
+                ></span
+              ><input id="pause-notifications" type="checkbox"
+            /></label>
+            <div id="notification-providers"></div>
+            <div class="settings-actions">
+              <button class="secondary" id="notification-settings">
+                Quyền thông báo macOS ↗
+              </button>
+            </div>
+            <p class="hint" id="notification-status" role="status"></p>
+            <p class="hint">
+              Nếu chưa có thông báo thật, bật thông báo cả trong cài đặt của nền
+              tảng. Nút thử chỉ kiểm tra đường gửi của Tin Nhan tới macOS.
+            </p>
+          </div>
+        </article>
         <p id="notice" role="status"></p>
         <footer>
           Tin nhắn <span id="version"></span> · Dữ liệu đăng nhập không gửi lên
           máy chủ riêng.
         </footer>
+      </section>
+      <section id="connection-panel" hidden role="status">
+        <div class="connection-card">
+          <span class="eyebrow">KẾT NỐI</span>
+          <h2 id="connection-title"></h2>
+          <p id="connection-detail"></p>
+          <button id="retry-connection" class="primary">
+            Thử lại nền tảng này
+          </button>
+          <p class="hint">Phiên đăng nhập vẫn được giữ trên máy.</p>
+        </div>
       </section>
       <div id="service-loading">Đang kết nối…</div>
     </main>

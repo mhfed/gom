@@ -49,7 +49,24 @@ export interface ShellTheme {
   text: string;
   muted: string;
 }
+export type NotificationChoice = "ask" | "allow" | "mute";
+export interface Preferences {
+  paused: boolean;
+  shortcut: boolean;
+  notifications: Record<ProviderId, NotificationChoice>;
+}
+export interface ConnectionState {
+  phase: "connecting" | "connected" | "offline" | "error";
+  reason: "network" | "crashed" | "blocked" | "load-failed" | null;
+  retryAt: number | null;
+}
 export interface AppState {
+  preferences: Preferences;
+  connections: Record<ProviderId, ConnectionState>;
+  canGoBack: boolean;
+  openAtLogin: boolean;
+  startupAvailable: boolean;
+  notificationStatus: string;
   themes: Record<ProviderId, ShellTheme | null>;
   collapsed: boolean;
   unread: Record<ProviderId, UnreadInfo>;
@@ -68,6 +85,15 @@ export interface DesktopBridge {
   openBrowser(): Promise<void>;
   settings(): Promise<void>;
   toggleSidebar(): Promise<void>;
+  back(): Promise<void>;
+  home(): Promise<void>;
+  setPreference(
+    key: "paused" | "shortcut" | "openAtLogin",
+    value: boolean,
+  ): Promise<void>;
+  setNotification(id: ProviderId, choice: NotificationChoice): Promise<void>;
+  testNotification(id: ProviderId): Promise<void>;
+  notificationSettings(): Promise<void>;
   importMessenger(sourceId: string): Promise<{ status: string }>;
   changed(callback: (state: AppState) => void): () => void;
 }

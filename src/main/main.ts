@@ -1,3 +1,15 @@
+import { RecoveryPolicy, type FailureReason } from "./recovery.ts";
+import {
+  defaultPreferences,
+  normalizePreferences,
+  restoreBounds,
+  SettingsWriter,
+} from "./preferences.ts";
+import {
+  notificationAllowed,
+  validNotificationFrame,
+  hasUnread,
+} from "./notification-policy.ts";
 import { normalizeTheme, themeScript } from "./theme.ts";
 import { layoutViews } from "./layout.ts";
 import { normalizeUnread } from "./unread.ts";
@@ -12,12 +24,19 @@ import {
   dialog,
   shell,
   Menu,
+  Tray,
+  nativeImage,
+  globalShortcut,
+  Notification,
+  screen,
+  net,
+  powerMonitor,
   type Session,
   type WebContents,
 } from "electron";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { readFile, mkdir, writeFile, rename } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import {
   PROVIDERS,
   type ProviderId,
@@ -37,7 +56,6 @@ app.setName("Tin Nhan");
 app.setPath("userData", join(app.getPath("appData"), "TinNhanDesktop"));
 const sources = new ChromeSources(
   join(homedir(), "Library/Application Support/Google/Chrome"),
-  "nmhieu04091999@gmail.com",
 );
 let win: BrowserWindow;
 let closing = false,
@@ -46,7 +64,32 @@ let poll: ReturnType<typeof setInterval>;
 const configured = new Set<Session>();
 const imports = new OperationGate();
 const popups = new Set<BrowserWindow>();
+const popupProviders = new Map<WebContents, ProviderId>();
+const recovery = new RecoveryPolicy();
+const detecting = new Set<ProviderId>();
+const navigationFailed = new Set<ProviderId>();
+const epochs = new Map<ProviderId, number>();
+let tray: Tray | undefined;
+let traySignature = "";
+let sleeping = false;
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+let wakeTimer: ReturnType<typeof setTimeout> | undefined;
+let lastNotificationClick = 0;
+const permissionPrompts = new Set<ProviderId>();
+const testAlerts = new Map<ProviderId, Notification>();
+const SHORTCUT = "CommandOrControl+Shift+Space";
 const state: AppState = {
+  preferences: defaultPreferences(),
+  connections: {
+    zalo: { phase: "connecting", reason: null, retryAt: null },
+    messenger: { phase: "connecting", reason: null, retryAt: null },
+    telegram: { phase: "connecting", reason: null, retryAt: null },
+  },
+  canGoBack: false,
+  openAtLogin: false,
+  startupAvailable: app.isPackaged,
+  notificationStatus:
+    "Thông báo gốc do từng nền tảng gửi; macOS quyết định hiển thị.",
   themes: { zalo: null, messenger: null, telegram: null },
   collapsed: false,
   unread: {
@@ -71,10 +114,22 @@ const state: AppState = {
   version: app.getVersion(),
 };
 const settingsPath = join(app.getPath("userData"), "window.json");
+const settingsWriter = new SettingsWriter(settingsPath);
 const views = new ViewRegistry<WebContentsView>(createView);
 const partition = (id: ProviderId) => session.fromPartition("persist:" + id);
 const publish = () => {
-  if (win && !win.isDestroyed()) win.webContents.send("state", state);
+  if (win && !win.isDestroyed()) {
+    const active = [...views.entries()].find(
+      ([id]) => id === state.active,
+    )?.[1];
+    state.canGoBack =
+      !!active &&
+      !active.webContents.isDestroyed() &&
+      active.webContents.navigationHistory.canGoBack();
+    win.webContents.send("state", state);
+    app.dock?.setBadge(hasUnread(Object.values(state.unread)) ? "•" : "");
+    updateTray();
+  }
 };
 function status(id: ProviderId, value: ProviderStatus) {
   state.statuses[id] = value;
@@ -101,11 +156,45 @@ async function external(url: string) {
 function setupSession(ses: Session, id: ProviderId) {
   if (configured.has(ses)) return;
   configured.add(ses);
-  ses.setPermissionRequestHandler((contents, permission, callback) => {
-    const valid = navigationPolicy(id, contents.getURL()) === "internal";
-    if (!valid || !["notifications", "media"].includes(permission)) {
+  const owned = (contents: WebContents | null) =>
+    !!contents &&
+    ([...views.entries()].some(
+      ([provider, view]) => provider === id && view.webContents === contents,
+    ) ||
+      [...popups].some(
+        (popup) =>
+          !popup.isDestroyed() &&
+          popup.webContents === contents &&
+          navigationPolicy(id, contents.getURL()) === "internal",
+      ));
+  ses.setPermissionRequestHandler((contents, permission, callback, details) => {
+    const valid = validNotificationFrame(
+      id,
+      details.requestingUrl,
+      details.isMainFrame,
+      owned(contents),
+    );
+    if (!valid || closing || !["notifications", "media"].includes(permission)) {
       callback(false);
       return;
+    }
+    if (permission === "notifications") {
+      if (
+        state.preferences.paused ||
+        state.preferences.notifications[id] === "mute"
+      ) {
+        callback(false);
+        return;
+      }
+      if (state.preferences.notifications[id] === "allow") {
+        callback(true);
+        return;
+      }
+      if (permissionPrompts.has(id)) {
+        callback(false);
+        return;
+      }
+      permissionPrompts.add(id);
     }
     void dialog
       .showMessageBox(win, {
@@ -115,9 +204,34 @@ function setupSession(ses: Session, id: ProviderId) {
         defaultId: 0,
         cancelId: 0,
       })
-      .then((r) => callback(r.response === 1));
+      .then(async (r) => {
+        if (permission === "notifications" && !closing) {
+          state.preferences.notifications[id] =
+            r.response === 1 ? "allow" : "mute";
+          await persist();
+        }
+        callback(
+          !closing &&
+            r.response === 1 &&
+            (permission !== "notifications" ||
+              notificationAllowed(state.preferences, id)),
+        );
+      })
+      .catch(() => callback(false))
+      .finally(() => permissionPrompts.delete(id));
   });
-  ses.setPermissionCheckHandler(() => false);
+  ses.setPermissionCheckHandler(
+    (contents, permission, origin, details) =>
+      permission === "notifications" &&
+      !closing &&
+      validNotificationFrame(
+        id,
+        details.requestingUrl || origin,
+        details.isMainFrame,
+        owned(contents),
+      ) &&
+      notificationAllowed(state.preferences, id),
+  );
   ses.on("will-download", (_event, item) => {
     item.setSaveDialogOptions({ title: "Lưu tệp từ " + PROVIDERS[id].label });
   });
@@ -129,10 +243,13 @@ function guard(contents: WebContents, id: ProviderId) {
       void external(url);
     }
   });
-  contents.on("will-redirect", (event, url) => {
-    if (navigationPolicy(id, url) !== "internal") {
+  contents.on("will-redirect", (event, url, _inPlace, isMainFrame) => {
+    if (navigationPolicy(id, event.url ?? url) !== "internal") {
       event.preventDefault();
-      status(id, "error");
+      const principal = [...views.entries()].some(
+        ([provider, view]) => provider === id && view.webContents === contents,
+      );
+      if ((event.isMainFrame ?? isMainFrame) && principal) fail(id, "blocked");
     }
   });
   contents.setWindowOpenHandler(({ url }) => {
@@ -144,6 +261,7 @@ function guard(contents: WebContents, id: ProviderId) {
           height: 800,
           webPreferences: {
             session: contents.session,
+            preload: join(__dirname, "platform-preload.cjs"),
             nodeIntegration: false,
             contextIsolation: true,
             sandbox: true,
@@ -155,8 +273,13 @@ function guard(contents: WebContents, id: ProviderId) {
   });
   contents.on("did-create-window", (popup) => {
     popups.add(popup);
+    const popupContents = popup.webContents;
+    popupProviders.set(popupContents, id);
     guard(popup.webContents, id);
-    popup.on("closed", () => popups.delete(popup));
+    popup.on("closed", () => {
+      popupProviders.delete(popupContents);
+      popups.delete(popup);
+    });
   });
 }
 function createView(id: ProviderId) {
@@ -165,6 +288,7 @@ function createView(id: ProviderId) {
   const view = new WebContentsView({
     webPreferences: {
       session: ses,
+      preload: join(__dirname, "platform-preload.cjs"),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
@@ -174,18 +298,50 @@ function createView(id: ProviderId) {
   });
   view.setVisible(false);
   guard(view.webContents, id);
-  view.webContents.on("did-start-loading", () => status(id, "loading"));
+  view.webContents.on(
+    "did-start-navigation",
+    (_e, _url, inPlace, isMainFrame) => {
+      if (isMainFrame && !inPlace) {
+        navigationFailed.delete(id);
+        epochs.set(id, (epochs.get(id) ?? 0) + 1);
+      }
+    },
+  );
+  view.webContents.on("did-start-loading", () => {
+    state.connections[id] = {
+      phase: isOnline() ? "connecting" : "offline",
+      reason: null,
+      retryAt: null,
+    };
+    status(id, "loading");
+  });
+  view.webContents.on("did-navigate-in-page", () => publish());
   view.webContents.on("did-finish-load", () => {
+    if (navigationFailed.has(id)) return;
+    recovery.loaded(id, Date.now());
+    state.connections[id] = {
+      phase: isOnline() ? "connected" : "offline",
+      reason: null,
+      retryAt: null,
+    };
+    layout();
     status(id, "ready");
     void detect(id, view.webContents);
   });
   view.webContents.on("did-fail-load", (_e, code, _desc, _url, main) => {
-    if (main && code !== -3) status(id, "error");
+    if (main && code !== -3)
+      fail(
+        id,
+        [-106, -105, -102, -101, -100, -118].includes(code)
+          ? "network"
+          : "load-failed",
+      );
   });
-  view.webContents.on("render-process-gone", () => status(id, "error"));
-  void view.webContents
-    .loadURL(PROVIDERS[id].entry)
-    .catch(() => status(id, "error"));
+  view.webContents.on("render-process-gone", () => {
+    epochs.set(id, (epochs.get(id) ?? 0) + 1);
+    fail(id, "crashed");
+  });
+  void view.webContents.loadURL(PROVIDERS[id].entry).catch(() => {});
   return view;
 }
 function layout() {
@@ -197,7 +353,9 @@ function layout() {
     height,
     state.collapsed,
     state.active,
-    state.panel,
+    state.panel === "service" && state.connections[state.active].reason
+      ? "settings"
+      : state.panel,
   );
 }
 function activate(id: ProviderId) {
@@ -213,18 +371,27 @@ function activate(id: ProviderId) {
 
 async function detect(id: ProviderId, contents: WebContents) {
   if (
+    closing ||
+    sleeping ||
+    detecting.has(id) ||
+    recovery.reason(id) ||
     contents.isDestroyed() ||
     contents.isLoadingMainFrame() ||
     navigationPolicy(id, contents.getURL()) !== "internal"
   )
     return;
+  detecting.add(id);
+  const epoch = epochs.get(id) ?? 0;
+  const valid = () =>
+    !closing &&
+    !contents.isDestroyed() &&
+    !contents.isLoadingMainFrame() &&
+    epoch === (epochs.get(id) ?? 0) &&
+    !recovery.reason(id);
   try {
     const theme = normalizeTheme(await contents.executeJavaScript(themeScript));
-    if (theme) state.themes[id] = theme;
     const result = await contents.executeJavaScript(authScript);
-    if (["ready", "needs-login", "authenticated"].includes(result))
-      status(id, result);
-    state.unread[id] = normalizeUnread(
+    const unread = normalizeUnread(
       result === "authenticated"
         ? await contents.executeJavaScript(unreadScript)
         : {
@@ -233,12 +400,188 @@ async function detect(id: ProviderId, contents: WebContents) {
             kind: id === "zalo" ? "messages" : "conversations",
           },
     );
-    // Warm hidden clients only during startup; restore real background visibility
-    // once authenticated so inactive conversations keep normal read behavior.
+    if (!valid()) return;
+    if (theme) state.themes[id] = theme;
+    state.unread[id] = unread;
+    if (["ready", "needs-login", "authenticated"].includes(result))
+      state.statuses[id] = result;
     if (result === "authenticated" && !contents.getBackgroundThrottling())
       contents.setBackgroundThrottling(true);
     publish();
-  } catch {}
+  } catch {
+  } finally {
+    detecting.delete(id);
+  }
+}
+function isOnline() {
+  return !sleeping && net.isOnline();
+}
+function fail(id: ProviderId, reason: FailureReason) {
+  if (closing) return;
+  navigationFailed.add(id);
+  epochs.set(id, (epochs.get(id) ?? 0) + 1);
+  recovery.fail(id, reason, Date.now());
+  state.connections[id] = {
+    phase: isOnline() ? "error" : "offline",
+    reason,
+    retryAt: recovery.retryAt(id),
+  };
+  status(id, "error");
+  layout();
+}
+function reloadProvider(id: ProviderId, manual = false, home = false) {
+  if (closing || state.importing) return;
+  const view = views.activate(id);
+  if (view.webContents.isDestroyed()) return;
+  if (manual) recovery.reset(id);
+  epochs.set(id, (epochs.get(id) ?? 0) + 1);
+  if (home || navigationPolicy(id, view.webContents.getURL()) !== "internal")
+    void view.webContents.loadURL(PROVIDERS[id].entry).catch(() => {});
+  else view.webContents.reload();
+}
+function tick() {
+  if (closing || sleeping) return;
+  const online = isOnline();
+  for (const [id] of views.entries()) {
+    const c = state.connections[id];
+    if (!online) c.phase = "offline";
+    else if (c.phase === "offline")
+      c.phase = recovery.reason(id)
+        ? "error"
+        : state.statuses[id] === "loading"
+          ? "connecting"
+          : "connected";
+  }
+  if (!state.importing)
+    for (const id of recovery.due(Date.now(), online)) reloadProvider(id);
+  for (const [id, view] of views.entries()) void detect(id, view.webContents);
+  publish();
+}
+function showWindow() {
+  if (!win || win.isDestroyed() || closing) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+  if (state.panel === "service" && !state.connections[state.active].reason)
+    views.activate(state.active).webContents.focus();
+  else win.webContents.focus();
+}
+function showSettings() {
+  state.panel = "settings";
+  layout();
+  publish();
+  showWindow();
+}
+function toggleWindow() {
+  if (win.isVisible() && win.isFocused()) win.hide();
+  else showWindow();
+}
+function updateTray() {
+  if (!tray || tray.isDestroyed()) return;
+  const signature = `${state.preferences.paused}:${hasUnread(Object.values(state.unread))}`;
+  if (signature === traySignature) return;
+  traySignature = signature;
+  tray.setToolTip(
+    "Tin Nhan" +
+      (hasUnread(Object.values(state.unread)) ? " · Có mục chưa đọc" : ""),
+  );
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: "Mở Tin Nhan", click: showWindow },
+      ...(["zalo", "messenger", "telegram"] as ProviderId[]).map((id) => ({
+        label: PROVIDERS[id].label,
+        click: () => {
+          activate(id);
+          showWindow();
+        },
+      })),
+      { type: "separator" },
+      {
+        label: "Tạm dừng thông báo",
+        type: "checkbox",
+        checked: state.preferences.paused,
+        click: () => {
+          state.preferences.paused = !state.preferences.paused;
+          void persist();
+        },
+      },
+      { label: "Cài đặt…", click: showSettings },
+      { type: "separator" },
+      { label: "Thoát Tin Nhan", click: () => app.quit() },
+    ]),
+  );
+}
+function configureShortcut(enabled: boolean) {
+  if (!enabled) {
+    globalShortcut.unregister(SHORTCUT);
+    state.preferences.shortcut = false;
+    return;
+  }
+  if (
+    !globalShortcut.isRegistered(SHORTCUT) &&
+    !globalShortcut.register(SHORTCUT, toggleWindow)
+  ) {
+    state.preferences.shortcut = false;
+    state.notice =
+      "Phím tắt Cmd+Shift+Space đang được app khác dùng. Anh có thể bật lại sau.";
+  } else state.preferences.shortcut = true;
+}
+async function persist() {
+  publish();
+  try {
+    await save();
+  } catch {
+    state.notice =
+      "Chưa lưu được cài đặt. Anh kiểm tra dung lượng/quyền ghi rồi thử lại.";
+    publish();
+  }
+}
+function scheduleSave() {
+  if (closing) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => void persist(), 500);
+}
+function testNotification(id: ProviderId) {
+  if (!notificationAllowed(state.preferences, id)) {
+    state.notificationStatus =
+      "Anh chọn Cho phép và bỏ tạm dừng trước khi thử thông báo.";
+    publish();
+    return;
+  }
+  if (!Notification.isSupported()) {
+    state.notificationStatus = "macOS hiện không hỗ trợ thông báo cho app.";
+    publish();
+    return;
+  }
+  testAlerts.get(id)?.close();
+  const notification = new Notification({
+    title: PROVIDERS[id].label + " · Tin Nhan",
+    body: "Thông báo thử. Bấm để mở nền tảng này.",
+    silent: true,
+  });
+  testAlerts.set(id, notification);
+  notification.on("click", () => {
+    if (!closing) {
+      activate(id);
+      showWindow();
+    }
+  });
+  notification.on("show", () => {
+    state.notificationStatus =
+      "Đã gửi thông báo thử tới macOS. Nếu chưa thấy, kiểm tra quyền thông báo và chế độ Tập trung.";
+    publish();
+  });
+  notification.on("failed", () => {
+    state.notificationStatus =
+      "macOS chưa hiển thị được thông báo. Kiểm tra quyền thông báo cho Tin Nhan trong Cài đặt hệ thống.";
+    publish();
+  });
+  notification.on("close", () => {
+    if (testAlerts.get(id) === notification) testAlerts.delete(id);
+  });
+  state.notificationStatus = "Đang gửi thông báo thử tới macOS…";
+  publish();
+  notification.show();
 }
 async function verifyMessenger(contents: WebContents) {
   await contents.loadURL(PROVIDERS.messenger.entry);
@@ -353,21 +696,23 @@ async function importMessenger(sourceId: string) {
   }
 }
 async function save() {
-  await mkdir(app.getPath("userData"), { recursive: true });
-  await writeFile(
-    settingsPath + ".tmp",
-    JSON.stringify({
-      active: state.active,
-      collapsed: state.collapsed,
-      bounds: win.getBounds(),
-    }),
-  );
-  await rename(settingsPath + ".tmp", settingsPath);
+  if (!win || win.isDestroyed()) return;
+  await settingsWriter.write({
+    active: state.active,
+    collapsed: state.collapsed,
+    bounds: win.getNormalBounds(),
+    preferences: state.preferences,
+  });
 }
 async function quit() {
   if (closing) return;
   closing = true;
   clearInterval(poll);
+  clearTimeout(saveTimer);
+  clearTimeout(wakeTimer);
+  globalShortcut.unregisterAll();
+  tray?.destroy();
+  for (const alert of testAlerts.values()) alert.close();
   await imports.close();
   await save().catch(() => {});
   const ok = await flushBeforeClose([...configured]);
@@ -389,20 +734,8 @@ async function quit() {
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
-  app.on("activate", () => {
-    if (win && !win.isDestroyed() && !closing) {
-      if (win.isMinimized()) win.restore();
-      win.show();
-      win.focus();
-    }
-  });
-  app.on("second-instance", () => {
-    if (win) {
-      if (win.isMinimized()) win.restore();
-      win.show();
-      win.focus();
-    }
-  });
+  app.on("activate", showWindow);
+  app.on("second-instance", showWindow);
   app.on("before-quit", (event) => {
     if (!closed && win) {
       event.preventDefault();
@@ -410,26 +743,30 @@ else {
     }
   });
   app.whenReady().then(async () => {
-    let bounds = { width: 1280, height: 840 };
+    let stored: Record<string, unknown> = {};
     try {
-      const stored = JSON.parse(await readFile(settingsPath, "utf8"));
-      if (typeof stored.collapsed === "boolean")
-        state.collapsed = stored.collapsed;
-      if (validProviderId(stored.active)) state.active = stored.active;
-      if (
-        Number.isFinite(stored.bounds?.width) &&
-        Number.isFinite(stored.bounds?.height)
-      )
-        bounds = {
-          width: Math.max(940, Math.min(stored.bounds.width, 1800)),
-          height: Math.max(640, Math.min(stored.bounds.height, 1200)),
-        };
+      const value = JSON.parse(await readFile(settingsPath, "utf8"));
+      if (value && typeof value === "object" && !Array.isArray(value))
+        stored = value;
     } catch {}
+    if (typeof stored.collapsed === "boolean")
+      state.collapsed = stored.collapsed;
+    if (validProviderId(stored.active)) state.active = stored.active;
+    state.preferences = normalizePreferences(stored.preferences);
+    const bounds = restoreBounds(
+      stored.bounds,
+      screen.getAllDisplays().map((d) => d.workArea),
+    );
+    if (app.isPackaged) {
+      try {
+        state.openAtLogin = app.getLoginItemSettings().openAtLogin;
+      } catch {}
+    }
     state.profiles = await sources.list();
     win = new BrowserWindow({
       ...bounds,
-      minWidth: 940,
-      minHeight: 640,
+      minWidth: Math.min(940, bounds.width),
+      minHeight: Math.min(640, bounds.height),
       title: "Tin nhắn",
       titleBarStyle: "hiddenInset",
       trafficLightPosition: { x: 20, y: 21 },
@@ -443,6 +780,27 @@ else {
     });
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     win.webContents.on("will-navigate", (event) => event.preventDefault());
+    ipcMain.on("provider-notification-click", (event) => {
+      if (
+        closing ||
+        Date.now() - lastNotificationClick < 1000 ||
+        event.senderFrame !== event.sender.mainFrame
+      )
+        return;
+      const provider =
+        [...views.entries()].find(
+          ([, v]) => v.webContents === event.sender,
+        )?.[0] ?? popupProviders.get(event.sender);
+      if (
+        !provider ||
+        navigationPolicy(provider, event.sender.getURL()) !== "internal" ||
+        !notificationAllowed(state.preferences, provider)
+      )
+        return;
+      lastNotificationClick = Date.now();
+      activate(provider);
+      showWindow();
+    });
     ipcMain.handle("desktop", async (event, command, arg) => {
       if (
         !trustedShellRequest(
@@ -453,6 +811,7 @@ else {
         )
       )
         throw new Error("untrusted");
+      if (closing && command !== "state") return;
       switch (command) {
         case "state":
           return structuredClone(state);
@@ -465,12 +824,54 @@ else {
           publish();
           return;
         case "settings":
-          state.panel = "settings";
-          layout();
-          publish();
+          showSettings();
           return;
         case "reload":
-          views.activate(state.active).webContents.reload();
+          reloadProvider(state.active, true);
+          return;
+        case "back": {
+          const c = views.activate(state.active).webContents;
+          if (!c.isDestroyed() && c.navigationHistory.canGoBack())
+            c.navigationHistory.goBack();
+          return;
+        }
+        case "home":
+          reloadProvider(state.active, true, true);
+          return;
+        case "preference": {
+          if (!arg || typeof arg !== "object" || typeof arg.value !== "boolean")
+            return;
+          if (arg.key === "paused") state.preferences.paused = arg.value;
+          else if (arg.key === "shortcut") configureShortcut(arg.value);
+          else if (arg.key === "openAtLogin" && app.isPackaged) {
+            try {
+              app.setLoginItemSettings({ openAtLogin: arg.value });
+              state.openAtLogin = app.getLoginItemSettings().openAtLogin;
+            } catch {
+              state.notice =
+                "Chưa đổi được chạy cùng macOS. Anh kiểm tra mục Đăng nhập trong Cài đặt hệ thống.";
+            }
+          } else return;
+          await persist();
+          return;
+        }
+        case "notification":
+          if (
+            arg &&
+            validProviderId(arg.id) &&
+            ["ask", "allow", "mute"].includes(arg.choice)
+          ) {
+            state.preferences.notifications[arg.id as ProviderId] = arg.choice;
+            await persist();
+          }
+          return;
+        case "test-notification":
+          if (validProviderId(arg)) testNotification(arg);
+          return;
+        case "notification-settings":
+          await shell.openExternal(
+            "x-apple.systempreferences:com.apple.Notifications-Settings.extension",
+          );
           return;
         case "browser":
           return external(PROVIDERS[state.active].entry);
@@ -494,11 +895,7 @@ else {
             {
               label: "Tài khoản & cài đặt",
               accelerator: "CmdOrCtrl+,",
-              click: () => {
-                state.panel = "settings";
-                layout();
-                publish();
-              },
+              click: showSettings,
             },
             { type: "separator" },
             { role: "quit" },
@@ -507,11 +904,35 @@ else {
         { role: "editMenu" },
         {
           label: "Không gian",
-          submenu: (Object.keys(PROVIDERS) as ProviderId[]).map((id, i) => ({
-            label: PROVIDERS[id].label,
-            accelerator: "CmdOrCtrl+" + (i + 1),
-            click: () => activate(id),
-          })),
+          submenu: [
+            ...(Object.keys(PROVIDERS) as ProviderId[]).map((id, i) => ({
+              label: PROVIDERS[id].label,
+              accelerator: "CmdOrCtrl+" + (i + 1),
+              click: () => {
+                activate(id);
+                showWindow();
+              },
+            })),
+            { type: "separator" },
+            {
+              label: "Quay lại",
+              accelerator: "CmdOrCtrl+[",
+              click: () => {
+                const c = views.activate(state.active).webContents;
+                if (c.navigationHistory.canGoBack())
+                  c.navigationHistory.goBack();
+              },
+            },
+            {
+              label: "Trang đầu nền tảng",
+              click: () => reloadProvider(state.active, true, true),
+            },
+            {
+              label: "Tải lại nền tảng",
+              accelerator: "CmdOrCtrl+R",
+              click: () => reloadProvider(state.active, true),
+            },
+          ],
         },
         {
           label: "Cửa sổ",
@@ -525,11 +946,16 @@ else {
         },
       ]),
     );
-    win.on("resize", layout);
+    win.on("resize", () => {
+      layout();
+      scheduleSave();
+    });
+    win.on("move", scheduleSave);
     win.on("close", (event) => {
       if (!closed) {
         event.preventDefault();
         win.hide();
+        scheduleSave();
       }
     });
     await win.loadFile(join(__dirname, "index.html"));
@@ -539,9 +965,22 @@ else {
         win.contentView.addChildView(views.activate(id));
     }
     layout();
-    poll = setInterval(() => {
-      for (const [id, view] of views.entries())
-        void detect(id, view.webContents);
-    }, 4000);
+    const image = nativeImage
+      .createFromPath(join(__dirname, "trayTemplate.png"))
+      .resize({ width: 18, height: 18 });
+    image.setTemplateImage(true);
+    tray = new Tray(image);
+    updateTray();
+    configureShortcut(state.preferences.shortcut);
+    powerMonitor.on("suspend", () => {
+      sleeping = true;
+    });
+    powerMonitor.on("resume", () => {
+      sleeping = false;
+      clearTimeout(wakeTimer);
+      wakeTimer = setTimeout(tick, 1200);
+    });
+    poll = setInterval(tick, 4000);
+    tick();
   });
 }

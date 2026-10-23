@@ -488,3 +488,68 @@ select {
 #notice {
   color: var(--ink);
 }
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.setting-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+  margin-top: 4px;
+}
+.setting-row input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+.notification-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) minmax(130px, 180px) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  font-size: 12px;
+}
+.notification-row select {
+  margin: 0;
+  padding: 9px 12px;
+}
+.secondary {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  padding: 9px 14px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.settings-actions {
+  margin-top: 12px;
+}
+#connection-panel {
+  position: absolute;
+  inset: 76px 0 0;
+  padding: 44px;
+  overflow: auto;
+  background: var(--cream);
+}
+.connection-card {
+  max-width: 540px;
+  margin: 8vh auto;
+}
+.connection-card .eyebrow {
+  padding: 0;
+}
+.connection-card p {
+  color: var(--muted);
+}
+.connection-card .hint {
+  font-size: 11px;
+}

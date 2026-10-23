@@ -44,6 +44,17 @@ for (const id of Object.keys(PROVIDERS) as ProviderId[]) {
   b.innerHTML = `<img class="logo" src="logos/${icons[id]}" alt=""/><span class="provider-label">${PROVIDERS[id].label}</span><span class="unread" aria-hidden="true">—</span><i class="dot" aria-hidden="true"></i>`;
   b.onclick = () => void window.desktop.activate(id);
   $("providers").append(b);
+  const row = document.createElement("div");
+  row.className = "notification-row";
+  row.innerHTML = `<label for="notification-${id}">${PROVIDERS[id].label}</label><select id="notification-${id}" aria-label="Thông báo ${PROVIDERS[id].label}"><option value="ask">Hỏi lần đầu</option><option value="allow">Cho phép</option><option value="mute">Tắt thông báo</option></select><button class="secondary" id="test-${id}" aria-label="Thử thông báo ${PROVIDERS[id].label}">Thử</button>`;
+  row.querySelector("select")!.onchange = (e) =>
+    void window.desktop.setNotification(
+      id,
+      (e.target as HTMLSelectElement).value as "ask" | "allow" | "mute",
+    );
+  row.querySelector("button")!.onclick = () =>
+    void window.desktop.testNotification(id);
+  $("notification-providers").append(row);
 }
 function render(state: AppState) {
   current = state;
@@ -92,8 +103,45 @@ function render(state: AppState) {
   $("subtitle").textContent = settings
     ? "Không gian nhắn tin cá nhân của anh"
     : labels[state.statuses[state.active]];
+  const connection = state.connections[state.active];
+  if (!settings && connection.phase === "offline")
+    $("subtitle").textContent =
+      "Máy đang ngoại tuyến · Phiên đăng nhập vẫn được giữ";
+  else if (!settings && connection.phase === "error")
+    $("subtitle").textContent =
+      "Kết nối gián đoạn · Có thể thử lại riêng nền tảng";
+  $("back").toggleAttribute("disabled", !state.canGoBack || settings);
+  const failed = !settings && !!connection.reason;
+  $("connection-panel").hidden = !failed;
+  $("connection-title").textContent =
+    connection.reason === "crashed"
+      ? "Trang vừa dừng hoạt động."
+      : connection.reason === "blocked"
+        ? "Liên kết chuyển hướng chưa được hỗ trợ."
+        : "Chưa kết nối được nền tảng.";
+  $("connection-detail").textContent =
+    connection.phase === "offline"
+      ? "Anh kết nối lại mạng; app sẽ kiểm tra lại khi có mạng."
+      : connection.retryAt
+        ? "App đang tự thử lại có giới hạn. Các nền tảng khác vẫn hoạt động bình thường."
+        : "Anh có thể thử lại hoặc về trang đầu. App không xóa phiên đăng nhập.";
+  $<HTMLInputElement>("open-at-login").checked = state.openAtLogin;
+  $<HTMLInputElement>("open-at-login").disabled = !state.startupAvailable;
+  $("startup-hint").textContent = state.startupAvailable
+    ? "Có thể quản lý thêm trong Cài đặt hệ thống → Cài đặt chung → Mục đăng nhập."
+    : "Tùy chọn này dùng trong bản app đã đóng gói.";
+  $<HTMLInputElement>("global-shortcut").checked = state.preferences.shortcut;
+  $<HTMLInputElement>("pause-notifications").checked = state.preferences.paused;
+  $("notification-status").textContent = state.notificationStatus;
+  for (const id of Object.keys(PROVIDERS) as ProviderId[]) {
+    $<HTMLSelectElement>("notification-" + id).value =
+      state.preferences.notifications[id];
+    $<HTMLButtonElement>("test-" + id).disabled =
+      state.preferences.paused ||
+      state.preferences.notifications[id] !== "allow";
+  }
   $("settings-panel").hidden = !settings;
-  $("service-loading").hidden = settings;
+  $("service-loading").hidden = settings || failed;
   $("notice").textContent = state.notice;
   $("version").textContent = state.version;
   const select = $<HTMLSelectElement>("profiles");
@@ -125,3 +173,24 @@ void window.desktop.state().then(render);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (current) render(current);
 });
+
+$("back").onclick = () => void window.desktop.back();
+$("home").onclick = () => void window.desktop.home();
+$("retry-connection").onclick = () => void window.desktop.reload();
+$("open-at-login").onchange = (e) =>
+  void window.desktop.setPreference(
+    "openAtLogin",
+    (e.target as HTMLInputElement).checked,
+  );
+$("global-shortcut").onchange = (e) =>
+  void window.desktop.setPreference(
+    "shortcut",
+    (e.target as HTMLInputElement).checked,
+  );
+$("pause-notifications").onchange = (e) =>
+  void window.desktop.setPreference(
+    "paused",
+    (e.target as HTMLInputElement).checked,
+  );
+$("notification-settings").onclick = () =>
+  void window.desktop.notificationSettings();

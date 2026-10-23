@@ -5,6 +5,16 @@ const bridge: DesktopBridge = {
   activate: (id) => ipcRenderer.invoke("desktop", "activate", id),
   reload: () => ipcRenderer.invoke("desktop", "reload"),
   openBrowser: () => ipcRenderer.invoke("desktop", "browser"),
+  back: () => ipcRenderer.invoke("desktop", "back"),
+  home: () => ipcRenderer.invoke("desktop", "home"),
+  setPreference: (key, value) =>
+    ipcRenderer.invoke("desktop", "preference", { key, value }),
+  setNotification: (id, choice) =>
+    ipcRenderer.invoke("desktop", "notification", { id, choice }),
+  testNotification: (id) =>
+    ipcRenderer.invoke("desktop", "test-notification", id),
+  notificationSettings: () =>
+    ipcRenderer.invoke("desktop", "notification-settings"),
   toggleSidebar: () => ipcRenderer.invoke("desktop", "toggle-sidebar"),
   settings: () => ipcRenderer.invoke("desktop", "settings"),
   importMessenger: (id) => ipcRenderer.invoke("desktop", "import", id),
