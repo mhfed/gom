@@ -4,19 +4,19 @@ import { providerBounds } from "../src/main/layout.ts";
 import { normalizeUnread, badgeText } from "../src/main/unread.ts";
 test("collapsed and expanded sidebar bounds preserve the full remote view height", () => {
   assert.deepEqual(providerBounds(1024, 720, false), {
-    x: 208,
+    x: 224,
     y: 76,
-    width: 816,
+    width: 800,
     height: 644,
   });
   assert.deepEqual(providerBounds(1024, 720, true), {
-    x: 80,
+    x: 72,
     y: 76,
-    width: 944,
+    width: 952,
     height: 644,
   });
   assert.deepEqual(providerBounds(40, 40, true), {
-    x: 80,
+    x: 72,
     y: 76,
     width: 0,
     height: 0,
@@ -164,7 +164,7 @@ test("background views keep a real viewport so responsive clients can render the
     updates.every(
       (x) =>
         JSON.stringify(x.bounds) ===
-        JSON.stringify({ x: 80, y: 76, width: 944, height: 644 }),
+        JSON.stringify({ x: 72, y: 76, width: 952, height: 644 }),
     ),
   );
 });

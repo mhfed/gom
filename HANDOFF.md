@@ -135,3 +135,13 @@ Verification:
 Measurement: rework9 corrective cycles: Electron fixture evaluation context; legacy cookie persistence expiry; source fixture expiry; global click throttle changed to per-account; corrupt-backup read-only fallback; review import guard; staging-marker regression precision; ASAR verification command syntax; checksum command working directory. Sandbox GUI launch retried with permission, no product change. Actual token usage unavailable.
 
 Risks/next gate: simultaneous two real accounts per provider still requires owner's distinct account QR/explicit Chrome source. Six-account isolation is fixture-verified. Actual incoming platform alerts, worker/cold-start click routing, calls/files and long-duration resource use remain unverified. Local avatar is initials/emoji. Next: user add distinct secondary accounts via + and verify platform behavior; no automatic duplicate-primary login. Source commit/push follows final diff gate; no public release update.
+
+## Sidebar sizing 0.4.1 — 2026-10-23
+
+Goal/status: compact multi-account navigation, consistent shell/native bounds. Expanded224px (was208), collapsed72px (was80), account rows44px with30px avatars; reduced brand/group/footer spacing. Footer/brand fixed, account list alone scrolls. Long labels flex/ellipsis without squeezing avatar/badge. Six accounts fit at720px tall; minimum640px may scroll. No account/session behavior changes.
+
+Changed: src/renderer/shell.css, src/main/layout.ts, tests/sidebar.test.ts, scripts/sidebar-layout-check.mjs, package*.json, README.md, HANDOFF.md.
+
+Verification: npm run typecheck PASS; npm test PASS39/39; npm run build PASS; node scripts/sidebar-layout-check.mjs PASS (isolated fake home, six accounts, long aliases,940x640/1024x720/1280x840 expanded+collapsed, contained rows/avatars/footer, six fit at720, native view bounds match CSS); representative light and dark screenshots inspected at1024x720, plus minimum-size expanded. node scripts/window-lifecycle-check.mjs PASS. npm run make PASS0.4.1; copied output codesign --verify --deep --strict PASS; unzip -tq PASS; Info.plist0.4.1; shasum -a256 -c SHA256SUMS-0.4.1.txt PASS. App opened from outputs/TinNhan-0.4.1.
+
+Rework2: initial fixture requested600px but app enforces640px minimum, corrected fixture; version was bumped after first packaging began, rebuilt package to ensure0.4.1. Actual token usage unavailable. No independent reviewer for this small sizing fix. Risk/next gate: arbitrary account counts require scrolling; user feedback on real sidebar proportions. Multi-account/login integration unchanged; previous0.4 coverage remains recorded above. Source commit/push after final diff gate, no Release upload.

@@ -3,7 +3,7 @@ export function providerBounds(
   height: number,
   collapsed: boolean,
 ) {
-  const sidebar = collapsed ? 80 : 208;
+  const sidebar = collapsed ? 72 : 224;
   return {
     x: sidebar,
     y: 76,
