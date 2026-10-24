@@ -2,7 +2,7 @@
   "name": "tin-nhan-desktop",
   "type": "module",
   "productName": "Tin Nhan",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Không gian nhắn tin cá nhân cho macOS",
   "author": "Tin Nhan",
   "license": "UNLICENSED",
@@ -18,7 +18,8 @@
     "test:live": "node scripts/live-check.mjs",
     "format": "prettier --write src tests scripts forge.config.cjs",
     "test:desktop": "npm run build && node scripts/desktop-check.mjs",
-    "test:multi-account": "npm run build && node scripts/multi-account-check.mjs"
+    "test:multi-account": "npm run build && node scripts/multi-account-check.mjs",
+    "test:shell": "npm run build && node scripts/shell-05-check.mjs && node scripts/command-focus-check.mjs"
   },
   "config": {
     "forge": "./forge.config.cjs"

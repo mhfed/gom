@@ -7,134 +7,350 @@
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'"
     />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Tin nhắn</title>
+    <title>Tin Nhan</title>
     <link rel="stylesheet" href="shell.css" />
   </head>
   <body>
-    <aside>
+    <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <symbol id="i-search" viewBox="0 0 24 24">
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m16 16 4 4" />
+        </symbol>
+        <symbol id="i-sidebar" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="16" rx="3" />
+          <path d="M9 4v16" />
+        </symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14" />
+        </symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24">
+          <path d="M5 12h14m-5-5 5 5-5 5" />
+        </symbol>
+        <symbol id="i-up" viewBox="0 0 24 24">
+          <path d="M12 19V5m-5 5 5-5 5 5" />
+        </symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24">
+          <path d="m9 5 7 7-7 7" />
+        </symbol>
+        <symbol id="i-down" viewBox="0 0 24 24">
+          <path d="m6 9 6 6 6-6" />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+          <path d="m5 12 4 4L19 6" />
+        </symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24">
+          <path d="M20 15.3A8.7 8.7 0 0 1 8.7 4 8.7 8.7 0 1 0 20 15.3Z" />
+        </symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" />
+          <path
+            d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M19 5l-1.5 1.5m-11 11L5 19"
+          />
+        </symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24">
+          <path
+            d="m10 3-1 3-3 1-3 3 1 3 2 2v3l3 2h3l2-2 3-1 2-3v-3l-2-2-1-3-3-1Z"
+          />
+          <circle cx="11" cy="12" r="3" />
+        </symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24">
+          <path d="M6 9a6 6 0 0 1 12 0c0 6 2 6 2 8H4c0-2 2-2 2-8Zm4 12h4" />
+        </symbol>
+        <symbol id="i-bell-off" viewBox="0 0 24 24">
+          <path
+            d="M3 3l18 18M9 4a6 6 0 0 1 9 5v3M6 8v1c0 6-2 6-2 8h12M10 21h4"
+          />
+        </symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24">
+          <path d="m15 3 6 6-4 1-4 5-1 4-7-7 4-1 5-4 1-4ZM5 19l4-4" />
+        </symbol>
+        <symbol id="i-more" viewBox="0 0 24 24">
+          <circle cx="5" cy="12" r="1" />
+          <circle cx="12" cy="12" r="1" />
+          <circle cx="19" cy="12" r="1" />
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+          <path d="m6 6 12 12M6 18 18 6" />
+        </symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24">
+          <path d="M20 10a8 8 0 1 0-1 7M20 3v7h-7" />
+        </symbol>
+        <symbol id="i-external" viewBox="0 0 24 24">
+          <path d="M14 3h7v7m0-7L10 14M9 5H4v15h15v-5" />
+        </symbol>
+        <symbol id="i-chat" viewBox="0 0 24 24">
+          <path d="M20 11a8 8 0 0 1-8 8H5l-3 3v-8a8 8 0 1 1 18-3Z" />
+          <path d="M7 9h8M7 13h5" />
+        </symbol>
+        <symbol id="i-compose" viewBox="0 0 24 24">
+          <path d="m15 4 5 5-9 9-6 1 1-6 9-9ZM9 4H3v17h17v-6" />
+        </symbol>
+        <symbol id="i-attach" viewBox="0 0 24 24">
+          <path d="m8 13 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9" />
+        </symbol>
+        <symbol id="i-smile" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M8 14c1 4 7 4 8 0M8 9h.01M16 9h.01" />
+        </symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24">
+          <rect x="5" y="10" width="14" height="11" rx="3" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+        </symbol>
+        <symbol id="i-file" viewBox="0 0 24 24">
+          <path d="M14 2H5v20h14V7l-5-5Zm0 0v6h5M8 13h8m-8 4h6" />
+        </symbol>
+        <symbol id="i-users" viewBox="0 0 24 24">
+          <circle cx="9" cy="8" r="3" />
+          <path
+            d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m3 10v-3a6 6 0 0 0-2-4"
+          />
+        </symbol>
+      </defs>
+    </svg>
+
+    <aside aria-label="Tài khoản nhắn tin">
       <div class="brand">
-        <span class="brand-icon" aria-hidden="true">👋</span>
-        <div>Tin nhắn<small>Ghé vào, cùng trò chuyện.</small></div>
+        <span class="brand-mark" aria-hidden="true"
+          >t<span>n</span><i></i
+        ></span>
+        <div>Tin Nhan<small>Mọi kết nối, một nơi.</small></div>
       </div>
-      <p class="eyebrow">GÓC TRÒ CHUYỆN</p>
-      <nav id="providers"></nav>
+      <button id="quick-switch" class="quick-switch" title="Chuyển nhanh (⌘K)">
+        <svg><use href="#i-search" /></svg><span>Chuyển nhanh</span
+        ><kbd>⌘ K</kbd>
+      </button>
+      <nav id="providers" aria-label="Các tài khoản"></nav>
       <div class="sidebar-bottom">
         <button
           id="add-account-sidebar"
           title="Thêm tài khoản"
           aria-label="Thêm tài khoản"
         >
-          <span aria-hidden="true">＋</span><span>Thêm tài khoản</span>
+          <svg><use href="#i-plus" /></svg><span>Thêm tài khoản</span>
         </button>
         <button
           id="settings"
           title="Tài khoản & cài đặt"
           aria-label="Tài khoản & cài đặt"
         >
-          <span aria-hidden="true">⚙</span> <span>Tài khoản & cài đặt</span>
+          <svg><use href="#i-settings" /></svg><span>Tài khoản & cài đặt</span>
         </button>
-        <p><i></i> Phiên lưu trên máy này</p>
+        <p>
+          <svg><use href="#i-lock" /></svg><span>Phiên riêng trên máy</span>
+        </p>
       </div>
     </aside>
+    <div
+      id="sidebar-resizer"
+      role="separator"
+      tabindex="0"
+      aria-orientation="vertical"
+      aria-label="Chiều rộng sidebar"
+      aria-valuemin="200"
+      aria-valuemax="300"
+      aria-valuenow="224"
+      title="Kéo để đổi kích thước · Nhấp đúp để đặt lại"
+    ></div>
     <main>
       <header>
         <div class="header-main">
           <button
             id="sidebar-toggle"
+            class="icon-button"
             aria-label="Thu gọn sidebar"
             aria-expanded="true"
             title="Thu gọn sidebar"
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="16" rx="3" />
-              <path d="M9 4v16M15 9l-3 3 3 3" />
-            </svg>
-          </button>
-          <div>
-            <h1 id="title">Zalo</h1>
-            <p id="subtitle">Đang mở không gian trò chuyện…</p>
+            <svg><use href="#i-sidebar" /></svg></button
+          ><img id="header-logo" alt="" />
+          <div class="header-identity">
+            <h1 id="title">Tin Nhan</h1>
+            <p id="subtitle">Đang kết nối…</p>
           </div>
         </div>
         <div class="tools">
-          <button id="back" title="Quay lại (Cmd+[)" aria-label="Quay lại">
+          <button id="back" aria-label="Quay lại" title="Quay lại (⌘[)">
             ‹</button
           ><button
             id="home"
-            title="Trang đầu nền tảng"
             aria-label="Trang đầu nền tảng"
+            title="Trang đầu nền tảng"
           >
             ⌂</button
           ><button
             id="reload"
-            title="Tải lại nền tảng (Cmd+R)"
             aria-label="Tải lại nền tảng"
+            title="Tải lại (⌘R)"
           >
-            ↻</button
-          ><button id="browser" title="Mở trong trình duyệt">↗</button>
+            <svg><use href="#i-refresh" /></svg></button
+          ><button
+            id="browser"
+            aria-label="Mở trong trình duyệt"
+            title="Mở trong trình duyệt"
+          >
+            <svg><use href="#i-external" /></svg></button
+          ><span class="tool-divider"></span
+          ><button
+            id="theme-toggle"
+            aria-label="Đổi sáng tối"
+            title="Đổi sáng/tối"
+          >
+            <svg><use href="#i-moon" /></svg>
+          </button>
         </div>
       </header>
       <section id="settings-panel" hidden>
-        <div class="settings-heading">
-          <span class="eyebrow">CHÀO ANH 👋</span>
-          <h2>Góc trò chuyện của anh.</h2>
-          <p>Mỗi nền tảng giữ một phiên đăng nhập riêng trên máy của anh.</p>
-        </div>
-        <p
-          id="catalog-warning"
-          class="catalog-warning"
-          role="status"
-          hidden
-        ></p>
-        <article>
-          <div class="preferences-card">
-            <div class="account-manager-heading">
-              <h3>Các tài khoản của anh</h3>
-              <button id="add-account-settings" class="secondary">
-                ＋ Thêm tài khoản
-              </button>
+        <div class="settings-content">
+          <div class="settings-heading">
+            <div>
+              <span class="eyebrow">KHÔNG GIAN CỦA ANH</span>
+              <h2>Kết nối theo cách của mình.</h2>
+              <p>Mỗi tài khoản một không gian. Mọi thứ đều trong tầm tay.</p>
             </div>
-            <p>
-              Mỗi tài khoản giữ phiên riêng. Chữ/emoji giúp anh phân biệt nhanh
-              trong sidebar.
-            </p>
-            <div id="account-manager"></div>
+            <button id="add-account-settings" class="primary">
+              <svg><use href="#i-plus" /></svg>Thêm tài khoản
+            </button>
+          </div>
+          <p
+            id="catalog-warning"
+            class="catalog-warning"
+            role="status"
+            hidden
+          ></p>
+          <nav class="settings-tabs" aria-label="Danh mục cài đặt">
+            <button data-tab="accounts" aria-pressed="true">
+              Tài khoản <span id="account-count"></span></button
+            ><button data-tab="appearance" aria-pressed="false">
+              Giao diện</button
+            ><button data-tab="notifications" aria-pressed="false">
+              Thông báo</button
+            ><button data-tab="macos" aria-pressed="false">macOS</button>
+          </nav>
+          <div id="tab-accounts" class="settings-pane">
+            <div class="accounts-tools">
+              <div class="platform-filters" aria-label="Lọc nền tảng">
+                <button data-filter="all" aria-pressed="true">Tất cả</button
+                ><button data-filter="zalo" aria-pressed="false">Zalo</button
+                ><button data-filter="messenger" aria-pressed="false">
+                  Messenger</button
+                ><button data-filter="telegram" aria-pressed="false">
+                  Telegram
+                </button>
+              </div>
+              <span id="connected-count"></span>
+            </div>
+            <div id="account-manager" class="account-table"></div>
+            <p id="account-empty" hidden>Chưa có tài khoản cho nền tảng này.</p>
             <div id="archived-accounts"></div>
             <p id="account-feedback" class="hint" role="status"></p>
+            <div class="privacy-note">
+              <svg><use href="#i-lock" /></svg>
+              <div>
+                <strong>Một nơi chung. Những phiên riêng.</strong>
+                <p>
+                  Đổi tên, ghim hay sắp xếp tài khoản không làm thay đổi phiên
+                  đăng nhập.
+                </p>
+              </div>
+            </div>
+            <details class="import-section">
+              <summary>Dùng phiên Messenger có sẵn trên máy</summary>
+              <p>
+                Chọn đúng tài khoản đích và profile Chrome. Tài khoản đã đăng
+                nhập được bảo vệ khỏi ghi đè.
+              </p>
+              <div class="import-controls">
+                <label
+                  >Tài khoản đích<select id="messenger-target"></select></label
+                ><label>Profile Chrome<select id="profiles"></select></label
+                ><button id="import" class="secondary">
+                  Dùng phiên có sẵn
+                </button>
+              </div>
+              <p class="hint">
+                Zalo và Telegram: mở tài khoản ở sidebar, rồi quét QR trên điện
+                thoại.
+              </p>
+            </details>
           </div>
-        </article>
-        <article>
-          <img class="logo" src="logos/messenger.svg" alt="Messenger" />
-          <div>
-            <h3>Messenger</h3>
-            <p>Dùng tài khoản đang có trong Chrome. Chọn đúng hồ sơ của anh.</p>
-            <label class="field-label" for="messenger-target"
-              >Tài khoản Messenger sẽ nhận phiên</label
-            >
-            <select
-              id="messenger-target"
-              aria-label="Tài khoản Messenger đích"
-            ></select>
-            <label class="field-label" for="profiles">Hồ sơ Chrome nguồn</label>
-            <select id="profiles" aria-label="Hồ sơ Chrome"></select
-            ><button class="primary" id="import">Dùng phiên có sẵn</button>
-            <p class="hint">
-              macOS có thể yêu cầu cho phép truy cập Chrome Safe Storage.
-            </p>
-          </div>
-        </article>
-        <article>
-          <img class="logo" src="logos/zalo.png" alt="Zalo" />
-          <div>
-            <h3>Zalo & Telegram</h3>
+          <div
+            id="tab-appearance"
+            class="settings-pane preference-panel"
+            hidden
+          >
+            <h3>Vừa mắt, cả ngày lẫn đêm.</h3>
             <p>
-              Mở từng nền tảng ở sidebar và quét QR bằng điện thoại. Phiên được
-              giữ cho lần mở sau.
+              Chọn màu cho sidebar và thanh điều hướng. Nội dung chat dùng giao
+              diện của từng nền tảng.
+            </p>
+            <div class="theme-options">
+              <button data-theme-choice="light">
+                <span class="theme-sample light"><i></i><i></i></span
+                ><strong>Sáng · Ivory</strong></button
+              ><button data-theme-choice="dark">
+                <span class="theme-sample dark"><i></i><i></i></span
+                ><strong>Tối · Graphite</strong>
+              </button>
+            </div>
+            <label class="setting-row"
+              ><span
+                >Đồng bộ tự động<small
+                  >Theo nền tảng đang chọn hoặc giao diện macOS.</small
+                ></span
+              ><select id="theme-mode" aria-label="Chế độ giao diện">
+                <option value="platform">Theo nền tảng</option>
+                <option value="system">Theo macOS</option>
+                <option value="light">Luôn sáng</option>
+                <option value="dark">Luôn tối</option>
+              </select></label
+            >
+            <label class="setting-row"
+              ><span
+                >Sidebar gọn<small
+                  >Hiển thị tài khoản dưới dạng biểu tượng.</small
+                ></span
+              ><input id="compact-setting" type="checkbox"
+            /></label>
+            <div class="setting-row">
+              <span
+                >Chiều rộng sidebar<small
+                  >Kéo đường phân cách hoặc dùng phím mũi tên.</small
+                ></span
+              ><button id="reset-width" class="secondary">
+                Đặt lại 224 px
+              </button>
+            </div>
+          </div>
+          <div
+            id="tab-notifications"
+            class="settings-pane preference-panel"
+            hidden
+          >
+            <h3>Chỉ những kết nối anh muốn.</h3>
+            <p>
+              Thông báo gốc do nền tảng gửi. Bấm thông báo để mở đúng tài khoản.
+            </p>
+            <label class="setting-row"
+              ><span
+                >Tạm dừng thông báo<small
+                  >Áp dụng cho tất cả tài khoản.</small
+                ></span
+              ><input id="pause-notifications" type="checkbox"
+            /></label>
+            <div id="notification-providers"></div>
+            <button class="secondary" id="notification-settings">
+              Quyền thông báo macOS ↗
+            </button>
+            <p class="hint" id="notification-status" role="status"></p>
+            <p class="hint">
+              Bật thông báo trong cài đặt của từng nền tảng. Nút thử kiểm tra
+              thông báo từ Tin Nhan tới macOS; chế độ Tập trung có thể ẩn
+              banner.
             </p>
           </div>
-        </article>
-        <article>
-          <div class="preferences-card">
-            <h3>Dùng trên macOS</h3>
+          <div id="tab-macos" class="settings-pane preference-panel" hidden>
+            <h3>Thân quen như chiếc Mac của anh.</h3>
             <label class="setting-row"
               ><span
                 >Chạy cùng macOS<small
@@ -146,62 +362,70 @@
             <label class="setting-row"
               ><span
                 >Phím tắt hiện / ẩn<small
-                  >Cmd + Shift + Space · giữ nguyên các trang đang mở.</small
+                  >⌘ ⇧ Space · giữ nguyên các trang đang mở.</small
                 ></span
               ><input id="global-shortcut" type="checkbox"
             /></label>
-            <p class="hint">
-              Cmd+W ẩn cửa sổ · Cmd+Q thoát hẳn · Cmd+1/2/3 chuyển nền tảng. Tin
-              Nhan cũng có trong menu bar.
-            </p>
-          </div>
-        </article>
-        <article>
-          <div class="preferences-card">
-            <h3>Thông báo</h3>
-            <p>
-              Thông báo gốc do nền tảng gửi. Bấm thông báo để trở về nền tảng;
-              macOS có thể ẩn thông báo khi bật Tập trung.
-            </p>
-            <label class="setting-row"
-              ><span
-                >Tạm dừng thông báo<small
-                  >Áp dụng cho cả ba nền tảng.</small
-                ></span
-              ><input id="pause-notifications" type="checkbox"
-            /></label>
-            <div id="notification-providers"></div>
-            <div class="settings-actions">
-              <button class="secondary" id="notification-settings">
-                Quyền thông báo macOS ↗
-              </button>
+            <div class="shortcut-list">
+              <p><span>Chuyển nhanh tài khoản</span><kbd>⌘ K</kbd></p>
+              <p><span>Ẩn cửa sổ</span><kbd>⌘ W</kbd></p>
+              <p><span>Thoát app</span><kbd>⌘ Q</kbd></p>
+              <p>
+                <span>Zalo · Messenger · Telegram</span><kbd>⌘ 1 / 2 / 3</kbd>
+              </p>
             </div>
-            <p class="hint" id="notification-status" role="status"></p>
-            <p class="hint">
-              Nếu chưa có thông báo thật, bật thông báo cả trong cài đặt của nền
-              tảng. Nút thử chỉ kiểm tra đường gửi của Tin Nhan tới macOS.
-            </p>
           </div>
-        </article>
-        <p id="notice" role="status"></p>
-        <footer>
-          Tin nhắn <span id="version"></span> · Dữ liệu đăng nhập không gửi lên
-          máy chủ riêng.
-        </footer>
+          <p id="notice" role="status"></p>
+          <footer>
+            Tin Nhan <span id="version"></span
+            ><span>Không gian nhắn tin của riêng anh.</span>
+          </footer>
+        </div>
       </section>
       <section id="connection-panel" hidden role="status">
         <div class="connection-card">
-          <span class="eyebrow">KẾT NỐI</span>
+          <svg><use href="#i-chat" /></svg><span class="eyebrow">KẾT NỐI</span>
           <h2 id="connection-title"></h2>
           <p id="connection-detail"></p>
           <button id="retry-connection" class="primary">
-            Thử lại nền tảng này
+            Thử lại tài khoản này
           </button>
           <p class="hint">Phiên đăng nhập vẫn được giữ trên máy.</p>
         </div>
       </section>
       <div id="service-loading">Đang kết nối…</div>
     </main>
+    <dialog id="command-dialog" aria-labelledby="command-label">
+      <div class="command-input">
+        <svg><use href="#i-search" /></svg
+        ><label id="command-label" class="sr-only" for="command-search"
+          >Tìm tài khoản hoặc thao tác</label
+        ><input
+          id="command-search"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="command-results"
+          aria-expanded="false"
+          placeholder="Anh muốn mở gì?"
+          autocomplete="off"
+        /><button
+          id="close-command"
+          class="escape-key"
+          aria-label="Đóng chuyển nhanh"
+        >
+          esc
+        </button>
+      </div>
+      <div
+        id="command-results"
+        role="listbox"
+        aria-label="Kết quả tìm kiếm"
+      ></div>
+      <div class="command-footer">
+        <span><kbd>↑</kbd><kbd>↓</kbd> để chọn <kbd>↵</kbd> để mở</span
+        ><span>Tiếp tục mạch trò chuyện.</span>
+      </div>
+    </dialog>
     <dialog id="account-editor">
       <form id="account-form">
         <span class="eyebrow">TÀI KHOẢN RIÊNG</span>

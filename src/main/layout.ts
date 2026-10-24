@@ -1,9 +1,11 @@
+import { sidebarWidth } from "./presentation.ts";
 export function providerBounds(
   width: number,
   height: number,
   collapsed: boolean,
+  expandedWidth = 224,
 ) {
-  const sidebar = collapsed ? 72 : 224;
+  const sidebar = collapsed ? 72 : sidebarWidth(expandedWidth);
   return {
     x: sidebar,
     y: 76,
@@ -23,8 +25,9 @@ export function layoutViews(
   collapsed: boolean,
   active: string,
   panel: string,
+  expandedWidth = 224,
 ) {
-  const bounds = providerBounds(width, height, collapsed);
+  const bounds = providerBounds(width, height, collapsed, expandedWidth);
   for (const [id, view] of views) {
     view.setVisible(panel === "service" && active === id);
     view.setBounds(bounds);

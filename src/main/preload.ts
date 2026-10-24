@@ -26,6 +26,17 @@ const bridge: DesktopBridge = {
   notificationSettings: () =>
     ipcRenderer.invoke("desktop", "notification-settings"),
   toggleSidebar: () => ipcRenderer.invoke("desktop", "toggle-sidebar"),
+  setSidebarWidth: (width) =>
+    ipcRenderer.invoke("desktop", "sidebar-width", width),
+  setTheme: (theme) => ipcRenderer.invoke("desktop", "theme", theme),
+  pinAccount: (id) => ipcRenderer.invoke("desktop", "pin-account", id),
+  command: (open) => ipcRenderer.invoke("desktop", "command", open),
+  commandClosed: () => ipcRenderer.invoke("desktop", "command-closed"),
+  commandRequested(callback) {
+    const listener = () => callback();
+    ipcRenderer.on("command-toggle", listener);
+    return () => ipcRenderer.removeListener("command-toggle", listener);
+  },
   settings: () => ipcRenderer.invoke("desktop", "settings"),
   importMessenger: (sourceId, accountId) =>
     ipcRenderer.invoke("desktop", "import", { sourceId, accountId }),

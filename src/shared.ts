@@ -73,7 +73,14 @@ export interface ConnectionState {
   reason: "network" | "crashed" | "blocked" | "load-failed" | null;
   retryAt: number | null;
 }
+export interface Presentation {
+  sidebarWidth: number;
+  theme: "platform" | "system" | "light" | "dark";
+  pinned: AccountId[];
+}
 export interface AppState {
+  presentation: Presentation;
+  commandOpen: boolean;
   accounts: Account[];
   accountBusy: boolean;
   catalogWarning: string;
@@ -114,6 +121,12 @@ export interface DesktopBridge {
   openBrowser(): Promise<void>;
   settings(): Promise<void>;
   toggleSidebar(): Promise<void>;
+  setSidebarWidth(width: number): Promise<void>;
+  setTheme(theme: Presentation["theme"]): Promise<void>;
+  pinAccount(id: AccountId): Promise<void>;
+  command(open: boolean): Promise<void>;
+  commandClosed(): Promise<void>;
+  commandRequested(callback: () => void): () => void;
   back(): Promise<void>;
   home(): Promise<void>;
   setPreference(

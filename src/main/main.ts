@@ -21,6 +21,7 @@ import {
   hasUnread,
 } from "./notification-policy.ts";
 import { normalizeTheme, themeScript } from "./theme.ts";
+import { normalizePresentation, sidebarWidth } from "./presentation.ts";
 import { layoutViews } from "./layout.ts";
 import { normalizeUnread } from "./unread.ts";
 import { unreadScript } from "./unread-snapshot.ts";
@@ -95,6 +96,8 @@ const permissionPrompts = new Set<AccountId>();
 const testAlerts = new Map<AccountId, Notification>();
 const SHORTCUT = "CommandOrControl+Shift+Space";
 const state: AppState = {
+  presentation: normalizePresentation(undefined, []),
+  commandOpen: false,
   accounts: defaultAccounts(),
   accountBusy: false,
   catalogWarning: "",
@@ -441,9 +444,11 @@ function layout() {
     height,
     state.collapsed,
     state.active,
-    state.panel === "service" && state.connections[state.active].reason
+    state.commandOpen ||
+      (state.panel === "service" && state.connections[state.active].reason)
       ? "settings"
       : state.panel,
+    state.presentation.sidebarWidth,
   );
 }
 function activate(id: AccountId) {
@@ -451,6 +456,7 @@ function activate(id: AccountId) {
   if (!account || closing) return;
   lastAccounts.set(account.provider, id);
   state.active = id;
+  state.commandOpen = false;
   state.panel = "service";
   const known = views.ids().includes(id);
   const view = views.activate(id);
@@ -560,12 +566,23 @@ function showWindow() {
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
-  if (state.panel === "service" && !state.connections[state.active].reason)
+  if (
+    !state.commandOpen &&
+    state.panel === "service" &&
+    !state.connections[state.active].reason
+  )
     views.activate(state.active).webContents.focus();
   else win.webContents.focus();
 }
 function showSettings() {
+  state.commandOpen = false;
   state.panel = "settings";
+  layout();
+  publish();
+  showWindow();
+}
+function showCommand(open: boolean) {
+  state.commandOpen = open;
   layout();
   publish();
   showWindow();
@@ -971,6 +988,7 @@ async function save() {
     collapsed: state.collapsed,
     bounds: win.getNormalBounds(),
     preferences: state.preferences,
+    presentation: state.presentation,
   });
 }
 async function quit() {
@@ -1023,6 +1041,10 @@ else {
       state.collapsed = stored.collapsed;
     const catalog = await catalogStore.load();
     state.accounts = catalog.accounts;
+    state.presentation = normalizePresentation(
+      stored.presentation,
+      state.accounts.map((a) => a.id),
+    );
     state.catalogWarning = catalog.warning;
     state.preferences = normalizePreferences(
       stored.preferences,
@@ -1112,6 +1134,38 @@ else {
           state.collapsed = !state.collapsed;
           layout();
           publish();
+          scheduleSave();
+          return;
+        case "sidebar-width":
+          if (typeof arg !== "number" || !Number.isFinite(arg)) return;
+          state.presentation.sidebarWidth = sidebarWidth(arg);
+          layout();
+          publish();
+          scheduleSave();
+          return;
+        case "theme":
+          if (!["platform", "system", "light", "dark"].includes(arg)) return;
+          state.presentation.theme = arg;
+          await persist();
+          return;
+        case "pin-account":
+          if (!findAccount(arg)) return;
+          state.presentation.pinned = state.presentation.pinned.includes(arg)
+            ? state.presentation.pinned.filter((id) => id !== arg)
+            : [...state.presentation.pinned, arg];
+          await persist();
+          return;
+        case "command":
+          if (typeof arg === "boolean") showCommand(arg);
+          return;
+        case "command-closed":
+          // Renderer acknowledges that the dialog has closed before native focus moves.
+          if (
+            !state.commandOpen &&
+            state.panel === "service" &&
+            !state.connections[state.active].reason
+          )
+            views.peek(state.active)?.webContents.focus();
           return;
         case "settings":
           showSettings();
@@ -1214,6 +1268,11 @@ else {
         {
           label: "Không gian",
           submenu: [
+            {
+              label: "Chuyển nhanh…",
+              accelerator: "CmdOrCtrl+K",
+              click: () => win.webContents.send("command-toggle"),
+            },
             ...(Object.keys(PROVIDERS) as ProviderId[]).map((id, i) => ({
               label: PROVIDERS[id].label,
               accelerator: "CmdOrCtrl+" + (i + 1),

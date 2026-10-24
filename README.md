@@ -1,6 +1,6 @@
 # Tin nhắn — macOS
 
-Ứng dụng cá nhân bọc giao diện web chính thức của Zalo, Messenger và Telegram. Sidebar chuyển giữa ba khung độc lập; mỗi khung dùng một partition cố định và không bị tạo lại khi đổi nền tảng.
+Ứng dụng cá nhân bọc giao diện web chính thức của Zalo, Messenger và Telegram. Hỗ trợ nhiều tài khoản cho mỗi nền tảng, mỗi tài khoản giữ phiên riêng và trang đang mở khi chuyển qua lại.
 
 ## Tải app
 
@@ -103,3 +103,22 @@ Fixture cách ly seeding dữ liệu kiểu0.3 rồi chạy0.4, kiểm tra6 tài
 Sidebar mở rộng224px, thu gọn72px; hàng tài khoản44px. Giảm khoảng trống phía trên, giữ các nút Thêm tài khoản/Cài đặt cố định bên dưới; chỉ danh sách tài khoản cuộn khi thiếu chiều cao. Tên dài được rút gọn trong hàng, badge không co avatar. Kích thước nội dung nền tảng dùng cùng mốc với sidebar.
 
 Kiểm tra bố cục cách ly: `node scripts/sidebar-layout-check.mjs` sau `npm run build` (940×640,1024×720,1280×840; sáu tài khoản, cả hai chế độ).
+
+
+## Giao diện 0.5.0
+
+Giao diện theo prototype đã duyệt: nền sáng Ivory/tối Graphite, sidebar gọn, tài khoản ghim, bảng chuyển nhanh và cài đặt chia theo mục. Nội dung chat tiếp tục là web chính thức của từng nền tảng.
+
+- **⌘K** tìm tài khoản hoặc thao tác, hỗ trợ gõ không dấu; ↑/↓ chọn, Enter mở, Escape quay lại. Mở từ trang chat vẫn dùng được; bảng chuyển nhanh không chồng lên hộp thêm/đổi tên tài khoản.
+- Kéo đường phân cách sidebar trong khoảng **200–300px**, nhấp đúp về **224px**. Khi đường phân cách có focus: ←/→ thay đổi, Home/End chọn giới hạn. Thu gọn còn **72px**.
+- **Tài khoản**: lọc theo nền tảng, ghim/bỏ ghim, đổi tên; menu **…** sắp xếp và gỡ khỏi sidebar. Khôi phục vẫn dùng đúng phiên cũ.
+- **Giao diện**: chọn Sáng/Tối, Theo macOS hoặc Theo nền tảng (mặc định, giữ khả năng đồng bộ màu cũ). Lựa chọn áp dụng cho khung app; từng nền tảng tự quản lý giao diện chat.
+- **Thông báo** và **macOS** có mục riêng; giữ quyền thông báo từng tài khoản, tạm dừng, Cmd+W, phím tắt và chạy cùng máy.
+
+Nâng cấp không đổi `TinNhanDesktop`, `accounts.json` hay ID/partition của tài khoản. Màu, chiều rộng và tài khoản ghim được lưu thêm trong `window.json`. Không nhập lại cookie hoặc yêu cầu quét QR chỉ vì nâng cấp giao diện.
+
+```sh
+npm run test:shell
+```
+
+Kiểm tra cách ly gồm12 tổ hợp màn hình/sáng-tối/sidebar, bàn phím và focus native, không chồng hộp thoại, giữ view/bản nháp, tên an toàn, kéo kích thước, lưu giao diện và ID tài khoản qua thoát/mở lại. Các fixture không dùng phiên cá nhân. Bản ZIP public ở đầu README vẫn là **0.2.0**; mã nguồn hiện tại là **0.5.0**.

@@ -1,3 +1,4 @@
+import { createCommandPalette } from "./command.ts";
 import {
   PROVIDERS,
   type Account,
@@ -30,6 +31,8 @@ const icons = {
   telegram: "telegram.svg",
 };
 let current: AppState;
+let activeTab = "accounts";
+let accountFilter = "all";
 let signature = "";
 let editing: AccountId | null = null;
 let lastPanel = "";
@@ -72,9 +75,62 @@ function action(
   b.onclick = click;
   return b;
 }
-function avatar(a: Account) {
-  return element("span", "account-avatar avatar-" + a.provider, a.avatar);
+function icon(name: string) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("aria-hidden", "true");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", "#i-" + name);
+  svg.append(use);
+  return svg;
 }
+function avatar(a: Account) {
+  const e = element("span", "account-avatar avatar-" + a.provider, a.avatar);
+  const logo = element("img", "avatar-provider");
+  logo.src = "logos/" + icons[a.provider];
+  logo.alt = "";
+  e.append(logo);
+  return e;
+}
+function iconAction(name: string, title: string, click: () => void) {
+  const b = action("", title, click, "icon-button");
+  b.append(icon(name));
+  return b;
+}
+function sidebarAccount(a: Account) {
+  const b = action(
+    "",
+    "",
+    () => void window.desktop.activate(a.id),
+    "account-button",
+  );
+  b.id = "provider-" + a.id;
+  const badge = element("span", "unread", "—");
+  badge.setAttribute("aria-hidden", "true");
+  const dot = element("i", "dot");
+  dot.setAttribute("aria-hidden", "true");
+  b.append(avatar(a), element("span", "provider-label", a.name), badge, dot);
+  return b;
+}
+function applyAccountFilter() {
+  for (const row of document.querySelectorAll<HTMLElement>(
+    "#account-manager [data-provider]",
+  ))
+    row.hidden =
+      accountFilter !== "all" && row.dataset.provider !== accountFilter;
+  for (const b of document.querySelectorAll<HTMLElement>("[data-filter]"))
+    b.setAttribute("aria-pressed", String(b.dataset.filter === accountFilter));
+  $("account-empty").hidden = !!document.querySelector(
+    "#account-manager [data-provider]:not([hidden])",
+  );
+}
+function showTab(tab: string) {
+  activeTab = tab;
+  for (const b of document.querySelectorAll<HTMLElement>("[data-tab]"))
+    b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
+  for (const pane of document.querySelectorAll<HTMLElement>(".settings-pane"))
+    pane.hidden = pane.id !== "tab-" + tab;
+}
+
 async function accountAction(promise: Promise<AccountResult>) {
   try {
     const result = await promise;
@@ -108,13 +164,32 @@ async function openEditor(a?: Account, provider?: ProviderId) {
   $("account-name").focus();
 }
 function rebuildAccounts(state: AppState) {
-  const key = JSON.stringify(state.accounts);
+  const key = JSON.stringify([state.accounts, state.presentation.pinned]);
   if (key === signature) return false;
   signature = key;
+  const focused = document.activeElement as HTMLElement | null;
+  const focusId = focused?.id;
+  const focusKey = focused?.dataset.focus;
+  const openMenus = [
+    ...document.querySelectorAll<HTMLDetailsElement>(".more-menu[open]"),
+  ].map((e) => e.dataset.accountId);
   $("providers").replaceChildren();
   $("account-manager").replaceChildren();
   $("notification-providers").replaceChildren();
   $("archived-accounts").replaceChildren();
+  const pinned = state.accounts.filter(
+    (a) => !a.archived && state.presentation.pinned.includes(a.id),
+  );
+  if (pinned.length) {
+    const group = element("div", "provider-group pinned-group");
+    const heading = element("div", "provider-group-heading");
+    heading.append(
+      icon("pin"),
+      element("span", "provider-group-label", "ĐÃ GHIM"),
+    );
+    group.append(heading, ...pinned.map(sidebarAccount));
+    $("providers").append(group);
+  }
   for (const provider of Object.keys(PROVIDERS) as ProviderId[]) {
     const group = element("div", "provider-group");
     const heading = element("div", "provider-group-heading");
@@ -136,26 +211,11 @@ function rebuildAccounts(state: AppState) {
       (a) => a.provider === provider && !a.archived,
     );
     for (const [index, a] of peers.entries()) {
-      const b = action(
-        "",
-        "",
-        () => void window.desktop.activate(a.id),
-        "account-button",
-      );
-      b.id = "provider-" + a.id;
-      const badge = element("span", "unread", "—");
-      badge.setAttribute("aria-hidden", "true");
-      const dot = element("i", "dot");
-      dot.setAttribute("aria-hidden", "true");
-      b.append(
-        avatar(a),
-        element("span", "provider-label", a.name),
-        badge,
-        dot,
-      );
-      group.append(b);
+      if (!state.presentation.pinned.includes(a.id))
+        group.append(sidebarAccount(a));
       const row = element("div", "account-manage-row");
       row.dataset.accountId = a.id;
+      row.dataset.provider = provider;
       const identity = element("div", "account-identity");
       const label = element("div");
       label.append(
@@ -164,14 +224,43 @@ function rebuildAccounts(state: AppState) {
       );
       identity.append(avatar(a), label);
       const tools = element("div", "account-actions");
+      const pin = iconAction(
+        "pin",
+        (state.presentation.pinned.includes(a.id) ? "Bỏ ghim " : "Ghim ") +
+          nameOf(a),
+        () => void window.desktop.pinAccount(a.id),
+      );
+      pin.classList.toggle("pinned", state.presentation.pinned.includes(a.id));
+      pin.setAttribute(
+        "aria-pressed",
+        String(state.presentation.pinned.includes(a.id)),
+      );
+      pin.dataset.focus = "pin-" + a.id;
+      const rename = iconAction(
+        "compose",
+        "Đổi tên " + nameOf(a),
+        () => void openEditor(a),
+      );
+      rename.dataset.focus = "edit-" + a.id;
       tools.append(
         action(
           "Mở",
           "Mở " + nameOf(a),
           () => void window.desktop.activate(a.id),
         ),
-        action("Đổi tên", "Đổi tên " + nameOf(a), () => void openEditor(a)),
+        pin,
+        rename,
       );
+      const more = element("details", "more-menu");
+      more.dataset.accountId = a.id;
+      const summary = element("summary");
+      summary.title = "Thao tác khác · " + nameOf(a);
+      summary.setAttribute("aria-label", summary.title);
+      summary.dataset.focus = "more-" + a.id;
+      summary.append(icon("more"));
+      const menu = element("div");
+      more.append(summary, menu);
+      more.open = openMenus.includes(a.id);
       const up = action(
         "↑",
         "Đưa lên " + nameOf(a),
@@ -192,8 +281,13 @@ function rebuildAccounts(state: AppState) {
       hide.dataset.last = String(
         state.accounts.filter((a) => !a.archived).length === 1,
       );
-      tools.append(up, down, hide);
-      row.append(identity, tools);
+      for (const [i, b] of [up, down, hide].entries())
+        b.dataset.focus = "account-" + a.id + "-" + i;
+      menu.append(up, down, hide);
+      tools.append(more);
+      const status = element("span", "account-status");
+      status.id = "account-status-" + a.id;
+      row.append(identity, status, tools);
       $("account-manager").append(row);
       const nrow = element("div", "notification-row");
       const nlabel = element("label", "", nameOf(a));
@@ -224,7 +318,7 @@ function rebuildAccounts(state: AppState) {
       nrow.append(nlabel, select, test);
       $("notification-providers").append(nrow);
     }
-    $("providers").append(group);
+    if (group.querySelector(".account-button")) $("providers").append(group);
   }
   const archived = state.accounts.filter((a) => a.archived);
   if (archived.length) {
@@ -262,17 +356,31 @@ function rebuildAccounts(state: AppState) {
   );
   if ([...target.options].some((o) => o.value === selected))
     target.value = selected;
+  applyAccountFilter();
+  const nextFocus = focusId
+    ? document.getElementById(focusId)
+    : focusKey
+      ? [...document.querySelectorAll<HTMLElement>("[data-focus]")].find(
+          (e) => e.dataset.focus === focusKey,
+        )
+      : null;
+  nextFocus?.focus({ preventScroll: true });
   return true;
 }
 function render(state: AppState) {
   const active = state.accounts.find((a) => a.id === state.active)!;
   current = state;
   const rebuilt = rebuildAccounts(state);
-  const theme = state.themes[state.active],
-    root = document.documentElement;
+  const root = document.documentElement,
+    choice = state.presentation.theme;
+  const theme = choice === "platform" ? state.themes[state.active] : null;
   root.dataset.theme =
     theme?.mode ||
-    (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    (choice === "light" || choice === "dark"
+      ? choice
+      : matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light");
   for (const [key, value] of Object.entries({
     cream: theme?.background,
     paper: theme?.surface,
@@ -282,6 +390,24 @@ function render(state: AppState) {
   }))
     if (value) root.style.setProperty("--" + key, value);
     else root.style.removeProperty("--" + key);
+  root.style.setProperty(
+    "--sidebar-width",
+    state.presentation.sidebarWidth + "px",
+  );
+  $("sidebar-resizer").setAttribute(
+    "aria-valuenow",
+    String(state.presentation.sidebarWidth),
+  );
+  $("sidebar-resizer").tabIndex = state.collapsed ? -1 : 0;
+  $<HTMLSelectElement>("theme-mode").value = choice;
+  for (const b of document.querySelectorAll<HTMLElement>("[data-theme-choice]"))
+    b.setAttribute("aria-pressed", String(b.dataset.themeChoice === choice));
+  $<HTMLInputElement>("compact-setting").checked = state.collapsed;
+  $("theme-toggle").replaceChildren(
+    icon(root.dataset.theme === "dark" ? "sun" : "moon"),
+  );
+  $("theme-toggle").title =
+    root.dataset.theme === "dark" ? "Chuyển sang sáng" : "Chuyển sang tối";
   document.body.classList.toggle("collapsed", state.collapsed);
   const toggle = $("sidebar-toggle");
   toggle.setAttribute("aria-expanded", String(!state.collapsed));
@@ -304,6 +430,23 @@ function render(state: AppState) {
     b.title = nameOf(a) + " · " + unreadLabel(info);
     b.setAttribute("aria-label", b.title);
     b.querySelector("i")!.className = "dot " + state.statuses[a.id];
+    b.setAttribute(
+      "aria-current",
+      state.active === a.id && state.panel === "service" ? "page" : "false",
+    );
+    const accountStatus = $("account-status-" + a.id);
+    accountStatus.textContent =
+      state.statuses[a.id] === "authenticated"
+        ? "● Đã kết nối"
+        : state.statuses[a.id] === "needs-login"
+          ? "Cần đăng nhập"
+          : state.connections[a.id].phase === "offline"
+            ? "Ngoại tuyến"
+            : labels[state.statuses[a.id]].split(" · ")[0];
+    accountStatus.classList.toggle(
+      "connected",
+      state.statuses[a.id] === "authenticated",
+    );
     $<HTMLSelectElement>("notification-" + a.id).value =
       state.preferences.notifications[a.id];
     $<HTMLButtonElement>("test-" + a.id).disabled =
@@ -321,7 +464,17 @@ function render(state: AppState) {
   lastActive = state.active;
   lastCollapsed = state.collapsed;
   const settings = state.panel === "settings";
-  $("title").textContent = settings ? "Tài khoản & cài đặt" : nameOf(active);
+  $("title").textContent = settings ? "Không gian của anh" : nameOf(active);
+  $<HTMLImageElement>("header-logo").src = "logos/" + icons[active.provider];
+  $("header-logo").hidden = settings;
+  $("settings").classList.toggle("active", settings);
+  $("account-count").textContent = String(
+    state.accounts.filter((a) => !a.archived).length,
+  );
+  $("connected-count").textContent =
+    state.accounts.filter(
+      (a) => !a.archived && state.statuses[a.id] === "authenticated",
+    ).length + " tài khoản đã kết nối";
   $("subtitle").textContent = settings
     ? "Mỗi tài khoản một phiên riêng trên máy"
     : labels[state.statuses[state.active]];
@@ -333,7 +486,7 @@ function render(state: AppState) {
     $("subtitle").textContent =
       "Kết nối gián đoạn · Thử lại riêng tài khoản này";
   $("back").toggleAttribute("disabled", !state.canGoBack || settings);
-  const failed = !settings && !!c.reason;
+  const failed = !settings && !state.commandOpen && !!c.reason;
   $("connection-panel").hidden = !failed;
   $("connection-title").textContent =
     c.reason === "crashed"
@@ -356,7 +509,7 @@ function render(state: AppState) {
   $<HTMLInputElement>("pause-notifications").checked = state.preferences.paused;
   $("notification-status").textContent = state.notificationStatus;
   $("settings-panel").hidden = !settings;
-  $("service-loading").hidden = settings || failed;
+  $("service-loading").hidden = settings || failed || state.commandOpen;
   $("catalog-warning").textContent = state.catalogWarning;
   $("catalog-warning").hidden = !state.catalogWarning;
   for (const b of document.querySelectorAll<HTMLButtonElement>(
@@ -398,6 +551,8 @@ function render(state: AppState) {
   button.textContent = state.importing
     ? "Đang kiểm tra phiên…"
     : "Dùng phiên có sẵn";
+  command.sync(state);
+  showTab(activeTab);
 }
 $("sidebar-toggle").onclick = () => void window.desktop.toggleSidebar();
 $("settings").onclick = () => void window.desktop.settings();
@@ -461,6 +616,83 @@ $("account-form").onsubmit = async (event) => {
   } finally {
     button.disabled = false;
   }
+};
+const command = createCommandPalette({
+  getState: () => current,
+  avatar,
+  icon,
+  settings: (tab) => {
+    showTab(tab);
+    void window.desktop.settings();
+  },
+});
+function requestCommand() {
+  if ($<HTMLDialogElement>("account-editor").open) return;
+  void window.desktop.command(!current.commandOpen);
+}
+window.desktop.commandRequested(requestCommand);
+$("quick-switch").onclick = requestCommand;
+$("theme-toggle").onclick = () =>
+  void window.desktop.setTheme(
+    document.documentElement.dataset.theme === "dark" ? "light" : "dark",
+  );
+$<HTMLSelectElement>("theme-mode").onchange = (e) =>
+  void window.desktop.setTheme(
+    (e.target as HTMLSelectElement).value as AppState["presentation"]["theme"],
+  );
+for (const b of document.querySelectorAll<HTMLElement>("[data-theme-choice]"))
+  b.onclick = () =>
+    void window.desktop.setTheme(b.dataset.themeChoice as "light" | "dark");
+for (const b of document.querySelectorAll<HTMLElement>("[data-tab]"))
+  b.onclick = () => showTab(b.dataset.tab!);
+for (const b of document.querySelectorAll<HTMLElement>("[data-filter]"))
+  b.onclick = () => {
+    accountFilter = b.dataset.filter!;
+    applyAccountFilter();
+  };
+$("compact-setting").onchange = () => void window.desktop.toggleSidebar();
+$("reset-width").onclick = () => void window.desktop.setSidebarWidth(224);
+const resizer = $("sidebar-resizer");
+let resizing: number | null = null;
+let resizeFrame: number | null = null;
+let pendingWidth = 224;
+function scheduleWidth(width: number) {
+  pendingWidth = Math.max(200, Math.min(300, Math.round(width)));
+  if (resizeFrame === null)
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = null;
+      void window.desktop.setSidebarWidth(pendingWidth);
+    });
+}
+resizer.onpointerdown = (e) => {
+  if (e.button !== 0 || current.collapsed) return;
+  resizing = e.pointerId;
+  resizer.setPointerCapture(e.pointerId);
+  document.body.classList.add("resizing");
+  e.preventDefault();
+  resizer.focus();
+};
+resizer.onpointermove = (e) => {
+  if (resizing === e.pointerId) scheduleWidth(e.clientX);
+};
+const stopResize = () => {
+  resizing = null;
+  document.body.classList.remove("resizing");
+};
+resizer.onpointerup = stopResize;
+resizer.onpointercancel = stopResize;
+resizer.onlostpointercapture = stopResize;
+resizer.ondblclick = () => void window.desktop.setSidebarWidth(224);
+resizer.onkeydown = (e) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+  e.preventDefault();
+  const next =
+    e.key === "Home"
+      ? 200
+      : e.key === "End"
+        ? 300
+        : current.presentation.sidebarWidth + (e.key === "ArrowLeft" ? -8 : 8);
+  void window.desktop.setSidebarWidth(next);
 };
 window.desktop.changed(render);
 void window.desktop.state().then(render);
