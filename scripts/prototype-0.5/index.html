@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tin Nhan — Prototype 0.5</title>
+    <meta
+      name="description"
+      content="Prototype tương tác Tin Nhan 0.5 với dữ liệu minh họa."
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <symbol id="i-search" viewBox="0 0 24 24">
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m16 16 4 4" />
+        </symbol>
+        <symbol id="i-sidebar" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="16" rx="3" />
+          <path d="M9 4v16" />
+        </symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14" />
+        </symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24">
+          <path d="M5 12h14m-5-5 5 5-5 5" />
+        </symbol>
+        <symbol id="i-up" viewBox="0 0 24 24">
+          <path d="M12 19V5m-5 5 5-5 5 5" />
+        </symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24">
+          <path d="m9 5 7 7-7 7" />
+        </symbol>
+        <symbol id="i-down" viewBox="0 0 24 24">
+          <path d="m6 9 6 6 6-6" />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+          <path d="m5 12 4 4L19 6" />
+        </symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24">
+          <path d="M20 15.3A8.7 8.7 0 0 1 8.7 4 8.7 8.7 0 1 0 20 15.3Z" />
+        </symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" />
+          <path
+            d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M19 5l-1.5 1.5m-11 11L5 19"
+          />
+        </symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24">
+          <path
+            d="m10 3-1 3-3 1-3 3 1 3 2 2v3l3 2h3l2-2 3-1 2-3v-3l-2-2-1-3-3-1Z"
+          />
+          <circle cx="11" cy="12" r="3" />
+        </symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24">
+          <path d="M6 9a6 6 0 0 1 12 0c0 6 2 6 2 8H4c0-2 2-2 2-8Zm4 12h4" />
+        </symbol>
+        <symbol id="i-bell-off" viewBox="0 0 24 24">
+          <path
+            d="M3 3l18 18M9 4a6 6 0 0 1 9 5v3M6 8v1c0 6-2 6-2 8h12M10 21h4"
+          />
+        </symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24">
+          <path d="m15 3 6 6-4 1-4 5-1 4-7-7 4-1 5-4 1-4ZM5 19l4-4" />
+        </symbol>
+        <symbol id="i-more" viewBox="0 0 24 24">
+          <circle cx="5" cy="12" r="1" />
+          <circle cx="12" cy="12" r="1" />
+          <circle cx="19" cy="12" r="1" />
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+          <path d="m6 6 12 12M6 18 18 6" />
+        </symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24">
+          <path d="M20 10a8 8 0 1 0-1 7M20 3v7h-7" />
+        </symbol>
+        <symbol id="i-external" viewBox="0 0 24 24">
+          <path d="M14 3h7v7m0-7L10 14M9 5H4v15h15v-5" />
+        </symbol>
+        <symbol id="i-chat" viewBox="0 0 24 24">
+          <path d="M20 11a8 8 0 0 1-8 8H5l-3 3v-8a8 8 0 1 1 18-3Z" />
+          <path d="M7 9h8M7 13h5" />
+        </symbol>
+        <symbol id="i-compose" viewBox="0 0 24 24">
+          <path d="m15 4 5 5-9 9-6 1 1-6 9-9ZM9 4H3v17h17v-6" />
+        </symbol>
+        <symbol id="i-attach" viewBox="0 0 24 24">
+          <path d="m8 13 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9" />
+        </symbol>
+        <symbol id="i-smile" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M8 14c1 4 7 4 8 0M8 9h.01M16 9h.01" />
+        </symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24">
+          <rect x="5" y="10" width="14" height="11" rx="3" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+        </symbol>
+        <symbol id="i-file" viewBox="0 0 24 24">
+          <path d="M14 2H5v20h14V7l-5-5Zm0 0v6h5M8 13h8m-8 4h6" />
+        </symbol>
+        <symbol id="i-users" viewBox="0 0 24 24">
+          <circle cx="9" cy="8" r="3" />
+          <path
+            d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m3 10v-3a6 6 0 0 0-2-4"
+          />
+        </symbol>
+      </defs>
+    </svg>
+    <div class="preview">
+      <div class="preview-bar">
+        <div class="preview-brand">
+          <span class="brand-mark small">t<span>n</span><i></i></span
+          ><span>Tin Nhan <small>DESIGN PREVIEW · 0.5</small></span>
+        </div>
+        <nav class="scene-tabs" aria-label="Màn hình prototype">
+          <button data-scene="chat" aria-pressed="true">
+            01 <span>Nhắn tin</span>
+          </button>
+          <button data-scene="command" aria-pressed="false">
+            02 <span>Chuyển nhanh</span>
+          </button>
+          <button data-scene="accounts" aria-pressed="false">
+            03 <span>Tài khoản</span>
+          </button>
+        </nav>
+        <button
+          class="theme-toggle"
+          id="theme-toggle"
+          aria-label="Chuyển sang giao diện tối"
+        >
+          <svg><use href="#i-moon" /></svg><span>Tối</span>
+        </button>
+      </div>
+      <div class="app-window" id="app-window">
+        <aside class="sidebar" aria-label="Điều hướng tài khoản">
+          <div class="sidebar-top">
+            <div class="traffic" aria-label="Cửa sổ minh họa">
+              <i></i><i></i><i></i>
+            </div>
+            <span class="version">0.5</span>
+          </div>
+          <div class="app-brand">
+            <span class="brand-mark">t<span>n</span><i></i></span>
+            <div>
+              <strong>Tin Nhan</strong><small>Mọi kết nối, một nơi.</small>
+            </div>
+          </div>
+          <button class="quick-search" id="quick-search">
+            <svg><use href="#i-search" /></svg><span>Chuyển nhanh</span
+            ><kbd>⌘ K</kbd>
+          </button>
+          <div class="nav-label">
+            <span>TÀI KHOẢN</span
+            ><button
+              class="icon-button"
+              data-add
+              aria-label="Thêm tài khoản minh họa"
+            >
+              <svg><use href="#i-plus" /></svg>
+            </button>
+          </div>
+          <div class="account-nav" id="account-nav"></div>
+          <div class="sidebar-footer">
+            <button class="sidebar-action" data-add>
+              <svg><use href="#i-plus" /></svg><span>Thêm tài khoản</span>
+            </button>
+            <button class="sidebar-action" id="settings-nav">
+              <svg><use href="#i-settings" /></svg
+              ><span>Tài khoản & cài đặt</span>
+            </button>
+            <div class="local-note">
+              <svg><use href="#i-lock" /></svg
+              ><span>Phiên riêng, trên máy anh</span>
+            </div>
+            <button
+              class="profile"
+              id="profile-button"
+              aria-label="Mở quản lý tài khoản"
+            >
+              <span class="profile-avatar">MH</span
+              ><span
+                ><strong>Không gian của Hiếu</strong
+                ><small>Cá nhân</small></span
+              ><svg><use href="#i-more" /></svg>
+            </button>
+          </div>
+        </aside>
+        <div
+          class="sidebar-resizer"
+          id="sidebar-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Độ rộng sidebar"
+          aria-valuenow="224"
+          aria-valuemin="200"
+          aria-valuemax="300"
+          tabindex="0"
+        ></div>
+        <main class="workspace">
+          <header class="toolbar">
+            <button
+              class="icon-button"
+              id="collapse-toggle"
+              aria-label="Thu gọn sidebar"
+              aria-expanded="true"
+            >
+              <svg><use href="#i-sidebar" /></svg>
+            </button>
+            <div class="breadcrumb" id="breadcrumb"></div>
+            <span class="toolbar-spacer"></span>
+            <span class="connection"><i></i><span>Đã kết nối</span></span>
+            <button
+              class="icon-button"
+              id="refresh"
+              aria-label="Tải lại minh họa"
+            >
+              <svg><use href="#i-refresh" /></svg>
+            </button>
+            <button
+              class="icon-button"
+              id="external"
+              aria-label="Thông tin mở trong trình duyệt"
+            >
+              <svg><use href="#i-external" /></svg>
+            </button>
+          </header>
+          <section
+            class="chat-view"
+            id="chat-view"
+            aria-label="Màn hình nhắn tin minh họa"
+          >
+            <div class="conversation-list">
+              <div class="list-heading">
+                <h1>Tin nhắn</h1>
+                <button
+                  class="icon-button"
+                  id="compose-button"
+                  aria-label="Tìm cuộc trò chuyện minh họa"
+                >
+                  <svg><use href="#i-compose" /></svg>
+                </button>
+              </div>
+              <label class="chat-search"
+                ><svg><use href="#i-search" /></svg
+                ><input
+                  id="chat-search"
+                  placeholder="Tìm cuộc trò chuyện"
+                  aria-label="Tìm cuộc trò chuyện minh họa"
+              /></label>
+              <div class="chat-filters">
+                <button class="selected" data-chat-filter="all">Tất cả</button
+                ><button data-chat-filter="unread">
+                  Chưa đọc <span>3</span>
+                </button>
+              </div>
+              <div id="conversations"></div>
+              <div class="provider-caption">
+                <span id="provider-caption-name">Telegram Web</span
+                ><small>Nội dung minh họa</small>
+              </div>
+            </div>
+            <div class="conversation">
+              <div class="conversation-header">
+                <span class="person-avatar forest" id="conversation-avatar"
+                  >M</span
+                >
+                <div>
+                  <strong id="conversation-title">Studio Mộc</strong
+                  ><small id="conversation-subtitle"
+                    >3 thành viên · Không gian sáng tạo</small
+                  >
+                </div>
+                <button
+                  class="icon-button"
+                  id="conversation-info"
+                  aria-label="Thông tin cuộc trò chuyện minh họa"
+                >
+                  <svg><use href="#i-more" /></svg>
+                </button>
+              </div>
+              <div class="messages" id="messages" aria-live="polite"></div>
+              <form class="composer" id="composer">
+                <button
+                  class="icon-button"
+                  type="button"
+                  id="attach-button"
+                  aria-label="Đính kèm minh họa"
+                >
+                  <svg><use href="#i-attach" /></svg></button
+                ><input
+                  id="message-input"
+                  aria-label="Soạn tin nhắn minh họa"
+                  placeholder="Viết điều gì đó…"
+                  autocomplete="off"
+                /><button
+                  class="icon-button"
+                  type="button"
+                  id="emoji-button"
+                  aria-label="Thêm biểu tượng cảm xúc"
+                >
+                  <svg><use href="#i-smile" /></svg></button
+                ><button class="send-button" aria-label="Gửi trong prototype">
+                  <svg><use href="#i-up" /></svg>
+                </button>
+              </form>
+              <div class="composer-note">
+                Bản xem thử · Tin nhắn chỉ xuất hiện trong prototype này
+              </div>
+            </div>
+          </section>
+          <section
+            class="accounts-view"
+            id="accounts-view"
+            aria-label="Quản lý tài khoản"
+            hidden
+          >
+            <div class="settings-heading">
+              <div>
+                <span class="overline">KHÔNG GIAN CỦA ANH</span>
+                <h1>Kết nối theo cách của mình.</h1>
+                <p>Mỗi tài khoản một không gian. Mọi thứ đều trong tầm tay.</p>
+              </div>
+              <button class="primary" data-add>
+                <svg><use href="#i-plus" /></svg>Thêm tài khoản
+              </button>
+            </div>
+            <nav class="settings-tabs" aria-label="Danh mục cài đặt">
+              <button class="active" data-settings="accounts">
+                Tài khoản <span id="account-count">6</span></button
+              ><button data-settings="appearance">Giao diện</button
+              ><button data-settings="notifications">Thông báo</button>
+            </nav>
+            <div id="settings-accounts">
+              <div class="accounts-tools">
+                <div class="platform-filters">
+                  <button data-filter="all" class="selected">Tất cả</button
+                  ><button data-filter="zalo">Zalo</button
+                  ><button data-filter="messenger">Messenger</button
+                  ><button data-filter="telegram">Telegram</button>
+                </div>
+                <span id="connected-count">6 tài khoản đã kết nối</span>
+              </div>
+              <div class="account-table" id="account-table"></div>
+              <div class="privacy-note">
+                <span class="privacy-icon"
+                  ><svg><use href="#i-lock" /></svg
+                ></span>
+                <div>
+                  <strong>Một nơi chung. Những phiên riêng.</strong>
+                  <p>
+                    Đổi tên, ghim hay sắp xếp tài khoản không làm thay đổi phiên
+                    đăng nhập.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div id="settings-appearance" class="preference-panel" hidden>
+              <h2>Vừa mắt, cả ngày lẫn đêm.</h2>
+              <p>Chọn sắc độ phù hợp với không gian của anh.</p>
+              <div class="theme-options">
+                <button data-theme-choice="light">
+                  <span class="theme-sample light"><i></i><i></i></span
+                  ><strong>Sáng · Ivory</strong></button
+                ><button data-theme-choice="dark">
+                  <span class="theme-sample dark"><i></i><i></i></span
+                  ><strong>Tối · Graphite</strong>
+                </button>
+              </div>
+              <div class="preference-row">
+                <div>
+                  <strong>Sidebar gọn</strong
+                  ><small>Giữ tài khoản ở dạng biểu tượng.</small>
+                </div>
+                <button
+                  class="switch"
+                  id="compact-setting"
+                  role="switch"
+                  aria-checked="false"
+                  aria-label="Sidebar gọn"
+                >
+                  <i></i>
+                </button>
+              </div>
+            </div>
+            <div id="settings-notifications" class="preference-panel" hidden>
+              <h2>Chỉ những kết nối anh muốn.</h2>
+              <p>
+                Bật hoặc tắt thông báo riêng cho từng tài khoản trong bản xem
+                thử.
+              </p>
+              <div id="notification-settings"></div>
+            </div>
+          </section>
+        </main>
+        <dialog
+          id="command-dialog"
+          class="command-dialog"
+          aria-labelledby="command-label"
+        >
+          <div class="command-input">
+            <svg><use href="#i-search" /></svg
+            ><label class="sr-only" for="command-search" id="command-label"
+              >Tìm tài khoản hoặc thao tác</label
+            ><input
+              id="command-search"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="command-results"
+              aria-expanded="false"
+              placeholder="Anh muốn mở gì?"
+              autocomplete="off"
+            /><button
+              class="escape-key"
+              data-close-command
+              aria-label="Đóng bảng chuyển nhanh"
+            >
+              esc
+            </button>
+          </div>
+          <div
+            class="command-results"
+            id="command-results"
+            role="listbox"
+            aria-label="Kết quả tìm kiếm"
+          ></div>
+          <div class="command-footer">
+            <span><kbd>↑</kbd><kbd>↓</kbd> để chọn <kbd>↵</kbd> để mở</span
+            ><span>Chuyển nhanh, tiếp tục mạch trò chuyện.</span>
+          </div>
+        </dialog>
+        <dialog
+          id="account-editor"
+          class="account-editor"
+          aria-labelledby="editor-title"
+        >
+          <form id="account-form">
+            <div class="editor-heading">
+              <span class="overline">TIN NHAN</span
+              ><button
+                class="icon-button"
+                id="close-editor"
+                type="button"
+                aria-label="Đóng"
+              >
+                <svg><use href="#i-close" /></svg>
+              </button>
+            </div>
+            <h2 id="editor-title">Thêm một kết nối.</h2>
+            <p>Tài khoản minh họa để thử bố cục và thao tác.</p>
+            <label
+              >Nền tảng<select id="editor-provider">
+                <option value="zalo">Zalo</option>
+                <option value="messenger">Messenger</option>
+                <option value="telegram">Telegram</option>
+              </select></label
+            ><label
+              >Tên gợi nhớ<input
+                id="editor-name"
+                required
+                maxlength="40"
+                placeholder="Ví dụ: Công việc"
+            /></label>
+            <div class="editor-actions">
+              <button type="button" class="secondary" id="cancel-editor">
+                Hủy</button
+              ><button class="primary" id="save-account">Thêm tài khoản</button>
+            </div>
+          </form>
+        </dialog>
+        <div class="toast" id="toast" role="status" hidden></div>
+      </div>
+      <footer class="preview-footer">
+        <span><i></i> PROTOTYPE TƯƠNG TÁC <b>·</b> Dữ liệu minh họa</span
+        ><span>Thử <kbd>⌘ K</kbd> · Kéo mép sidebar · Chuyển sáng / tối</span>
+      </footer>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
