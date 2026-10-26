@@ -1,13 +1,13 @@
 import { createCommandPalette } from "./command.ts";
+import { createProviderNavigation } from "./provider-navigation.ts";
 import {
-  PROVIDERS,
-  PROVIDER_ORDER,
   type Account,
   type AccountId,
   type AccountResult,
   type AppState,
   type DesktopBridge,
   type ProviderId,
+  type ProviderDefinition,
   type NotificationChoice,
 } from "../shared.ts";
 declare global {
@@ -25,7 +25,7 @@ const labels = {
   authenticated: "Đã kết nối · Phiên riêng trên máy",
   error: "Chưa kết nối được · Thử tải lại",
 };
-const icons = {
+const icons: Record<string, string> = {
   zalo: "zalo.png",
   messenger: "messenger.svg",
   telegram: "telegram.svg",
@@ -74,8 +74,11 @@ function setStyle(node: HTMLElement, name: string, value = "") {
   if (value) node.style.setProperty(name, value);
   else node.style.removeProperty(name);
 }
+function providerOf(id: ProviderId) {
+  return current.providers.find((provider) => provider.id === id)!;
+}
 function nameOf(a: Account) {
-  return `${PROVIDERS[a.provider].label} · ${a.name}`;
+  return `${providerOf(a.provider).label} · ${a.name}`;
 }
 function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -108,11 +111,29 @@ function icon(name: string) {
   svg.append(use);
   return svg;
 }
+function providerLogo(provider: ProviderDefinition) {
+  if (icons[provider.id]) {
+    const logo = element("img", "provider-logo");
+    logo.src = "logos/" + icons[provider.id];
+    logo.alt = "";
+    logo.draggable = false;
+    return logo;
+  }
+  const initials = provider.label
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => [...word][0])
+    .join("")
+    .toLocaleUpperCase();
+  const logo = element("span", "provider-logo provider-initials", initials);
+  logo.setAttribute("aria-hidden", "true");
+  return logo;
+}
 function avatar(a: Account) {
   const e = element("span", "account-avatar avatar-" + a.provider, a.avatar);
-  const logo = element("img", "avatar-provider");
-  logo.src = "logos/" + icons[a.provider];
-  logo.alt = "";
+  const logo = providerLogo(providerOf(a.provider));
+  logo.classList.add("avatar-provider");
   e.append(logo);
   return e;
 }
@@ -285,7 +306,11 @@ async function openEditor(a?: Account, provider?: ProviderId) {
   $("account-name").focus();
 }
 function rebuildAccounts(state: AppState) {
-  const key = JSON.stringify([state.accounts, state.presentation.pinned]);
+  const key = JSON.stringify([
+    state.accounts,
+    state.presentation.pinned,
+    state.providers,
+  ]);
   if (key === signature) return false;
   signature = key;
   const focused = document.activeElement as HTMLElement | null;
@@ -297,7 +322,48 @@ function rebuildAccounts(state: AppState) {
   $("account-manager").replaceChildren();
   $("notification-providers").replaceChildren();
   $("archived-accounts").replaceChildren();
-  for (const provider of PROVIDER_ORDER) {
+  syncSelectOptions(
+    $<HTMLSelectElement>("account-provider"),
+    state.providers.map((provider) => ({
+      value: provider.id,
+      label: provider.label,
+    })),
+    "Chưa có nền tảng",
+  );
+  const filters = [{ id: "all", label: "Tất cả" }, ...state.providers];
+  if (state.providers.length > 5) {
+    const filter = element("select");
+    filter.id = "account-provider-filter";
+    filter.setAttribute("aria-label", "Lọc tài khoản theo nền tảng");
+    syncSelectOptions(
+      filter,
+      filters.map(({ id, label }) => ({ value: id, label })),
+      "Tất cả",
+    );
+    filter.value = accountFilter;
+    filter.onchange = () => {
+      accountFilter = filter.value;
+      applyAccountFilter();
+    };
+    $("platform-filters").replaceChildren(filter);
+  } else {
+    $("platform-filters").replaceChildren(
+      ...filters.map(({ id, label }) => {
+        const button = action(
+          label,
+          "Lọc " + label,
+          () => {
+            accountFilter = id;
+            applyAccountFilter();
+          },
+          "",
+        );
+        button.dataset.filter = id;
+        return button;
+      }),
+    );
+  }
+  for (const { id: provider, label: providerLabel } of state.providers) {
     const peers = state.accounts.filter(
       (a) => a.provider === provider && !a.archived,
     );
@@ -312,7 +378,7 @@ function rebuildAccounts(state: AppState) {
       const status = element("span", "account-status");
       status.id = "account-status-" + a.id;
       const meta = element("div", "account-meta");
-      meta.append(element("small", "", PROVIDERS[provider].label), status);
+      meta.append(element("small", "", providerLabel), status);
       label.append(name, meta);
       identity.append(avatar(a), label);
       const tools = element("div", "account-actions");
@@ -390,7 +456,7 @@ function rebuildAccounts(state: AppState) {
       const nlabel = element("label");
       nlabel.append(
         element("strong", "", a.name),
-        element("small", "", PROVIDERS[provider].label),
+        element("small", "", providerLabel),
       );
       nlabel.htmlFor = "notification-" + a.id;
       const select = element("select");
@@ -467,32 +533,14 @@ function rebuildAccounts(state: AppState) {
   nextFocus?.focus({ preventScroll: true });
   return true;
 }
+const providerNavigation = createProviderNavigation({
+  getState: () => current,
+  select: selectProvider,
+  logo: providerLogo,
+  icon,
+});
 function renderToolbar(state: AppState, active: Account) {
-  for (const [index, provider] of PROVIDER_ORDER.entries()) {
-    const tab = $("platform-" + provider);
-    const selected = active.provider === provider;
-    const peers = state.accounts.filter(
-      (a) => a.provider === provider && !a.archived,
-    );
-    const unread = peers.some((a) => (state.unread[a.id]?.count ?? 0) > 0);
-    setAttribute(tab, "aria-selected", String(selected));
-    setProperty(tab, "tabIndex", selected ? 0 : -1);
-    setProperty(
-      tab.querySelector<HTMLElement>(".platform-unread")!,
-      "hidden",
-      !unread,
-    );
-    setProperty(
-      tab,
-      "title",
-      `${PROVIDERS[provider].label} (⌘${index + 1})${unread ? " · Có tin chưa đọc" : ""}`,
-    );
-    setAttribute(
-      tab,
-      "aria-label",
-      `${PROVIDERS[provider].label}${unread ? " · Có tin chưa đọc" : ""}`,
-    );
-  }
+  providerNavigation.sync(state);
   const select = $<HTMLButtonElement>("account-select");
   setProperty(select, "value", active.id);
   setProperty($("account-select-label"), "textContent", active.name);
@@ -510,7 +558,7 @@ function renderToolbar(state: AppState, active: Account) {
   setProperty(
     $("add-account-toolbar"),
     "title",
-    "Thêm tài khoản " + PROVIDERS[active.provider].label,
+    "Thêm tài khoản " + providerOf(active.provider).label,
   );
 }
 async function selectProvider(provider: ProviderId, focusPage = true) {
@@ -525,28 +573,6 @@ async function selectProvider(provider: ProviderId, focusPage = true) {
   )
     await openEditor(undefined, provider);
   else await window.desktop.activateProvider(provider, focusPage);
-}
-for (const [index, provider] of PROVIDER_ORDER.entries()) {
-  const tab = $("platform-" + provider);
-  tab.onclick = () => void selectProvider(provider);
-  tab.onkeydown = (event) => {
-    if (event.isComposing || event.altKey || event.metaKey || event.ctrlKey)
-      return;
-    const next =
-      event.key === "ArrowRight"
-        ? (index + 1) % PROVIDER_ORDER.length
-        : event.key === "ArrowLeft"
-          ? (index + PROVIDER_ORDER.length - 1) % PROVIDER_ORDER.length
-          : event.key === "Home"
-            ? 0
-            : event.key === "End"
-              ? PROVIDER_ORDER.length - 1
-              : -1;
-    if (next < 0) return;
-    event.preventDefault();
-    $("platform-" + PROVIDER_ORDER[next]).focus();
-    void selectProvider(PROVIDER_ORDER[next], false);
-  };
 }
 async function openAccountMenu() {
   const picker = $("account-select");
@@ -574,6 +600,7 @@ function render(state: AppState) {
   current = state;
   const rebuilt = rebuildAccounts(state);
   const settings = state.panel === "settings";
+  const library = state.panel === "providers";
   const refreshSettings = settings || !previous || rebuilt;
   const root = document.documentElement,
     choice = state.presentation.theme;
@@ -677,7 +704,7 @@ function render(state: AppState) {
           ? "Kết nối gián đoạn · Thử lại riêng tài khoản này"
           : labels[state.statuses[state.active]],
   );
-  const failed = !settings && !state.commandOpen && !!c.reason;
+  const failed = state.panel === "service" && !state.commandOpen && !!c.reason;
   setProperty($("connection-panel"), "hidden", !failed);
   if (failed) {
     setProperty(
@@ -778,7 +805,7 @@ function render(state: AppState) {
   setProperty(
     $("service-loading"),
     "hidden",
-    settings || failed || state.commandOpen,
+    settings || library || failed || state.commandOpen,
   );
   setProperty($("catalog-warning"), "textContent", state.catalogWarning);
   setProperty($("catalog-warning"), "hidden", !state.catalogWarning);
@@ -808,8 +835,7 @@ $("settings").onclick = () => {
   if (current.updates?.phase === "available") showTab("updates");
   void window.desktop.settings();
 };
-$("close-settings").onclick = () =>
-  void window.desktop.activate(current.active);
+$("close-settings").onclick = () => void window.desktop.providerLibrary(false);
 $("check-updates").onclick = () =>
   void window.desktop.checkUpdates().catch(() => {
     setProperty(
@@ -980,11 +1006,6 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
   }
 });
-for (const b of document.querySelectorAll<HTMLElement>("[data-filter]"))
-  b.onclick = () => {
-    accountFilter = b.dataset.filter!;
-    applyAccountFilter();
-  };
 window.desktop.changed(render);
 void window.desktop.state().then(render);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {

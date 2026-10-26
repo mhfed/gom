@@ -8,6 +8,14 @@ const bridge: DesktopBridge = {
   navigationMenu: () => ipcRenderer.invoke("desktop", "navigation-menu"),
   accountMenu: (anchor) =>
     ipcRenderer.invoke("desktop", "account-menu", anchor),
+  providerLibrary: (open) =>
+    ipcRenderer.invoke("desktop", "provider-library", open),
+  providerMenu: (request) =>
+    ipcRenderer.invoke("desktop", "provider-menu", request),
+  pinProvider: (id) => ipcRenderer.invoke("desktop", "provider-pin", id),
+  closeProvider: (id) => ipcRenderer.invoke("desktop", "provider-close", id),
+  addProvider: (name, url) =>
+    ipcRenderer.invoke("desktop", "provider-add", { name, url }),
   accountEditor: (open) =>
     ipcRenderer.invoke("desktop", "account-editor", open),
   addAccount: (provider, name, avatar) =>

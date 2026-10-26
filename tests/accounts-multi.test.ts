@@ -16,6 +16,7 @@ import {
 } from "../src/main/accounts.ts";
 import { normalizePreferences } from "../src/main/preferences.ts";
 import { ViewRegistry } from "../src/main/view-registry.ts";
+import type { Account, ProviderDefinition } from "../src/shared.ts";
 const uuid = "12345678-1234-4234-8234-123456789abc";
 test("legacy migration keeps exact partition names; new same-platform accounts have immutable separate partitions", () => {
   const legacy = defaultAccounts();
@@ -147,4 +148,136 @@ test("missing primary with corrupt backup stays read-only instead of creating a 
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+const websiteId = "web_87654321-1234-4234-8234-123456789abc";
+const website: ProviderDefinition = {
+  id: websiteId,
+  label: "Team website",
+  entry: "https://work.example.test:8443/dashboard",
+  hosts: ["work.example.test"],
+  color: "#087f7a",
+  custom: true,
+};
+const websiteAccount: Account = {
+  id: "acc_" + uuid,
+  provider: websiteId,
+  name: "Cá nhân",
+  avatar: "CN",
+  archived: false,
+};
+
+test("v2 catalog restores registered websites without changing legacy or isolated account partitions", () => {
+  const accounts = validateCatalog({
+    version: 2,
+    providers: [website],
+    accounts: [...defaultAccounts(), websiteAccount],
+  });
+  assert.equal(accounts[3].provider, websiteId);
+  assert.deepEqual(accounts.map(accountPartition), [
+    "persist:zalo",
+    "persist:messenger",
+    "persist:telegram",
+    "persist:tn-account-acc_" + uuid,
+  ]);
+  assert.throws(() => accountPartition({ ...websiteAccount, id: websiteId }));
+  assert.throws(() => validateCatalog({ version: 2, providers: [], accounts }));
+  assert.throws(() =>
+    validateCatalog({ version: 2, providers: [website, website], accounts }),
+  );
+});
+
+test("legacy catalog upgrades on a successful atomic website/account commit and preserves the registry on later account edits", async () => {
+  const root = await mkdtemp(join(tmpdir(), "gom-providers-"));
+  try {
+    const path = join(root, "accounts.json");
+    await writeFile(
+      path,
+      JSON.stringify({ version: 1, accounts: defaultAccounts() }),
+    );
+    const store = new AccountCatalogStore(path);
+    const before = await store.load();
+    assert.equal(before.providers.length, 3);
+    assert.deepEqual(before.accounts.map(accountPartition), [
+      "persist:zalo",
+      "persist:messenger",
+      "persist:telegram",
+    ]);
+    const next = [...before.accounts, websiteAccount];
+    await store.commit(next, [...before.providers, website]);
+    const saved = JSON.parse(await readFile(path, "utf8"));
+    assert.equal(saved.version, 2);
+    assert.equal(saved.providers.length, 1);
+    assert.equal(saved.providers[0].id, websiteId);
+    assert.equal(saved.accounts[3].provider, websiteId);
+    const reopened = new AccountCatalogStore(path);
+    const after = await reopened.load();
+    assert.equal(after.writable, true);
+    assert.equal(
+      after.providers[3].entry,
+      "https://work.example.test:8443/dashboard",
+    );
+    await reopened.commit(
+      editAccount(after.accounts, websiteAccount.id, "Work", "W"),
+    );
+    const retained = await new AccountCatalogStore(path).load();
+    assert.equal(retained.providers[3].id, websiteId);
+    assert.equal(retained.accounts[3].name, "Work");
+    const good = await readFile(path, "utf8");
+    await assert.rejects(() =>
+      reopened.commit(retained.accounts, before.providers),
+    );
+    assert.equal(await readFile(path, "utf8"), good);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("v2 backup retains matching website definitions and sessions while blocking further writes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "gom-provider-backup-"));
+  try {
+    const path = join(root, "accounts.json");
+    const store = new AccountCatalogStore(path);
+    const initial = await store.load();
+    const accounts = [...initial.accounts, websiteAccount];
+    await store.commit(accounts, [...initial.providers, website]);
+    await store.commit(editAccount(accounts, websiteAccount.id, "Latest", "L"));
+    await writeFile(path, "broken");
+    const recovered = new AccountCatalogStore(path);
+    const result = await recovered.load();
+    assert.equal(result.writable, false);
+    assert.equal(result.providers[3].id, websiteId);
+    assert.equal(result.accounts[3].provider, websiteId);
+    assert.equal(result.accounts[3].name, "Cá nhân");
+    assert.equal(
+      accountPartition(result.accounts[3]),
+      "persist:tn-account-acc_" + uuid,
+    );
+    await assert.rejects(() => recovered.commit(result.accounts));
+    assert.equal(await readFile(path, "utf8"), "broken");
+    const reloaded = await store.load();
+    assert.equal(reloaded.writable, false);
+    await assert.rejects(() => store.commit(reloaded.accounts));
+    assert.equal(await readFile(path, "utf8"), "broken");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("catalog rejects malformed custom entries and unregistered custom accounts", () => {
+  const accounts = [...defaultAccounts(), websiteAccount];
+  for (const providers of [
+    undefined,
+    [{ ...website, id: "web_bad" }],
+    [{ ...website, id: "zalo" }],
+    [{ ...website, entry: "javascript:alert(1)" }],
+    [{ ...website, entry: "https://user:secret@example.test/" }],
+    [{ ...website, label: " " }],
+  ])
+    assert.throws(() => validateCatalog({ version: 2, providers, accounts }));
+  const created = createAccount(websiteId, "Work", "W", uuid);
+  assert.equal(created.provider, websiteId);
+  assert.throws(() =>
+    validateCatalog({ version: 1, accounts: [...defaultAccounts(), created] }),
+  );
 });

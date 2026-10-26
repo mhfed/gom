@@ -22,6 +22,13 @@ import {
 } from "./notification-policy.ts";
 import { normalizeTheme } from "./theme.ts";
 import { normalizePresentation, sidebarWidth } from "./presentation.ts";
+import { createCustomProvider, defaultProviders } from "./providers.ts";
+import {
+  normalizeProviderTabs,
+  openProviderTab,
+  toggleProviderPin,
+  closeProviderTab,
+} from "./provider-tabs.ts";
 import { layoutViews } from "./layout.ts";
 import { normalizeUnread } from "./unread.ts";
 import { authScript } from "./auth-detection.ts";
@@ -64,6 +71,7 @@ import {
   type AccountResult,
   type AppState,
   type ProviderStatus,
+  type ProviderResult,
 } from "../shared.ts";
 import {
   navigationPolicy,
@@ -105,6 +113,7 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let wakeTimer: ReturnType<typeof setTimeout> | undefined;
 const lastNotificationClicks = new Map<AccountId, number>();
 const permissionPrompts = new Set<AccountId>();
+const closingProviders = new Set<ProviderId>();
 const testAlerts = new Map<AccountId, Notification>();
 const SHORTCUT = "CommandOrControl+Shift+Space";
 const appIconPath = join(__dirname, "app.png");
@@ -118,6 +127,8 @@ const updateChecker = new ManualUpdateChecker({
 });
 const updateSchedule = new UpdateSchedule(() => updateChecker.check());
 const state: AppState = {
+  providers: defaultProviders(),
+  providerTabs: normalizeProviderTabs(undefined, [...PROVIDER_ORDER]),
   presentation: normalizePresentation(undefined, []),
   commandOpen: false,
   accounts: defaultAccounts(),
@@ -179,9 +190,17 @@ function providerFor(id: AccountId): ProviderId {
   if (!account) throw new Error("unknown-account");
   return account.provider;
 }
+function providerDefinition(id: ProviderId) {
+  const provider = state.providers.find((p) => p.id === id);
+  if (!provider) throw new Error("unknown-provider");
+  return provider;
+}
+function knownProvider(id: unknown): id is ProviderId {
+  return validProviderId(id) && state.providers.some((p) => p.id === id);
+}
 function accountLabel(id: AccountId) {
   const a = findAccount(id, true)!;
-  return `${PROVIDERS[a.provider].label} · ${a.name}`;
+  return `${providerDefinition(a.provider).label} · ${a.name}`;
 }
 function isCurrent(id: AccountId, contents: WebContents) {
   return !!findAccount(id) && views.peek(id)?.webContents === contents;
@@ -266,7 +285,11 @@ function setupSession(ses: Session, id: AccountId) {
           !popup.isDestroyed() &&
           popup.webContents === contents &&
           popupProviders.get(contents) === id &&
-          navigationPolicy(providerFor(id), contents.getURL()) === "internal",
+          navigationPolicy(
+            providerFor(id),
+            contents.getURL(),
+            state.providers,
+          ) === "internal",
       ));
   ses.setPermissionRequestHandler((contents, permission, callback, details) => {
     const valid =
@@ -276,6 +299,7 @@ function setupSession(ses: Session, id: AccountId) {
         details.requestingUrl,
         details.isMainFrame,
         owned(contents),
+        state.providers,
       );
     if (!valid || closing || !["notifications", "media"].includes(permission)) {
       callback(false);
@@ -340,24 +364,29 @@ function setupSession(ses: Session, id: AccountId) {
         details.requestingUrl || origin,
         details.isMainFrame,
         owned(contents),
+        state.providers,
       ) &&
       notificationAllowed(state.preferences, id),
   );
   ses.on("will-download", (_event, item) => {
     item.setSaveDialogOptions({
-      title: "Lưu tệp từ " + PROVIDERS[providerFor(id)].label,
+      title: "Lưu tệp từ " + providerDefinition(providerFor(id)).label,
     });
   });
 }
 function guard(contents: WebContents, id: AccountId) {
   contents.on("will-navigate", (event, url) => {
-    if (navigationPolicy(providerFor(id), url) !== "internal") {
+    const policy = navigationPolicy(providerFor(id), url, state.providers);
+    if (policy !== "internal") {
       event.preventDefault();
-      void external(url);
+      if (policy === "external") void external(url);
     }
   });
   contents.on("will-redirect", (event, url, _inPlace, isMainFrame) => {
-    if (navigationPolicy(providerFor(id), event.url ?? url) !== "internal") {
+    if (
+      navigationPolicy(providerFor(id), event.url ?? url, state.providers) !==
+      "internal"
+    ) {
       event.preventDefault();
       const principal = [...views.entries()].some(
         ([provider, view]) => provider === id && view.webContents === contents,
@@ -366,7 +395,8 @@ function guard(contents: WebContents, id: AccountId) {
     }
   });
   contents.setWindowOpenHandler(({ url }) => {
-    if (navigationPolicy(providerFor(id), url) === "internal")
+    const policy = navigationPolicy(providerFor(id), url, state.providers);
+    if (policy === "internal")
       return {
         action: "allow",
         overrideBrowserWindowOptions: {
@@ -381,7 +411,7 @@ function guard(contents: WebContents, id: AccountId) {
           },
         },
       };
-    void external(url);
+    if (policy === "external") void external(url);
     return { action: "deny" };
   });
   contents.on("did-create-window", (popup) => {
@@ -463,7 +493,7 @@ function createView(id: AccountId) {
     fail(id, "crashed");
   });
   void view.webContents
-    .loadURL(PROVIDERS[providerFor(id)].entry)
+    .loadURL(providerDefinition(providerFor(id)).entry)
     .catch(() => {});
   return view;
 }
@@ -484,16 +514,18 @@ function layout() {
 function activate(id: AccountId, focusPage = true) {
   if (accountEditorOpen) return;
   const account = findAccount(id);
-  if (!account || closing) return;
+  if (!account || closing || closingProviders.has(account.provider)) return;
+  const opened = !state.providerTabs.open.includes(account.provider);
+  state.providerTabs = openProviderTab(state.providerTabs, account.provider);
   const selectionChanged =
     state.active !== id || lastAccounts.get(account.provider) !== id;
   lastAccounts.set(account.provider, id);
   state.active = id;
   state.commandOpen = false;
   state.panel = "service";
-  const known = views.ids().includes(id);
   const view = views.activate(id);
-  if (!known) win.contentView.addChildView(view);
+  if (!win.contentView.children.includes(view))
+    win.contentView.addChildView(view);
   layout();
   if (
     focusPage &&
@@ -505,7 +537,7 @@ function activate(id: AccountId, focusPage = true) {
     view.webContents.focus();
   void detect(id, view.webContents, true);
   publish();
-  if (selectionChanged) scheduleSave();
+  if (selectionChanged || opened) scheduleSave();
 }
 
 function detect(id: AccountId, contents: WebContents, refresh = false) {
@@ -519,9 +551,13 @@ async function detectOnce(id: AccountId, contents: WebContents) {
     recovery.reason(id) ||
     contents.isDestroyed() ||
     contents.isLoadingMainFrame() ||
-    navigationPolicy(providerFor(id), contents.getURL()) !== "internal"
+    navigationPolicy(providerFor(id), contents.getURL(), state.providers) !==
+      "internal"
   )
     return;
+  // Arbitrary websites do not expose Gom's messaging DOM contract.
+  // Their native loading/connection status remains authoritative.
+  if (providerDefinition(providerFor(id)).custom) return;
   const epoch = epochs.get(id) ?? 0;
   const valid = () =>
     !closing &&
@@ -597,18 +633,47 @@ function fail(id: AccountId, reason: FailureReason) {
 }
 function reloadProvider(id: AccountId, manual = false, home = false) {
   if (closing || state.importing || !findAccount(id)) return;
-  const view = views.activate(id);
-  if (view.webContents.isDestroyed()) return;
+  if (
+    manual &&
+    (state.panel !== "service" ||
+      state.commandOpen ||
+      accountEditorOpen ||
+      !state.providerTabs.open.includes(providerFor(id)))
+  )
+    return;
+  const view = views.peek(id);
+  if (!view || view.webContents.isDestroyed()) return;
   if (manual) recovery.reset(id);
   epochs.set(id, (epochs.get(id) ?? 0) + 1);
   if (
     home ||
-    navigationPolicy(providerFor(id), view.webContents.getURL()) !== "internal"
+    navigationPolicy(
+      providerFor(id),
+      view.webContents.getURL(),
+      state.providers,
+    ) !== "internal"
   )
     void view.webContents
-      .loadURL(PROVIDERS[providerFor(id)].entry)
+      .loadURL(providerDefinition(providerFor(id)).entry)
       .catch(() => {});
   else view.webContents.reload();
+}
+function goBack() {
+  if (
+    closing ||
+    state.panel !== "service" ||
+    state.commandOpen ||
+    accountEditorOpen ||
+    !state.providerTabs.open.includes(providerFor(state.active))
+  )
+    return;
+  const contents = views.peek(state.active)?.webContents;
+  if (
+    contents &&
+    !contents.isDestroyed() &&
+    contents.navigationHistory.canGoBack()
+  )
+    contents.navigationHistory.goBack();
 }
 function tick() {
   if (closing || sleeping) return;
@@ -646,6 +711,14 @@ function showWindow() {
 function showSettings() {
   state.commandOpen = false;
   state.panel = "settings";
+  layout();
+  publish();
+  showWindow();
+}
+function showProviderLibrary() {
+  if (closing || accountEditorOpen) return;
+  state.commandOpen = false;
+  state.panel = "providers";
   layout();
   publish();
   showWindow();
@@ -937,14 +1010,257 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
     publish();
   }
 }
-function activateProvider(provider: ProviderId, focusPage = true) {
+function accountForProvider(provider: ProviderId) {
   const last = lastAccounts.get(provider);
   const recent = last ? findAccount(last) : undefined;
-  const target =
+  return (
     (recent?.provider === provider ? recent : undefined) ||
-    state.accounts.find((a) => a.provider === provider && !a.archived);
+    state.accounts.find((a) => a.provider === provider && !a.archived)
+  );
+}
+function activateProvider(provider: ProviderId, focusPage = true) {
+  const target = accountForProvider(provider);
   if (target) activate(target.id, focusPage);
   else showSettings();
+}
+async function addProvider(arg: unknown): Promise<ProviderResult> {
+  if (state.importing || state.accountBusy || closing)
+    return {
+      ok: false,
+      message: "App đang xử lý tài khoản. Anh thử lại sau một chút.",
+    };
+  if (state.catalogWarning) return { ok: false, message: state.catalogWarning };
+  if (
+    !arg ||
+    typeof arg !== "object" ||
+    !("name" in arg) ||
+    !("url" in arg) ||
+    typeof arg.name !== "string" ||
+    typeof arg.url !== "string"
+  )
+    return { ok: false, message: "Nhập tên và địa chỉ website hợp lệ." };
+  const { name, url } = arg;
+  return (
+    accountOps.run(async () => {
+      state.accountBusy = true;
+      publish();
+      try {
+        const provider = createCustomProvider(name, url);
+        const account = createAccount(provider.id, "Cá nhân");
+        const providers = [...state.providers, provider];
+        const accounts = [...state.accounts, account];
+        if (closing) return { ok: false, message: "App đang thoát." };
+        await catalogStore.commit(accounts, providers);
+        state.providers = providers;
+        state.accounts = accounts;
+        initializeAccount(account);
+        activate(account.id);
+        await persist();
+        return { ok: true, accountId: account.id, providerId: provider.id };
+      } catch (error) {
+        const invalid =
+          error instanceof Error &&
+          /invalid|url|name|limit|provider/i.test(error.message);
+        const message = invalid
+          ? "Nhập tên website và URL http:// hoặc https:// hợp lệ, không kèm mật khẩu."
+          : "Chưa lưu được website. Anh kiểm tra quyền ghi hoặc dung lượng rồi thử lại.";
+        return { ok: false, message };
+      } finally {
+        state.accountBusy = false;
+        publish();
+      }
+    }) ?? { ok: false, message: "App đang xử lý tài khoản." }
+  );
+}
+async function closeProvider(provider: ProviderId): Promise<AccountResult> {
+  if (
+    closing ||
+    accountEditorOpen ||
+    state.commandOpen ||
+    state.accountBusy ||
+    state.importing
+  )
+    return {
+      ok: false,
+      message: "Đợi thao tác hiện tại hoàn tất để đóng tab.",
+    };
+  if (!state.providerTabs.open.includes(provider)) return { ok: true };
+  state.accountBusy = true;
+  closingProviders.add(provider);
+  publish();
+  try {
+    const custom = providerDefinition(provider).custom;
+    const owned = [...views.entries()].filter(
+      ([id]) => providerFor(id) === provider,
+    );
+    if (
+      custom &&
+      !(await flushBeforeClose(owned.map(([, v]) => v.webContents.session)))
+    )
+      return {
+        ok: false,
+        message: "Chưa lưu xong phiên website. Anh thử đóng tab lại sau.",
+      };
+    if (closing) return { ok: false, message: "App đang thoát." };
+    const active = providerFor(state.active);
+    const result = closeProviderTab(state.providerTabs, provider, active);
+    state.providerTabs = result.tabs;
+    if (custom) {
+      for (const popup of [...popups])
+        if (!popup.isDestroyed()) {
+          const id = popupProviders.get(popup.webContents);
+          if (id && providerFor(id) === provider) popup.destroy();
+        }
+      for (const [id, view] of owned) {
+        epochs.set(id, (epochs.get(id) ?? 0) + 1);
+        views.remove(id);
+        win.contentView.removeChildView(view);
+        if (!view.webContents.isDestroyed()) view.webContents.close();
+        recovery.reset(id);
+        navigationFailed.delete(id);
+        state.statuses[id] = "idle";
+        state.connections[id] = {
+          phase: "connecting",
+          reason: null,
+          retryAt: null,
+        };
+      }
+    }
+    if (!result.next) showProviderLibrary();
+    else if (active === provider) {
+      const target =
+        accountForProvider(result.next) ||
+        result.tabs.open.map(accountForProvider).find(Boolean);
+      if (!target) showProviderLibrary();
+      else if (state.panel === "service") activate(target.id);
+      else {
+        // Returning from Settings/Library must not reopen a tab just closed.
+        state.active = target.id;
+        lastAccounts.set(target.provider, target.id);
+      }
+    }
+    layout();
+    await persist();
+    return { ok: true };
+  } finally {
+    closingProviders.delete(provider);
+    state.accountBusy = false;
+    publish();
+  }
+}
+async function showProviderMenu(request: unknown) {
+  if (
+    closing ||
+    accountEditorOpen ||
+    state.commandOpen ||
+    state.accountBusy ||
+    state.importing
+  )
+    return;
+  if (
+    !request ||
+    typeof request !== "object" ||
+    !("x" in request) ||
+    !("y" in request) ||
+    typeof request.x !== "number" ||
+    typeof request.y !== "number" ||
+    !Number.isFinite(request.x) ||
+    !Number.isFinite(request.y)
+  )
+    return;
+  const selectedAccount = state.active,
+    panel = state.panel;
+  let selected: (() => void | Promise<unknown>) | undefined;
+  const items: Electron.MenuItemConstructorOptions[] = [];
+  if ("provider" in request && knownProvider(request.provider)) {
+    const id = request.provider;
+    if (!state.providerTabs.open.includes(id)) return;
+    items.push(
+      { label: providerDefinition(id).label, enabled: false },
+      { type: "separator" },
+      {
+        id: "provider-pin",
+        label: state.providerTabs.pinned.includes(id)
+          ? "Bỏ ghim tab"
+          : "Ghim tab",
+        click: () => {
+          selected = async () => {
+            if (!state.providerTabs.open.includes(id)) return;
+            state.providerTabs = toggleProviderPin(state.providerTabs, id);
+            await persist();
+          };
+        },
+      },
+      {
+        id: "provider-close",
+        label: "Đóng tab",
+        click: () => {
+          selected = async () => {
+            const result = await closeProvider(id);
+            if (!result.ok) {
+              state.notice = result.message ?? "Chưa đóng được tab.";
+              publish();
+            }
+          };
+        },
+      },
+    );
+  } else if ("overflow" in request && Array.isArray(request.overflow)) {
+    const ids = [
+      ...new Set(
+        request.overflow.filter(
+          (id): id is ProviderId =>
+            knownProvider(id) && state.providerTabs.open.includes(id),
+        ),
+      ),
+    ];
+    for (const id of ids)
+      items.push({
+        id: "provider-" + id,
+        label: providerDefinition(id).label,
+        type: "radio",
+        checked: providerFor(state.active) === id,
+        click: () => {
+          selected = () => {
+            if (state.providerTabs.open.includes(id)) activateProvider(id);
+          };
+        },
+      });
+    if (items.length) items.push({ type: "separator" });
+    items.push({
+      id: "provider-library",
+      label: "Tất cả nền tảng…",
+      click: () => {
+        selected = showProviderLibrary;
+      },
+    });
+  } else return;
+  const nativeMenu = Menu.buildFromTemplate(items);
+  const [width, height] = win.getContentSize();
+  await new Promise<void>((resolve) =>
+    nativeMenu.popup({
+      window: win,
+      x: Math.max(0, Math.min(width - 1, Math.round(request.x as number))),
+      y: Math.max(0, Math.min(height - 1, Math.round(request.y as number))),
+      callback: () => {
+        if (
+          closing ||
+          accountEditorOpen ||
+          state.commandOpen ||
+          state.accountBusy ||
+          state.importing ||
+          state.active !== selectedAccount ||
+          state.panel !== panel
+        ) {
+          resolve();
+          return;
+        }
+        Promise.resolve(selected?.())
+          .catch(() => {})
+          .finally(resolve);
+      },
+    }),
+  );
 }
 function showNavigationMenu() {
   if (closing || state.panel !== "service" || state.commandOpen) return;
@@ -988,7 +1304,8 @@ function showNavigationMenu() {
     {
       label: "Mở trong trình duyệt",
       click: () => {
-        if (current()) void external(PROVIDERS[account.provider].entry);
+        if (current())
+          void external(providerDefinition(account.provider).entry);
       },
     },
   ]).popup({ window: win });
@@ -1073,7 +1390,7 @@ async function changeAccount(
         const id = typeof data.id === "string" ? data.id : "";
         if (command === "account-add") {
           if (
-            !validProviderId(data.provider) ||
+            !knownProvider(data.provider) ||
             typeof data.name !== "string" ||
             typeof data.avatar !== "string"
           )
@@ -1138,12 +1455,30 @@ async function changeAccount(
           if (state.active === id) {
             state.active = (next.find(
               (a) => !a.archived && a.provider === providerFor(id),
-            ) || next.find((a) => !a.archived))!.id;
-            if (!views.peek(state.active))
+            ) ||
+              next.find(
+                (a) =>
+                  !a.archived && state.providerTabs.open.includes(a.provider),
+              ) ||
+              next.find((a) => !a.archived))!.id;
+            if (state.panel === "service") {
+              state.providerTabs = openProviderTab(
+                state.providerTabs,
+                providerFor(state.active),
+              );
+            }
+            if (
+              !views.peek(state.active) &&
+              (state.panel === "service" ||
+                !providerDefinition(providerFor(state.active)).custom)
+            )
               win.contentView.addChildView(views.activate(state.active));
           }
         }
-        if (command === "account-restore") {
+        if (
+          command === "account-restore" &&
+          !providerDefinition(providerFor(id)).custom
+        ) {
           const view = views.activate(id);
           win.contentView.addChildView(view);
         }
@@ -1173,6 +1508,7 @@ async function save() {
     bounds: win.getNormalBounds(),
     preferences: state.preferences,
     presentation: state.presentation,
+    providerTabs: state.providerTabs,
   });
 }
 async function quit() {
@@ -1230,6 +1566,11 @@ else {
       state.collapsed = stored.collapsed;
     const catalog = await catalogStore.load();
     state.accounts = catalog.accounts;
+    state.providers = catalog.providers;
+    state.providerTabs = normalizeProviderTabs(
+      stored.providerTabs,
+      state.providers.map((p) => p.id),
+    );
     state.presentation = normalizePresentation(
       stored.presentation,
       state.accounts.map((a) => a.id),
@@ -1246,7 +1587,7 @@ else {
       state.accounts.find((a) => !a.archived)!;
     state.active = selected.id;
     if (stored.lastAccounts && typeof stored.lastAccounts === "object")
-      for (const provider of Object.keys(PROVIDERS) as ProviderId[]) {
+      for (const { id: provider } of state.providers) {
         const id = (stored.lastAccounts as Record<string, unknown>)[provider];
         if (findAccount(id)?.provider === provider)
           lastAccounts.set(provider, id as AccountId);
@@ -1295,8 +1636,11 @@ else {
         )?.[0] ?? popupProviders.get(event.sender);
       if (
         !provider ||
-        navigationPolicy(providerFor(provider), event.sender.getURL()) !==
-          "internal" ||
+        navigationPolicy(
+          providerFor(provider),
+          event.sender.getURL(),
+          state.providers,
+        ) !== "internal" ||
         !notificationAllowed(state.preferences, provider) ||
         Date.now() - (lastNotificationClicks.get(provider) ?? 0) < 1000
       )
@@ -1327,7 +1671,7 @@ else {
             arg &&
             typeof arg === "object" &&
             !Array.isArray(arg) &&
-            validProviderId(arg.provider) &&
+            knownProvider(arg.provider) &&
             (arg.focusPage === undefined || typeof arg.focusPage === "boolean")
           )
             activateProvider(arg.provider, arg.focusPage);
@@ -1337,6 +1681,38 @@ else {
           return;
         case "account-menu":
           return showAccountMenu(arg);
+        case "provider-library":
+          if (typeof arg !== "boolean" || accountEditorOpen) return;
+          if (arg) showProviderLibrary();
+          else {
+            const provider = providerFor(state.active);
+            const target =
+              (state.providerTabs.open.includes(provider) &&
+                accountForProvider(provider)) ||
+              state.providerTabs.open.map(accountForProvider).find(Boolean);
+            if (target) activate(target.id);
+            else showProviderLibrary();
+          }
+          return;
+        case "provider-menu":
+          return showProviderMenu(arg);
+        case "provider-pin":
+          if (
+            !knownProvider(arg) ||
+            state.accountBusy ||
+            state.importing ||
+            accountEditorOpen
+          )
+            return;
+          state.providerTabs = toggleProviderPin(state.providerTabs, arg);
+          await persist();
+          return;
+        case "provider-close":
+          return knownProvider(arg)
+            ? closeProvider(arg)
+            : { ok: false, message: "Nền tảng không tồn tại." };
+        case "provider-add":
+          return addProvider(arg);
         case "account-editor":
           if (typeof arg !== "boolean") return;
           accountEditorOpen = arg;
@@ -1405,9 +1781,7 @@ else {
           reloadProvider(state.active, true);
           return;
         case "back": {
-          const c = views.activate(state.active).webContents;
-          if (!c.isDestroyed() && c.navigationHistory.canGoBack())
-            c.navigationHistory.goBack();
+          goBack();
           return;
         }
         case "home":
@@ -1454,7 +1828,7 @@ else {
           );
           return;
         case "browser":
-          return external(PROVIDERS[providerFor(state.active)].entry);
+          return external(providerDefinition(providerFor(state.active)).entry);
         case "account-add":
         case "account-edit":
         case "account-move":
@@ -1528,11 +1902,7 @@ else {
             {
               label: "Quay lại",
               accelerator: "CmdOrCtrl+[",
-              click: () => {
-                const c = views.activate(state.active).webContents;
-                if (c.navigationHistory.canGoBack())
-                  c.navigationHistory.goBack();
-              },
+              click: goBack,
             },
             {
               label: "Trang đầu nền tảng",
@@ -1570,8 +1940,16 @@ else {
       }
     });
     await win.loadFile(join(__dirname, "index.html"));
-    activate(state.active);
-    for (const { id } of state.accounts.filter((a) => !a.archived)) {
+    if (state.providerTabs.open.includes(providerFor(state.active)))
+      activate(state.active);
+    else if (state.providerTabs.open.length)
+      activateProvider(state.providerTabs.open[0]);
+    else showProviderLibrary();
+    // Keep built-in messaging sessions warm for notifications. Custom websites
+    // are created only when selected, regardless of library/catalog size.
+    for (const { id } of state.accounts.filter(
+      (a) => !a.archived && !providerDefinition(a.provider).custom,
+    )) {
       if (!views.ids().includes(id))
         win.contentView.addChildView(views.activate(id));
     }

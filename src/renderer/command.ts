@@ -1,4 +1,4 @@
-import { PROVIDERS, type Account, type AppState } from "../shared.ts";
+import { type Account, type AppState } from "../shared.ts";
 interface PaletteOptions {
   getState(): AppState;
   avatar(account: Account): HTMLElement;
@@ -67,11 +67,19 @@ export function createCommandPalette(options: PaletteOptions) {
         id: a.id,
         title: a.name,
         subtitle:
-          PROVIDERS[a.provider].label +
+          (state.providers.find((p) => p.id === a.provider)?.label ||
+            "Website") +
           (state.presentation.pinned.includes(a.id) ? " · Đã ghim" : ""),
         account: a,
         run: () => window.desktop.activate(a.id),
       })),
+      {
+        id: "providers",
+        title: "Mở tab hoặc thêm website",
+        subtitle: "Tìm nền tảng, ghim tab và thêm website riêng",
+        icon: "plus",
+        run: () => afterClose(() => window.desktop.providerLibrary(true)),
+      },
       {
         id: "settings",
         title: "Quản lý tài khoản",
@@ -218,6 +226,7 @@ export function createCommandPalette(options: PaletteOptions) {
     sync(state: AppState) {
       const next = JSON.stringify([
         state.accounts,
+        state.providers,
         state.presentation.pinned,
         state.preferences.paused,
       ]);

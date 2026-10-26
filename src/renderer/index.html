@@ -129,40 +129,39 @@
         <div class="toolbar-brand" title="Gom · Trò chuyện, gọn một nơi.">
           <img src="app.png" alt="" draggable="false" /><span>Gom</span>
         </div>
-        <nav
-          class="platform-tabs"
-          role="tablist"
-          aria-label="Nền tảng nhắn tin"
-        >
+        <div class="provider-navigation">
+          <div id="provider-tab-area">
+            <nav
+              id="provider-tabs"
+              class="platform-tabs"
+              role="tablist"
+              aria-label="Các tab đang mở"
+            ></nav>
+            <button
+              id="provider-overflow"
+              class="icon-button"
+              type="button"
+              title="Các tab khác"
+              aria-label="Các tab khác"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              hidden
+            >
+              <svg aria-hidden="true"><use href="#i-down" /></svg>
+            </button>
+          </div>
           <button
-            id="platform-zalo"
-            role="tab"
-            aria-selected="true"
-            tabindex="0"
+            id="provider-add"
+            class="icon-button"
+            type="button"
+            title="Mở nền tảng hoặc thêm website"
+            aria-label="Mở nền tảng hoặc thêm website"
+            aria-controls="providers-panel"
+            aria-expanded="false"
           >
-            <img src="logos/zalo.png" alt="" /><span>Zalo</span
-            ><i class="platform-unread" hidden aria-hidden="true"></i>
+            <svg aria-hidden="true"><use href="#i-plus" /></svg>
           </button>
-          <button
-            id="platform-telegram"
-            role="tab"
-            aria-selected="false"
-            tabindex="-1"
-          >
-            <img src="logos/telegram.svg" alt="" /><span>Telegram</span
-            ><i class="platform-unread" hidden aria-hidden="true"></i>
-          </button>
-          <button
-            id="platform-messenger"
-            role="tab"
-            aria-selected="false"
-            tabindex="-1"
-          >
-            <img src="logos/messenger.svg" alt="" /><span>Messenger</span
-            ><i class="platform-unread" hidden aria-hidden="true"></i>
-          </button>
-        </nav>
-        <div class="toolbar-space"></div>
+        </div>
         <div class="account-picker">
           <button
             id="account-select"
@@ -227,6 +226,95 @@
         </div>
         <p id="subtitle" class="sr-only" role="status">Đang kết nối…</p>
       </header>
+      <section id="providers-panel" hidden aria-labelledby="providers-title">
+        <div class="providers-content">
+          <div class="providers-heading">
+            <div>
+              <p class="eyebrow">KHÔNG GIAN CỦA ANH</p>
+              <h1 id="providers-title">Mở một tab mới</h1>
+              <p>Nền tảng quen thuộc và website riêng, ngay trong Gom.</p>
+            </div>
+            <button id="close-providers" type="button" class="secondary">
+              <svg aria-hidden="true"><use href="#i-back" /></svg>Quay lại
+            </button>
+          </div>
+          <p
+            id="provider-catalog-warning"
+            class="form-error"
+            role="alert"
+            hidden
+          ></p>
+          <div class="providers-columns">
+            <div class="provider-library">
+              <label class="provider-search-box" for="provider-search"
+                ><svg aria-hidden="true"><use href="#i-search" /></svg
+                ><input
+                  id="provider-search"
+                  type="search"
+                  placeholder="Tìm theo tên hoặc địa chỉ website"
+                  autocomplete="off"
+                  aria-label="Tìm nền tảng hoặc website"
+              /></label>
+              <div class="provider-list-heading">
+                <h2>Nền tảng của anh</h2>
+                <span id="provider-result-count" aria-live="polite"></span>
+              </div>
+              <div id="provider-list"></div>
+              <p id="provider-empty" class="empty-state" hidden>
+                Chưa tìm thấy. Anh thử tên khác hoặc thêm website bên cạnh.
+              </p>
+              <p class="provider-library-hint">
+                <svg aria-hidden="true"><use href="#i-pin" /></svg>Ghim để giữ
+                tab gọn bằng biểu tượng. Đóng tab vẫn giữ phiên đăng nhập.
+              </p>
+            </div>
+            <form
+              id="provider-form"
+              class="provider-add-card"
+              aria-describedby="provider-error"
+            >
+              <span class="provider-add-icon"
+                ><svg aria-hidden="true"><use href="#i-plus" /></svg
+              ></span>
+              <h2>Thêm website riêng</h2>
+              <p>Công cụ làm việc, email hay một website anh thường dùng.</p>
+              <label class="field-label" for="provider-name"
+                >Tên hiển thị</label
+              >
+              <input
+                id="provider-name"
+                maxlength="60"
+                required
+                placeholder="Ví dụ: Không gian làm việc"
+                autocomplete="off"
+              />
+              <label class="field-label" for="provider-url"
+                >Địa chỉ website</label
+              >
+              <input
+                id="provider-url"
+                type="url"
+                maxlength="2048"
+                required
+                placeholder="https://example.com"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <p class="provider-url-hint">
+                Nhập địa chỉ bắt đầu bằng https:// hoặc http://.
+              </p>
+              <p id="provider-error" class="form-error" role="alert"></p>
+              <button id="provider-save" type="submit" class="primary">
+                Thêm và mở website
+              </button>
+              <p class="provider-private-note">
+                <svg aria-hidden="true"><use href="#i-lock" /></svg>Website mới
+                có phiên đăng nhập riêng trong Gom.
+              </p>
+            </form>
+          </div>
+        </div>
+      </section>
       <section id="settings-panel" hidden aria-label="Cài đặt Gom">
         <div class="settings-content">
           <aside class="settings-sidebar">
@@ -330,15 +418,11 @@
               tabindex="0"
             >
               <div class="accounts-tools">
-                <div class="platform-filters" aria-label="Lọc nền tảng">
-                  <button data-filter="all" aria-pressed="true">Tất cả</button
-                  ><button data-filter="zalo" aria-pressed="false">Zalo</button
-                  ><button data-filter="telegram" aria-pressed="false">
-                    Telegram</button
-                  ><button data-filter="messenger" aria-pressed="false">
-                    Messenger
-                  </button>
-                </div>
+                <div
+                  id="platform-filters"
+                  class="platform-filters"
+                  aria-label="Lọc nền tảng"
+                ></div>
                 <span id="connected-count"></span>
               </div>
               <div id="account-manager" class="account-table"></div>
@@ -690,11 +774,7 @@
         </div>
         <h2 id="account-editor-title">Thêm tài khoản</h2>
         <label class="field-label" for="account-provider">Nền tảng</label>
-        <select id="account-provider">
-          <option value="zalo">Zalo</option>
-          <option value="messenger">Messenger</option>
-          <option value="telegram">Telegram</option>
-        </select>
+        <select id="account-provider"></select>
         <label class="field-label" for="account-name">Tên để phân biệt</label>
         <input
           id="account-name"

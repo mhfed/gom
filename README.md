@@ -1,6 +1,6 @@
-> **Phạm vi hiện tại — Gom 0.6.3:** chat riêng trên trang chính thức của Zalo / Telegram / Messenger, chọn bằng tab ở thanh trên. Mỗi tab nhớ tài khoản cuối; bộ chọn tài khoản và nút **+** ở bên phải. Thanh điều hướng gọn với logo Gom; Settings có danh mục riêng. ⌘1 / ⌘2 / ⌘3 theo thứ tự Zalo / Telegram / Messenger. ⌘K chuyển nhanh, nút **…** chứa thao tác trang. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
+> **Nhánh phát triển — Tab đang mở:** header 52px hỗ trợ đóng/ghim tab, menu cho các tab không vừa cửa sổ và thư viện nền tảng có tìm kiếm. Nút **+** cạnh thanh tab mở thư viện và form thêm website bằng tên + URL. Nhấp chuột phải vào tab để ghim/bỏ ghim hoặc đóng; trong thư viện cũng có nút ghim. Mỗi tab nhớ tài khoản cuối. Bộ chọn tài khoản và nút **+** tài khoản ở bên phải vẫn dùng phiên riêng. ⌘1 / ⌘2 / ⌘3 giữ thứ tự Zalo / Telegram / Messenger; ⌘K tìm tài khoản hoặc mở thư viện. Bản đã phát hành gần nhất vẫn là **0.6.3** theo link bên dưới.
 >
-> Kiểm tra giao diện hiện hành: `npm run test:shell` và `npm run test:settings` (fixture cách ly, không dùng phiên cá nhân). Connector chat thống nhất đã dừng theo yêu cầu; mã nghiên cứu không được đóng gói.
+> Kiểm tra giao diện hiện hành: `npm run test:providers`, `npm run test:shell` và `npm run test:settings` (fixture cách ly, không dùng phiên cá nhân). Connector chat thống nhất đã dừng theo yêu cầu; mã nghiên cứu không được đóng gói. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
 
 # Gom — macOS
 
@@ -37,6 +37,10 @@ Bản app nằm trong `out-release/Gom-darwin-arm64/`; DMG và ZIP trong `out-re
 
 ## Tài khoản
 
+- **Website riêng:** dùng URL đầy đủ `https://…` hoặc `http://…`; hỗ trợ địa chỉ nội bộ và cổng riêng. Website mới có tài khoản Cá nhân với phiên đăng nhập riêng, biểu tượng từ chữ đầu tên; có thể thêm tài khoản khác trong Cài đặt. Tên và địa chỉ được lưu cục bộ cùng danh sách tài khoản. Trạng thái tab mở/ghim được lưu riêng, không thay đổi ghim tài khoản cũ.
+- **Đóng tab:** không gỡ nền tảng hoặc xóa dữ liệu đăng nhập. Tab cuối đóng sẽ mở thư viện. Website riêng chỉ tải khi được chọn, đóng tab sẽ lưu phiên và giải phóng trang; dữ liệu chưa gửi trên trang phụ thuộc website. Ba nền tảng nhắn tin có sẵn vẫn giữ hoạt động nền theo cơ chế cũ.
+- Website riêng chỉ điều hướng trong cùng origin đã cấu hình; liên kết ra ngoài mở trình duyệt sau xác nhận. Luồng đăng nhập SSO chuyển sang origin khác có thể cần đăng nhập trực tiếp trên website hoặc được hỗ trợ thêm. Gom không suy diễn số tin chưa đọc cho website riêng.
+
 - Messenger: mở Tài khoản & cài đặt, chọn hồ sơ Chrome, bấm Dùng phiên có sẵn. Anh chọn hồ sơ trong danh sách; app không ghi cứng email cá nhân. Chỉ hai cookie Facebook cần thiết được đọc bằng SQLite ở chế độ chỉ đọc và giải mã qua Chrome Safe Storage trong Keychain.
 - Phiên được thử trong cửa sổ tạm trước; chỉ chấp nhận sau khi Messenger đích đã xác minh đăng nhập. Thất bại sẽ khôi phục cặp cookie cũ. Đóng app trong lúc nhập sẽ đợi giao dịch kết thúc.
 - Zalo và Telegram: đăng nhập QR trực tiếp trên giao diện chính thức. Nếu nền tảng thu hồi hoặc hết hạn phiên, phải đăng nhập lại.
@@ -52,6 +56,7 @@ npm run test:desktop
 npm run test:multi-account
 npm run test:shell
 npm run test:settings
+npm run test:providers
 npm run test:updates
 ```
 

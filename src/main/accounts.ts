@@ -1,8 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import type { Account, ProviderId } from "../shared.ts";
+import type { Account, ProviderDefinition, ProviderId } from "../shared.ts";
 import { validProviderId } from "./security.ts";
 import { SettingsWriter } from "./preferences.ts";
+import {
+  customProviderMetadata,
+  defaultProviders,
+  isBuiltinProviderId,
+  restoreProviders,
+} from "./providers.ts";
 const newId =
   /^acc_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const clean = (value: string, max: number) =>
@@ -34,7 +40,7 @@ export function defaultAccounts(): Account[] {
   );
 }
 export function accountPartition(account: Account) {
-  if (validProviderId(account.id)) {
+  if (isBuiltinProviderId(account.id)) {
     if (account.id !== account.provider) throw Error("invalid-legacy-account");
     return "persist:" + account.id;
   }
@@ -43,14 +49,27 @@ export function accountPartition(account: Account) {
   return "persist:tn-account-" + account.id;
 }
 export function validateCatalog(raw: unknown): Account[] {
-  const data = raw as { version?: unknown; accounts?: unknown };
+  return readCatalog(raw).accounts;
+}
+function readCatalog(raw: unknown): {
+  accounts: Account[];
+  providers: ProviderDefinition[];
+} {
+  const data = raw as {
+    version?: unknown;
+    accounts?: unknown;
+    providers?: unknown;
+  };
   if (
     !data ||
-    data.version !== 1 ||
+    ![1, 2].includes(data.version as number) ||
     !Array.isArray(data.accounts) ||
     data.accounts.length > 100
   )
     throw Error("invalid-catalog");
+  const providers =
+    data.version === 2 ? restoreProviders(data.providers) : defaultProviders();
+  const knownProviders = new Set(providers.map((provider) => provider.id));
   const ids = new Set<string>();
   const accounts = data.accounts.map((raw: unknown): Account => {
     const a = raw as Account;
@@ -58,6 +77,7 @@ export function validateCatalog(raw: unknown): Account[] {
       !a ||
       typeof a.id !== "string" ||
       !validProviderId(a.provider) ||
+      !knownProviders.has(a.provider) ||
       typeof a.name !== "string" ||
       !clean(a.name, 40) ||
       typeof a.avatar !== "string" ||
@@ -80,7 +100,7 @@ export function validateCatalog(raw: unknown): Account[] {
     !accounts.some((a) => !a.archived)
   )
     throw Error("invalid-catalog");
-  return accounts;
+  return { accounts, providers };
 }
 export function createAccount(
   provider: ProviderId,
@@ -162,6 +182,7 @@ export class AccountCatalogStore {
   private writer: SettingsWriter;
   private backup: SettingsWriter;
   private snapshot: Account[] = defaultAccounts();
+  private providers: ProviderDefinition[] = defaultProviders();
   private writable = false;
   constructor(path: string) {
     this.path = path;
@@ -170,46 +191,79 @@ export class AccountCatalogStore {
   }
   async load(): Promise<{
     accounts: Account[];
+    providers: ProviderDefinition[];
     writable: boolean;
     warning: string;
   }> {
+    this.writable = false;
     try {
-      this.snapshot = validateCatalog(
+      const catalog = readCatalog(
         JSON.parse(await readFile(this.path, "utf8")),
       );
+      this.snapshot = catalog.accounts;
+      this.providers = catalog.providers;
       this.writable = true;
-      return { accounts: this.snapshot, writable: true, warning: "" };
+      return {
+        accounts: this.snapshot,
+        providers: this.providers,
+        writable: true,
+        warning: "",
+      };
     } catch (error) {
       const missing = (error as NodeJS.ErrnoException).code === "ENOENT";
       try {
-        this.snapshot = validateCatalog(
+        const catalog = readCatalog(
           JSON.parse(await readFile(this.path + ".backup", "utf8")),
         );
+        this.snapshot = catalog.accounts;
+        this.providers = catalog.providers;
       } catch (backupError) {
         if (
           missing &&
           (backupError as NodeJS.ErrnoException).code === "ENOENT"
         ) {
           try {
-            await this.writer.write({ version: 1, accounts: this.snapshot });
+            await this.writer.write(
+              this.serialized(this.snapshot, this.providers),
+            );
             this.writable = true;
-            return { accounts: this.snapshot, writable: true, warning: "" };
+            return {
+              accounts: this.snapshot,
+              providers: this.providers,
+              writable: true,
+              warning: "",
+            };
           } catch {}
         }
       }
       return {
         accounts: this.snapshot,
+        providers: this.providers,
         writable: false,
         warning:
           "Chưa đọc/ghi được danh sách tài khoản. App mở các phiên nhận diện được ở chế độ bảo vệ; dữ liệu đăng nhập không bị xóa. Tạm khóa thêm/sửa/gỡ để tránh ghi đè danh sách.",
       };
     }
   }
-  async commit(accounts: Account[]) {
+  private serialized(
+    accounts: Account[],
+    providers: readonly ProviderDefinition[],
+  ) {
+    return {
+      version: 2,
+      providers: customProviderMetadata(providers),
+      accounts,
+    };
+  }
+  async commit(
+    accounts: Account[],
+    providers: readonly ProviderDefinition[] = this.providers,
+  ) {
     if (!this.writable) throw Error("catalog-readonly");
-    const next = validateCatalog({ version: 1, accounts });
-    await this.backup.write({ version: 1, accounts: this.snapshot });
-    await this.writer.write({ version: 1, accounts: next });
-    this.snapshot = next;
+    const next = readCatalog(this.serialized(accounts, providers));
+    await this.backup.write(this.serialized(this.snapshot, this.providers));
+    await this.writer.write(this.serialized(next.accounts, next.providers));
+    this.snapshot = next.accounts;
+    this.providers = next.providers;
   }
 }

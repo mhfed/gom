@@ -1,6 +1,19 @@
 import type { UpdateState } from "./update-types.ts";
-export type ProviderId = "zalo" | "messenger" | "telegram";
+export type BuiltinProviderId = "zalo" | "messenger" | "telegram";
+export type ProviderId = BuiltinProviderId | `web_${string}`;
 export const PROVIDER_ORDER = ["zalo", "telegram", "messenger"] as const;
+export interface ProviderDefinition {
+  id: ProviderId;
+  label: string;
+  entry: string;
+  hosts: readonly string[];
+  color: string;
+  custom: boolean;
+}
+export interface ProviderTabs {
+  open: ProviderId[];
+  pinned: ProviderId[];
+}
 export type AccountId = string;
 export interface Account {
   id: AccountId;
@@ -14,6 +27,9 @@ export interface AccountResult {
   accountId?: AccountId;
   message?: string;
 }
+export interface ProviderResult extends AccountResult {
+  providerId?: ProviderId;
+}
 export type ProviderStatus =
   "idle" | "loading" | "ready" | "needs-login" | "authenticated" | "error";
 export const PROVIDERS = {
@@ -23,6 +39,7 @@ export const PROVIDERS = {
     entry: "https://chat.zalo.me/",
     hosts: ["chat.zalo.me", "id.zalo.me", "jr.zaloapp.com", "jr.chat.zalo.me"],
     color: "#0068ff",
+    custom: false,
   },
   messenger: {
     id: "messenger",
@@ -35,6 +52,7 @@ export const PROVIDERS = {
       "messenger.com",
     ],
     color: "#8458ef",
+    custom: false,
   },
   telegram: {
     id: "telegram",
@@ -42,6 +60,7 @@ export const PROVIDERS = {
     entry: "https://web.telegram.org/k/",
     hosts: ["web.telegram.org"],
     color: "#279cda",
+    custom: false,
   },
 } as const;
 export interface ProfileSource {
@@ -82,6 +101,8 @@ export interface Presentation {
   pinned: AccountId[];
 }
 export interface AppState {
+  providers: ProviderDefinition[];
+  providerTabs: ProviderTabs;
   presentation: Presentation;
   commandOpen: boolean;
   accounts: Account[];
@@ -97,7 +118,7 @@ export interface AppState {
   collapsed: boolean;
   unread: Record<AccountId, UnreadInfo>;
   active: AccountId;
-  panel: "service" | "settings";
+  panel: "service" | "settings" | "providers";
   statuses: Record<AccountId, ProviderStatus>;
   profiles: ProfileSource[];
   importing: boolean;
@@ -109,6 +130,16 @@ export interface DesktopBridge {
   state(): Promise<AppState>;
   activate(id: AccountId): Promise<void>;
   activateProvider(provider: ProviderId, focusPage?: boolean): Promise<void>;
+  providerLibrary(open: boolean): Promise<void>;
+  providerMenu(request: {
+    x: number;
+    y: number;
+    provider?: ProviderId;
+    overflow?: ProviderId[];
+  }): Promise<void>;
+  pinProvider(id: ProviderId): Promise<void>;
+  closeProvider(id: ProviderId): Promise<AccountResult>;
+  addProvider(name: string, url: string): Promise<ProviderResult>;
   navigationMenu(): Promise<void>;
   accountMenu(anchor: { x: number; y: number }): Promise<void>;
   accountEditor(open: boolean): Promise<void>;
