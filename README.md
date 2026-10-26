@@ -1,4 +1,4 @@
-> **Phạm vi hiện tại — Gom 0.6.1:** chat riêng trên trang chính thức của Zalo / Telegram / Messenger, chọn bằng tab ở thanh trên. Mỗi tab nhớ tài khoản cuối; bộ chọn tài khoản và nút **+** ở bên phải. Thanh điều hướng gọn với logo Gom; Settings có danh mục riêng. ⌘1 / ⌘2 / ⌘3 theo thứ tự Zalo / Telegram / Messenger. ⌘K chuyển nhanh, nút **…** chứa thao tác trang. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
+> **Phạm vi hiện tại — Gom 0.6.2:** chat riêng trên trang chính thức của Zalo / Telegram / Messenger, chọn bằng tab ở thanh trên. Mỗi tab nhớ tài khoản cuối; bộ chọn tài khoản và nút **+** ở bên phải. Thanh điều hướng gọn với logo Gom; Settings có danh mục riêng. ⌘1 / ⌘2 / ⌘3 theo thứ tự Zalo / Telegram / Messenger. ⌘K chuyển nhanh, nút **…** chứa thao tác trang. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
 >
 > Kiểm tra giao diện hiện hành: `npm run test:shell` và `npm run test:settings` (fixture cách ly, không dùng phiên cá nhân). Connector chat thống nhất đã dừng theo yêu cầu; mã nghiên cứu không được đóng gói.
 
@@ -8,17 +8,17 @@
 
 ## Tải app
 
-Bản mới nhất: **Gom 0.6.1**, phát hành ngày 26/10/2026 cho Mac Apple Silicon (arm64).
+Bản mới nhất: **Gom 0.6.2**, phát hành ngày 26/10/2026 cho Mac Apple Silicon (arm64).
 
-- [Tải DMG](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.6.1/Gom-macOS-arm64-0.6.1.dmg)
-- [Tải ZIP](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.6.1/Gom-macOS-arm64-0.6.1.zip)
-- [Release và checksum](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.6.1)
+- [Tải DMG](https://github.com/mhfed/gom/releases/download/v0.6.2/Gom-macOS-arm64-0.6.2.dmg)
+- [Tải ZIP](https://github.com/mhfed/gom/releases/download/v0.6.2/Gom-macOS-arm64-0.6.2.zip)
+- [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.6.2)
 
-Settings mới cho cả năm mục, sửa trạng thái tài khoản ở cửa sổ nhỏ và điều hướng bàn phím; logo Gom đồng bộ trên thanh điều hướng, Dock, màn hình kết nối và hộp thoại. Giữ dữ liệu tài khoản và định danh khóa mã hóa của Tin Nhan. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Kiểm chứng 0.6.1](docs/release-0.6.1.md).
+Settings mới cho cả năm mục, sửa trạng thái tài khoản ở cửa sổ nhỏ và điều hướng bàn phím; logo Gom đồng bộ trên thanh điều hướng, Dock, màn hình kết nối và hộp thoại. Giữ dữ liệu tài khoản và định danh khóa mã hóa của Tin Nhan. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Kiểm chứng 0.6.2](docs/release-0.6.2.md).
 
 Lưu bản nháp quan trọng, thoát Tin Nhan/Gom bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp từ Tin Nhan lần đầu, tên file khác nên macOS không tự thay app cũ; sau khi kiểm tra Gom, có thể bỏ `Tin Nhan.app` cũ. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; macOS có thể cần Open Anyway theo hướng dẫn cài.
 
-Release có thêm `TinNhan-macOS-arm64-0.6.1.dmg`, giống hệt DMG Gom, để bộ cập nhật cũ 0.5.4 nhận diện được. Người dùng mới chọn file tên Gom.
+Repository đã chuyển sang `mhfed/gom`. Các bản 0.6.0 trở về trước cần tải DMG trực tiếp để nâng cấp lần này vì bộ kiểm tra cập nhật vẫn trỏ tới địa chỉ cũ. Bản 0.6.2 đã sửa nguồn cập nhật. File `TinNhan-macOS-arm64-0.6.2.dmg` là bản sao cùng nội dung, giữ tên gói cũ; người dùng mới chọn file Gom.
 
 ## Chạy và đóng gói
 
@@ -70,7 +70,7 @@ Mặc định đo hai lượt cho 3/6/12 tài khoản và ba trang chờ đăng 
 
 `npm run test:renderer-performance` kiểm tra DOM thật bằng Chromium riêng; cần browser của Playwright hoặc đặt `TIN_NHAN_CHROMIUM` tới executable Chromium/Chrome đã cài. Test này không mở profile cá nhân.
 
-Lượt tối ưu hiện tại giữ mọi trang tài khoản để bảo toàn bản nháp và hoạt động nền. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition, không tự đóng trang để giảm RAM. Bản cài mới nhất là **Gom 0.6.1**, dùng bộ nhận diện mới, giữ tab nền tảng, sửa lỗi Secure Input làm chặn EVKey và kiểm tra cập nhật: `outputs/Gom-macOS-arm64-0.6.1.dmg`, kèm `outputs/SHA256SUMS-Gom-0.6.1.txt`; các file tương ứng đã được phát hành tại link ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
+Lượt tối ưu hiện tại giữ mọi trang tài khoản để bảo toàn bản nháp và hoạt động nền. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition, không tự đóng trang để giảm RAM. Bản cài mới nhất là **Gom 0.6.2**, dùng bộ nhận diện mới, giữ tab nền tảng, sửa lỗi Secure Input làm chặn EVKey và kiểm tra cập nhật: `outputs/Gom-macOS-arm64-0.6.2.dmg`, kèm `outputs/SHA256SUMS-Gom-0.6.2.txt`; các file tương ứng đã được phát hành tại link ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
 
 Chi tiết thay đổi, phương pháp và kết quả đối chiếu: [báo cáo hiệu năng 26/10/2026](docs/performance-2026-10-26.md).
 

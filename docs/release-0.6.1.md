@@ -1,4 +1,6 @@
-# Gom 0.6.1 — 26/10/2026
+# Gom 0.6.1 — bản đóng gói chưa công bố
+
+Tag `v0.6.1` lưu bản cải tiến giao diện. Trong bước phát hành, kiểm tra thực tế phát hiện repository đã đổi tên thành `mhfed/gom`, khiến nguồn cập nhật cũ trả chuyển hướng bị app từ chối. Bản public được thay bằng [0.6.2](release-0.6.2.md) để sửa nguồn cập nhật; 0.6.1 không được công bố thành Release ổn định.
 
 Bản này gồm giao diện Settings mới cho cả năm mục, trạng thái tài khoản luôn hiển thị ở cửa sổ nhỏ, điều hướng bàn phím, sửa vị trí cuộn và thao tác menu. Logo Gom có sẵn được dùng đồng bộ ở thanh điều hướng, Settings, màn hình kết nối, hộp thoại, Dock và phần Giới thiệu.
 

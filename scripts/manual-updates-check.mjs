@@ -25,7 +25,7 @@ const newerVersion = `${major}.${minor}.${patch + 1}`;
 await access(entry);
 const root = await mkdtemp(join(tmpdir(), "tin-nhan-manual-updates-"));
 const bootstrap = join(root, "bootstrap.cjs");
-const releaseUrl = "https://github.com/mhfed/tin-nhan-desktop/releases";
+const releaseUrl = "https://github.com/mhfed/gom/releases";
 const cases = [];
 const errors = [];
 let client;
@@ -59,7 +59,7 @@ e.ipcMain.handle = (channel, listener) => {
   return handle(channel, listener);
 };
 globalThis.fetch = async (url, init) => {
-  if (url !== 'https://api.github.com/repos/mhfed/tin-nhan-desktop/releases/latest') {
+  if (url !== 'https://api.github.com/repos/mhfed/gom/releases/latest') {
     fixture.unexpected.push(String(url));
     throw Error('Unexpected network request');
   }
@@ -73,7 +73,7 @@ globalThis.fetch = async (url, init) => {
   const tag = 'v' + mode.version;
   const name = 'Gom-macOS-' + mode.arch + '-' + mode.version + '.dmg';
   return new Response(JSON.stringify({ tag_name: tag, prerelease: false, draft: false,
-    html_url: mode.kind === 'spoof' ? 'https://github.com.evil.example/mhfed/tin-nhan-desktop/releases/tag/' + tag : ${JSON.stringify(releaseUrl)} + '/tag/' + tag,
+    html_url: mode.kind === 'spoof' ? 'https://github.com.evil.example/mhfed/gom/releases/tag/' + tag : ${JSON.stringify(releaseUrl)} + '/tag/' + tag,
     body: mode.notes ?? 'Ghi chú kiểm thử.',
     assets: [{ name, browser_download_url: ${JSON.stringify(releaseUrl)} + '/download/' + tag + '/' + name }]
   }), { headers: { 'content-type': 'application/json' } });

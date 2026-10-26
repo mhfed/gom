@@ -3,8 +3,7 @@ import { test } from "node:test";
 import { ManualUpdateChecker, RELEASES_URL } from "../src/main/update-check.ts";
 import type { UpdateState } from "../src/update-types.ts";
 
-const API =
-  "https://api.github.com/repos/mhfed/tin-nhan-desktop/releases/latest";
+const API = "https://api.github.com/repos/mhfed/gom/releases/latest";
 function release(version = "0.5.10", arch = "arm64", extension = "dmg") {
   const tag = `v${version}`;
   const name = `TinNhan-macOS-${arch}-${version}.${extension}`;
@@ -71,6 +70,56 @@ test("fetches the fixed public source without credentials and orders numeric sem
     changes.map((state) => state.phase),
     ["checking", "available"],
   );
+});
+
+test("discovers a release from the renamed canonical Gom repository without redirects", async () => {
+  const canonicalApi = "https://api.github.com/repos/mhfed/gom/releases/latest";
+  const metadata = {
+    tag_name: "v0.6.2",
+    draft: false,
+    prerelease: false,
+    html_url: "https://github.com/mhfed/gom/releases/tag/v0.6.2",
+    body: "Cập nhật Gom.",
+    assets: [
+      {
+        name: "Gom-macOS-arm64-0.6.2.dmg",
+        browser_download_url:
+          "https://github.com/mhfed/gom/releases/download/v0.6.2/Gom-macOS-arm64-0.6.2.dmg",
+      },
+    ],
+  };
+  const { checker } = setup(
+    async (url) => {
+      // The former slug now returns a redirect, which the checker must not follow.
+      if (url !== canonicalApi) return response({}, 301);
+      const reply = response(metadata);
+      Object.defineProperty(reply, "url", { value: canonicalApi });
+      return reply;
+    },
+    { currentVersion: "0.6.0" },
+  );
+  const result = await checker.check();
+  assert.equal(result.phase, "available");
+  assert.equal(result.latestVersion, "0.6.2");
+  assert.equal(
+    result.releaseUrl,
+    "https://github.com/mhfed/gom/releases/tag/v0.6.2",
+  );
+});
+
+test("rejects release and download URLs using the former repository slug", async () => {
+  const oldRelease = release();
+  oldRelease.html_url =
+    "https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.5.10";
+  const oldAsset = release();
+  oldAsset.assets[0].browser_download_url =
+    "https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.5.10/TinNhan-macOS-arm64-0.5.10.dmg";
+  for (const metadata of [oldRelease, oldAsset]) {
+    const { checker } = setup(async () => response(metadata));
+    const result = await checker.check();
+    assert.equal(result.phase, "error");
+    assert.equal(result.releaseUrl, null);
+  }
 });
 
 test("distinguishes the same and an older published version", async () => {
@@ -152,8 +201,8 @@ test("Gom assets retain exact version, architecture, product and file-type match
 test("Gom assets still require the exact trusted download URL", async () => {
   for (const browser_download_url of [
     "https://evil.example/Gom-macOS-arm64-0.6.0.dmg",
-    "https://github.com.evil.example/mhfed/tin-nhan-desktop/releases/download/v0.6.0/Gom-macOS-arm64-0.6.0.dmg",
-    "https://github.com/mhfed/gom/releases/download/v0.6.0/Gom-macOS-arm64-0.6.0.dmg",
+    "https://github.com.evil.example/mhfed/gom/releases/download/v0.6.0/Gom-macOS-arm64-0.6.0.dmg",
+    "https://github.com/mhfed/other/releases/download/v0.6.0/Gom-macOS-arm64-0.6.0.dmg",
     `${RELEASES_URL}/download/v0.5.9/Gom-macOS-arm64-0.6.0.dmg`,
     `${RELEASES_URL}/download/v0.6.0/TinNhan-macOS-arm64-0.6.0.dmg`,
     `${RELEASES_URL}/download/v0.6.0/Gom-macOS-arm64-0.6.0.dmg?download=evil`,
@@ -220,15 +269,15 @@ test("rejects prereleases, drafts, malformed metadata and non-exact versions", a
 
 test("rejects spoofed hosts, repositories, credentials, ports and deceptive release URLs", async () => {
   const malicious = [
-    "https://github.com.evil.example/mhfed/tin-nhan-desktop/releases/tag/v0.5.10",
-    "https://github.com@evil.example/mhfed/tin-nhan-desktop/releases/tag/v0.5.10",
-    "https://github.com/other/tin-nhan-desktop/releases/tag/v0.5.10",
+    "https://github.com.evil.example/mhfed/gom/releases/tag/v0.5.10",
+    "https://github.com@evil.example/mhfed/gom/releases/tag/v0.5.10",
+    "https://github.com/other/gom/releases/tag/v0.5.10",
     `${RELEASES_URL}/tag/v0.5.11`,
     `${RELEASES_URL}/tag/v0.5.10?redirect=https://evil.example`,
     `${RELEASES_URL}/tag/v0.5.10#redirect`,
-    "http://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.5.10",
-    "https://github.com:444/mhfed/tin-nhan-desktop/releases/tag/v0.5.10",
-    "https://user@github.com/mhfed/tin-nhan-desktop/releases/tag/v0.5.10",
+    "http://github.com/mhfed/gom/releases/tag/v0.5.10",
+    "https://github.com:444/mhfed/gom/releases/tag/v0.5.10",
+    "https://user@github.com/mhfed/gom/releases/tag/v0.5.10",
     "javascript:alert(1)",
   ];
   for (const html_url of malicious) {
@@ -244,7 +293,7 @@ test("rejects a deceptive or wrong-version download URL for a compatible asset",
     "https://evil.example/TinNhan-macOS-arm64-0.5.10.dmg",
     `${RELEASES_URL}/download/v0.5.9/TinNhan-macOS-arm64-0.5.10.dmg`,
     `${RELEASES_URL}/download/v0.5.10/TinNhan-macOS-arm64-0.5.10.dmg?download=evil`,
-    "https://github.com.evil.example/mhfed/tin-nhan-desktop/releases/download/v0.5.10/TinNhan-macOS-arm64-0.5.10.dmg",
+    "https://github.com.evil.example/mhfed/gom/releases/download/v0.5.10/TinNhan-macOS-arm64-0.5.10.dmg",
   ]) {
     const metadata = release();
     metadata.assets[0].browser_download_url = url;
