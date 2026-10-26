@@ -6,7 +6,7 @@ Implemented the user-approved Gom name, rounded g/speech-bubble logo and teal/mi
 
 Bundle ID `local.mhfed.tinnhan.desktop`, `TinNhanDesktop` userData, account IDs and partitions remain. The early `app.setName("Tin Nhan")` is intentionally preserved: Electron 45 derives its macOS Keychain service from this internal name. Changing it to Gom would request another encryption key despite the unchanged profile directory. Verified against [Electron 45 initialization](https://github.com/electron/electron/blob/v45.0.0/shell/browser/electron_browser_main_parts.cc#L613-L655) and [its Keychain patch](https://github.com/electron/electron/blob/v45.0.0/patches/chromium/feat_ensure_mas_builds_of_the_same_application_can_use_safestorage.patch). OS bundle names can be Gom independently.
 
-The updater accepts both Gom and historical installer prefixes with the same exact repository/tag/version/architecture checks. Existing Tin Nhan 0.5.4 cannot recognize Gom filenames; a byte-identical `TinNhan-macOS-arm64-0.6.0.dmg` compatibility alias is prepared for a future public release. Installation instructions explain the new app filename and any old login item. See [distribution](distribution.md).
+The updater accepts both Gom and historical installer prefixes with the same exact repository/tag/version/architecture checks. Existing Tin Nhan 0.5.4 cannot recognize Gom filenames; a byte-identical `TinNhan-macOS-arm64-0.6.0.dmg` compatibility alias is included in the public release. Installation instructions explain the new app filename and any old login item. See [distribution](distribution.md).
 
 ## Verification
 
@@ -36,4 +36,10 @@ DMG SHA-256: `b857cce18968bd2cb263095caf0a0628a0f0afe697ee54da0ab52aca3f9b58df`.
 
 ZIP SHA-256: `ea92b8de02b8688a3d5f16e7f3e2266736da4cf54431ba8c87c14fb2d9d4d0b3`.
 
-The build remains ad-hoc signed, without Developer ID/notarization; macOS may request Keychain authorization after a rebuild. Actual provider-session expiry and draft restoration after quitting still depend on the providers. No personal app installation, live-account test, commit, push or public release was performed.
+The build remains ad-hoc signed, without Developer ID/notarization; macOS may request Keychain authorization after a rebuild. Actual provider-session expiry and draft restoration after quitting still depend on the providers. No personal app installation or live-account test was performed. The build was subsequently published as recorded below.
+
+## Public release — 26/10/2026
+
+The user requested publishing all source and the newest installer after Gom completed. Source commit `490b1df760b479ee64b44c91b2e003e162be6e45` and annotated tag `v0.6.0` were pushed to `main`/GitHub. [Gom 0.6.0](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.6.0) is a stable, non-draft Latest release with the canonical DMG, ZIP, TinNhan compatibility DMG and checksum file.
+
+Fresh pre-push typecheck/build and all 128 unit tests passed. Every runtime file from the fresh source build matches the packaged ASAR. GitHub asset sizes and SHA-256 digests match the local verified artifacts; the public canonical DMG returns HTTP 200. Unauthenticated update checks against the live release return `current` for Gom 0.6.0 and `available` for the original packaged Tin Nhan 0.5.4 checker. Evidence: `outputs/publish-0.6.0/` (local, ignored).

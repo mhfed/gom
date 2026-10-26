@@ -8,13 +8,17 @@
 
 ## Tải app
 
-Bản cài mới trên máy: [Gom 0.6.0 DMG — Apple Silicon](outputs/Gom-macOS-arm64-0.6.0.dmg), kèm [ZIP](outputs/Gom-macOS-arm64-0.6.0.zip). Tên, icon và bộ màu xanh ngọc mới; giữ dữ liệu tài khoản và khóa mã hóa của Tin Nhan. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Kiểm chứng 0.6.0](docs/release-0.6.0.md). Bản công khai bên dưới vẫn là Tin Nhan 0.5.0.
+Bản mới nhất: **Gom 0.6.0**, phát hành ngày 26/10/2026 cho Mac Apple Silicon (arm64).
 
-[Tải Tin Nhan 0.5.0 cho macOS Apple Silicon (arm64)](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.5.0/TinNhan-macOS-arm64-0.5.0.zip)
+- [Tải DMG](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.6.0/Gom-macOS-arm64-0.6.0.dmg)
+- [Tải ZIP](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.6.0/Gom-macOS-arm64-0.6.0.zip)
+- [Release và checksum](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.6.0)
 
-Với bản mới: thoát Tin Nhan/Gom bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications rồi mở Gom. Bản ZIP công khai 0.5.0 ở trên vẫn chứa `Tin Nhan.app`. Bản cá nhân ký ad-hoc, chưa có Developer ID / notarization. Repository public, có thể tải trực tiếp.
+Tên, icon và bộ màu xanh ngọc mới; giữ dữ liệu tài khoản và định danh khóa mã hóa của Tin Nhan. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Kiểm chứng 0.6.0](docs/release-0.6.0.md).
 
-Chi tiết và SHA-256 nằm trong [Release 0.5.0](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.5.0). Khi nâng cấp, thoát bản đang chạy bằng ⌘Q rồi thay app; giữ nguyên thư mục dữ liệu để tiếp tục dùng các tài khoản hiện có.
+Lưu bản nháp quan trọng, thoát Tin Nhan/Gom bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp từ Tin Nhan lần đầu, tên file khác nên macOS không tự thay app cũ; sau khi kiểm tra Gom, có thể bỏ `Tin Nhan.app` cũ. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; macOS có thể cần Open Anyway theo hướng dẫn cài.
+
+Release có thêm `TinNhan-macOS-arm64-0.6.0.dmg`, giống hệt DMG Gom, để bộ cập nhật cũ 0.5.4 nhận diện được. Người dùng mới chọn file tên Gom.
 
 ## Chạy và đóng gói
 
@@ -65,7 +69,7 @@ Mặc định đo hai lượt cho 3/6/12 tài khoản và ba trang chờ đăng 
 
 `npm run test:renderer-performance` kiểm tra DOM thật bằng Chromium riêng; cần browser của Playwright hoặc đặt `TIN_NHAN_CHROMIUM` tới executable Chromium/Chrome đã cài. Test này không mở profile cá nhân.
 
-Lượt tối ưu hiện tại giữ mọi trang tài khoản để bảo toàn bản nháp và hoạt động nền. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition, không tự đóng trang để giảm RAM. Bản cài cục bộ mới nhất là **Gom 0.6.0**, dùng bộ nhận diện mới, giữ tab nền tảng, sửa lỗi Secure Input làm chặn EVKey và kiểm tra cập nhật: `outputs/Gom-macOS-arm64-0.6.0.dmg`, kèm `outputs/SHA256SUMS-Gom-0.6.0.txt`; bản ZIP công khai ở trên vẫn là 0.5.0. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
+Lượt tối ưu hiện tại giữ mọi trang tài khoản để bảo toàn bản nháp và hoạt động nền. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition, không tự đóng trang để giảm RAM. Bản cài mới nhất là **Gom 0.6.0**, dùng bộ nhận diện mới, giữ tab nền tảng, sửa lỗi Secure Input làm chặn EVKey và kiểm tra cập nhật: `outputs/Gom-macOS-arm64-0.6.0.dmg`, kèm `outputs/SHA256SUMS-Gom-0.6.0.txt`; các file tương ứng đã được phát hành tại link ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
 
 Chi tiết thay đổi, phương pháp và kết quả đối chiếu: [báo cáo hiệu năng 26/10/2026](docs/performance-2026-10-26.md).
 
@@ -151,4 +155,4 @@ Nâng cấp không đổi `TinNhanDesktop`, `accounts.json` hay ID/partition c�
 npm run test:shell
 ```
 
-Kiểm tra cách ly gồm12 tổ hợp màn hình/sáng-tối/sidebar, bàn phím và focus native, không chồng hộp thoại, giữ view/bản nháp, tên an toàn, kéo kích thước, lưu giao diện và ID tài khoản qua thoát/mở lại. Các fixture không dùng phiên cá nhân. Bản ZIP public ở đầu README là **0.5.0**; mã nguồn và bản cài thử cục bộ hiện tại là **0.5.3**.
+Kiểm tra cách ly gồm12 tổ hợp màn hình/sáng-tối/sidebar, bàn phím và focus native, không chồng hộp thoại, giữ view/bản nháp, tên an toàn, kéo kích thước, lưu giao diện và ID tài khoản qua thoát/mở lại. Các fixture không dùng phiên cá nhân. Phần này ghi lại giao diện 0.5.0; bản hiện hành và link tải ở đầu tài liệu.

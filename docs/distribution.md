@@ -2,6 +2,8 @@
 
 Bản 0.6.0 tạo bộ cài **macOS Apple Silicon (arm64)**. Chưa có bản Intel hoặc Universal. Ứng dụng ký ad-hoc để chạy trên máy Mac, chưa ký bằng Apple Developer ID và chưa notarize. DMG không làm thay đổi giới hạn này.
 
+Bản 0.6.0 đã được phát hành tại [GitHub Releases](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.6.0), gồm DMG, ZIP, file tương thích TinNhan và checksum.
+
 ## Cài đặt và gửi cho người khác
 
 1. Gửi file `Gom-macOS-arm64-0.6.0.dmg` cùng file SHA-256, hoặc gửi đường dẫn GitHub Release sau khi người duy trì phát hành.
@@ -54,8 +56,9 @@ Sao chép gói đã kiểm chứng sang tên phát hành thống nhất và tạ
 mkdir -p outputs
 cp out-release/make/dmg/arm64/Gom-macOS-arm64-0.6.0.dmg outputs/
 cp 'out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.6.0.zip' outputs/Gom-macOS-arm64-0.6.0.zip
+cp outputs/Gom-macOS-arm64-0.6.0.dmg outputs/TinNhan-macOS-arm64-0.6.0.dmg
 cd outputs
-shasum -a 256 Gom-macOS-arm64-0.6.0.dmg Gom-macOS-arm64-0.6.0.zip > SHA256SUMS-Gom-0.6.0.txt
+shasum -a 256 Gom-macOS-arm64-0.6.0.dmg Gom-macOS-arm64-0.6.0.zip TinNhan-macOS-arm64-0.6.0.dmg > SHA256SUMS-Gom-0.6.0.txt
 ```
 
 ## Phát hành trên GitHub

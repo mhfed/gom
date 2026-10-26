@@ -288,3 +288,10 @@ Verification: typecheck/build,128 unit tests,12 native-tab cases,command-focus,9
 Gom0.6.0 DMG and ZIP under outputs/, checksum outputs/SHA256SUMS-Gom-0.6.0.txt. Deep/strict ad-hoc signature,arm64/version/bundle metadata,12 runtime file hashes,packaged icon,ZIP integrity,DMG checksum and readonly mounted contents/Applications link all PASS. Canonical and alias DMG SHA256 b857cce18968bd2cb263095caf0a0628a0f0afe697ee54da0ab52aca3f9b58df; ZIP ea92b8de02b8688a3d5f16e7f3e2266736da4cf54431ba8c87c14fb2d9d4d0b3. Full report docs/release-0.6.0.md; proof/screenshots outputs/Gom-0.6.0/.
 
 No personal profile/real Keychain access, installed-app replacement, live send, public release,commit or push. Ad-hoc code-signing authorization may still prompt on personal upgrade; provider session expiry/full-quit draft restoration remain provider-dependent. Existing uncommitted0.5.4 work preserved.
+
+
+## 2026-10-26 — public Gom 0.6.0 release
+
+User explicitly requested pushing everything, then clarified waiting for the parallel Gom branding task and publishing all source plus the newest installer. Waited for that task to complete. Committed all 99 source/assets/docs/test changes as 490b1df760b479ee64b44c91b2e003e162be6e45, pushed main and annotated v0.6.0 atomically. No profile/output artifacts in Git. Public stable Latest release: https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.6.0, ID424111791; includes Gom DMG/ZIP, byte-identical TinNhan compatibility DMG and SHA256SUMS-Gom-0.6.0.txt.
+
+Fresh 128 unit tests/typecheck/build PASS; rebuilt runtime equals packaged ASAR. GitHub digest/size verification matches all four uploads. Public DMG HTTP200. Live unauthenticated updater verification: Gom0.6.0=current; original packaged TinNhan0.5.4=available0.6.0, using compatibility asset. Evidence outputs/publish-0.6.0. README/download/distribution links updated after publication. No force push, app install, personal session access or change to repo visibility.
