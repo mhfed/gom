@@ -1,4 +1,5 @@
 :root {
+  --header-height: 52px;
   --cream: #f7f7f2;
   --paper: #ffffff;
   --soft: #f0f3ed;
@@ -11,6 +12,9 @@
   --accent-ink: #fff;
   --warning: #986213;
   --danger: #b6473b;
+  --control-border: #81958d;
+  --switch-off: #71877e;
+  --disabled-ink: #718078;
   color-scheme: light;
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   font-size: 13px;
@@ -31,6 +35,9 @@
   --accent-ink: #172e2c;
   --warning: #ebbd76;
   --danger: #ff9c8d;
+  --control-border: #6d8a7f;
+  --switch-off: #78958a;
+  --disabled-ink: #91a79e;
   color-scheme: dark;
 }
 * {
@@ -57,12 +64,12 @@ button {
     background 0.14s,
     color 0.14s;
 }
-button:hover {
+button:hover:not(:disabled) {
   background: var(--hover);
 }
 button:disabled {
   cursor: default;
-  opacity: 0.4;
+  color: var(--disabled-ink);
 }
 button:focus-visible,
 input:focus-visible,
@@ -139,12 +146,12 @@ main {
   background: var(--paper);
 }
 header {
-  height: 64px;
-  padding: 0 16px 0 100px;
+  height: var(--header-height);
+  padding: 0 12px 0 94px;
   background: var(--cream);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border-bottom: 1px solid var(--line);
   -webkit-app-region: drag;
 }
@@ -157,19 +164,19 @@ header {
   user-select: none;
 }
 .toolbar-brand img {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
 }
 .toolbar-brand span {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 650;
   letter-spacing: -0.7px;
 }
 .platform-tabs {
   display: flex;
   gap: 2px;
-  padding: 3px;
-  border-radius: 9px;
+  padding: 2px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--ink) 5%, transparent);
   flex: none;
 }
@@ -179,8 +186,8 @@ header {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 8px 12px;
-  min-height: 34px;
+  padding: 6px 10px;
+  min-height: 30px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 500;
@@ -194,8 +201,8 @@ header {
     0 0 0 0.5px #00000008;
 }
 .platform-tabs img {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   object-fit: contain;
 }
 .platform-unread {
@@ -214,31 +221,48 @@ header {
 .account-picker {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   min-width: 0;
-  padding: 2px 4px 2px 9px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--paper);
+  -webkit-app-region: no-drag;
 }
-.account-picker select {
-  width: 144px;
-  max-width: 18vw;
-  height: 32px;
-  background: transparent;
-  border: 0;
-  padding: 0 4px;
-  text-overflow: ellipsis;
+#account-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 96px;
+  width: auto;
+  max-width: min(168px, 18vw);
+  height: 30px;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  padding: 0 9px;
+  border: 1px solid transparent;
   font-size: 12px;
-  cursor: pointer;
+  text-align: left;
 }
-.account-picker select:hover {
+#account-select:hover:not(:disabled),
+#account-select[aria-expanded="true"] {
   background: var(--hover);
-  border-radius: 6px;
+  border-color: var(--line);
+}
+#account-select-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#account-select svg {
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
 }
 .account-picker .account-status {
   display: block;
-  margin: 0 2px;
+  margin: 0;
+}
+header .icon-button {
+  width: 28px;
+  height: 30px;
 }
 .icon-button {
   display: inline-flex;
@@ -327,7 +351,7 @@ header {
   background: #c79432;
 }
 #settings-panel {
-  height: calc(100vh - 64px);
+  height: calc(100vh - var(--header-height));
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
@@ -486,7 +510,7 @@ header {
   background: var(--accent);
   color: var(--accent-ink);
 }
-.primary:hover {
+.primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 86%, var(--ink));
 }
 .primary svg,
@@ -498,6 +522,17 @@ header {
   background: var(--paper);
   border-color: var(--line);
   box-shadow: 0 1px 2px #00000004;
+}
+.primary:disabled,
+.secondary:disabled {
+  background: var(--soft);
+  border-color: var(--line);
+  color: var(--disabled-ink);
+  box-shadow: none;
+}
+.primary:active:not(:disabled),
+.secondary:active:not(:disabled) {
+  box-shadow: inset 0 1px 2px #0002;
 }
 .settings-pane {
   min-width: 0;
@@ -813,7 +848,7 @@ header {
   border: 1px solid var(--line);
   border-radius: 9px;
   padding: 12px 14px;
-  background: var(--selected);
+  background: var(--soft);
   color: var(--ink);
   margin-top: 18px;
   font-size: 12px;
@@ -910,18 +945,21 @@ header {
 .setting-row:has(input:disabled) > span {
   color: var(--muted);
 }
+.setting-row:has(input[type="checkbox"]:enabled) {
+  cursor: pointer;
+}
 .field-hint {
   margin: 10px 3px 0;
 }
 input[type="checkbox"] {
   appearance: none;
   position: relative;
-  width: 34px;
-  height: 20px;
+  width: 38px;
+  height: 22px;
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--muted) 32%, var(--line));
+  border: 1px solid var(--switch-off);
   border-radius: 20px;
-  background: color-mix(in srgb, var(--muted) 22%, var(--soft));
+  background: var(--switch-off);
   cursor: pointer;
   flex: none;
   transition:
@@ -933,8 +971,8 @@ input[type="checkbox"]::after {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   background: #fff;
   border-radius: 50%;
   box-shadow: 0 1px 3px #0003;
@@ -945,12 +983,18 @@ input[type="checkbox"]:checked {
   border-color: var(--accent);
 }
 input[type="checkbox"]:checked::after {
-  transform: translateX(14px);
+  transform: translateX(16px);
   background: var(--accent-ink);
 }
 input[type="checkbox"]:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+  background: var(--soft);
+  border-color: var(--control-border);
+  border-style: dashed;
+  cursor: default;
+}
+input[type="checkbox"]:disabled::after {
+  background: var(--control-border);
+  box-shadow: none;
 }
 .theme-options {
   display: grid;
@@ -966,7 +1010,7 @@ input[type="checkbox"]:disabled {
   min-width: 0;
   text-align: left;
 }
-.theme-options button:hover {
+.theme-options button:hover:not(:disabled) {
   border-color: var(--muted);
 }
 .theme-options button[aria-pressed="true"] {
@@ -1101,21 +1145,130 @@ input[type="checkbox"]:disabled {
 }
 select,
 input:not([type="checkbox"]) {
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   background: var(--paper);
-  padding: 9px 10px;
+  padding: 8px 11px;
   font-size: 12px;
   min-height: 36px;
+  line-height: 18px;
 }
 select {
   cursor: pointer;
+  gap: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Keep native selection, keyboard and form behavior; theme the top-layer picker. */
+select,
+::picker(select) {
+  appearance: base-select;
+}
+select > button {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+}
+select > button:hover:not(:disabled) {
+  background: transparent;
+}
+select selectedcontent {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+select::picker-icon {
+  color: var(--muted);
+  width: 12px;
+  height: 12px;
+  align-self: center;
+  flex: none;
+  content: "";
+  background: currentColor;
+  clip-path: polygon(10% 30%, 50% 70%, 90% 30%, 100% 40%, 50% 90%, 0 40%);
+}
+select:open::picker-icon {
+  rotate: 180deg;
+}
+select:open {
+  border-color: var(--accent);
+}
+select:hover:not(:disabled):not(:open),
+input:not([type="checkbox"]):hover:not(:disabled) {
+  border-color: var(--muted);
+}
+::picker(select) {
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  padding: 4px;
+  margin-block: 5px;
+  box-shadow:
+    0 8px 24px #0002,
+    0 2px 5px #0001;
+  max-width: min(440px, calc(100vw - 32px));
+  max-height: min(320px, 50vh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+select option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+select option:checked {
+  background: var(--selected);
+  font-weight: 550;
+}
+select option:hover,
+select option:focus-visible {
+  background: var(--hover);
+}
+select option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+select option::checkmark {
+  order: 1;
+  margin-inline-start: auto;
+  color: var(--accent);
+}
+input::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 select:disabled,
 input:not([type="checkbox"]):disabled {
-  color: var(--muted);
+  color: var(--disabled-ink);
   background: var(--soft);
-  cursor: not-allowed;
+  border-color: var(--line);
+  cursor: default;
+}
+.form-error {
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 12px 0 0;
+}
+input[aria-invalid="true"] {
+  border-color: var(--danger);
 }
 .notification-row {
   display: flex;
@@ -1145,8 +1298,26 @@ input:not([type="checkbox"]):disabled {
   margin-top: 5px;
 }
 .notification-row select {
-  width: 136px;
-  flex-shrink: 0;
+  width: 150px;
+}
+.notification-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 150px) auto;
+  align-items: start;
+  gap: 7px 8px;
+  flex: none;
+  max-width: 100%;
+}
+.notification-hint {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: right;
+  max-width: 242px;
+}
+.notification-hint:empty {
+  display: none;
 }
 .notification-row .account-avatar {
   width: 32px;
@@ -1272,7 +1443,7 @@ input:not([type="checkbox"]):disabled {
 }
 #connection-panel {
   position: absolute;
-  inset: 64px 0 0;
+  inset: var(--header-height) 0 0;
   display: grid;
   place-items: center;
   padding: 30px;
@@ -1313,7 +1484,7 @@ input:not([type="checkbox"]):disabled {
 }
 #service-loading {
   position: absolute;
-  inset: 64px 0 0;
+  inset: var(--header-height) 0 0;
   display: grid;
   place-items: center;
   color: var(--muted);
@@ -1600,7 +1771,7 @@ dialog::backdrop {
     gap: 7px;
   }
   .platform-tabs button {
-    padding: 8px;
+    padding: 6px 8px;
   }
   .platform-tabs button > span {
     display: none;
@@ -1608,7 +1779,7 @@ dialog::backdrop {
   .toolbar-space {
     min-width: 0;
   }
-  .account-picker select {
+  #account-select {
     max-width: 24vw;
   }
 }
@@ -1635,9 +1806,17 @@ dialog::backdrop {
   .notification-row label {
     flex-basis: calc(100% - 56px);
   }
-  .notification-row select {
+  .notification-controls {
     margin-left: 42px;
     flex: 1;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .notification-row select {
+    width: 100%;
+  }
+  .notification-hint {
+    max-width: none;
+    text-align: left;
   }
   .theme-options {
     gap: 12px;

@@ -110,6 +110,7 @@ export interface DesktopBridge {
   activate(id: AccountId): Promise<void>;
   activateProvider(provider: ProviderId, focusPage?: boolean): Promise<void>;
   navigationMenu(): Promise<void>;
+  accountMenu(anchor: { x: number; y: number }): Promise<void>;
   accountEditor(open: boolean): Promise<void>;
   addAccount(
     provider: ProviderId,

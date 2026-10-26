@@ -2,36 +2,42 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { providerBounds } from "../src/main/layout.ts";
 import { normalizeUnread, badgeText } from "../src/main/unread.ts";
-test("official chat fills the window below the toolbar without a sidebar inset", () => {
+test("official chat fills the window below the compact toolbar without a sidebar inset", () => {
   assert.deepEqual(providerBounds(1024, 720), {
     x: 0,
-    y: 64,
+    y: 52,
     width: 1024,
-    height: 656,
+    height: 668,
   });
   assert.deepEqual(providerBounds(940, 640), {
     x: 0,
-    y: 64,
+    y: 52,
     width: 940,
-    height: 576,
+    height: 588,
   });
 });
 test("small or empty windows never give native views negative dimensions", () => {
   assert.deepEqual(providerBounds(40, 40), {
     x: 0,
-    y: 64,
+    y: 52,
     width: 40,
     height: 0,
   });
-  assert.deepEqual(providerBounds(0, 64), {
+  assert.deepEqual(providerBounds(0, 52), {
     x: 0,
-    y: 64,
+    y: 52,
     width: 0,
     height: 0,
   });
+  assert.deepEqual(providerBounds(40, 53), {
+    x: 0,
+    y: 52,
+    width: 40,
+    height: 1,
+  });
   assert.deepEqual(providerBounds(-10, -10), {
     x: 0,
-    y: 64,
+    y: 52,
     width: 0,
     height: 0,
   });
@@ -178,7 +184,7 @@ test("background views keep a real viewport so responsive clients can render the
     updates.every(
       (x) =>
         JSON.stringify(x.bounds) ===
-        JSON.stringify({ x: 0, y: 64, width: 1024, height: 656 }),
+        JSON.stringify({ x: 0, y: 52, width: 1024, height: 668 }),
     ),
   );
 });

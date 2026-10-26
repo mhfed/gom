@@ -1,12 +1,12 @@
 # Phân phối Gom bằng DMG và cập nhật thủ công
 
-Bản 0.6.2 tạo bộ cài **macOS Apple Silicon (arm64)**. Chưa có bản Intel hoặc Universal. Ứng dụng ký ad-hoc để chạy trên máy Mac, chưa ký bằng Apple Developer ID và chưa notarize. DMG không làm thay đổi giới hạn này.
+Bản 0.6.3 tạo bộ cài **macOS Apple Silicon (arm64)**. Chưa có bản Intel hoặc Universal. Ứng dụng ký ad-hoc để chạy trên máy Mac, chưa ký bằng Apple Developer ID và chưa notarize. DMG không làm thay đổi giới hạn này.
 
-Bản 0.6.2 đã được phát hành tại [GitHub Releases](https://github.com/mhfed/gom/releases/tag/v0.6.2), gồm DMG, ZIP, file tương thích TinNhan và checksum.
+Bản 0.6.3 đã được phát hành tại [GitHub Releases](https://github.com/mhfed/gom/releases/tag/v0.6.3), gồm DMG, ZIP, file tương thích TinNhan và checksum.
 
 ## Cài đặt và gửi cho người khác
 
-1. Gửi file `Gom-macOS-arm64-0.6.2.dmg` cùng file SHA-256, hoặc gửi đường dẫn GitHub Release sau khi người duy trì phát hành.
+1. Gửi file `Gom-macOS-arm64-0.6.3.dmg` cùng file SHA-256, hoặc gửi đường dẫn GitHub Release sau khi người duy trì phát hành.
 2. Người nhận mở DMG rồi kéo **Gom.app** vào **Applications**.
 3. Eject ổ đĩa Gom, mở ứng dụng từ Applications. Tránh chạy trực tiếp trong DMG.
 4. Nếu macOS chặn vì chưa xác minh nhà phát triển, chỉ khi đã tin cậy nguồn tải: thử mở app trước, vào **System Settings → Privacy & Security → Open Anyway**, rồi xác nhận **Open**. Máy do tổ chức quản lý có thể không cho phép thao tác này. Xem [hướng dẫn chính thức của Apple](https://support.apple.com/en-us/102445).
@@ -17,7 +17,7 @@ Gói chỉ chứa chương trình và tài nguyên hiển thị. Người nhận
 
 ## Kiểm tra và cài bản mới
 
-Repository đã đổi tên thành `mhfed/gom`. Bộ kiểm tra của các bản 0.6.0 trở về trước từ chối chuyển hướng từ địa chỉ cũ; tải DMG trực tiếp từ Release để nâng cấp lần này. Bản 0.6.2 đã dùng nguồn mới và tiếp tục kiểm tra chính xác địa chỉ phát hành.
+Repository đã đổi tên thành `mhfed/gom`. Bộ kiểm tra của các bản 0.6.0 trở về trước từ chối chuyển hướng từ địa chỉ cũ; tải DMG trực tiếp từ Release để nâng cấp lần này. Từ bản 0.6.2, app đã dùng nguồn mới và tiếp tục kiểm tra chính xác địa chỉ phát hành.
 
 Trong **Cài đặt → Cập nhật**, bấm **Kiểm tra cập nhật**. Cũng có thể mở mục này từ menu **Gom → Kiểm tra cập nhật…**. Khi tìm thấy bản ổn định mới có gói tương thích, nút **Tải bản mới** mở trang GitHub Release trong trình duyệt. App không tự tải chương trình, cài thay thế hoặc khởi động lại.
 
@@ -44,8 +44,8 @@ npm run make
 
 Electron Forge tạo cả hai định dạng bằng cùng app bundle:
 
-- DMG: `out-release/make/dmg/arm64/Gom-macOS-arm64-0.6.2.dmg`
-- ZIP: `out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.6.2.zip`
+- DMG: `out-release/make/dmg/arm64/Gom-macOS-arm64-0.6.3.dmg`
+- ZIP: `out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.6.3.zip`
 - App: `out-release/Gom-darwin-arm64/Gom.app`
 
 Cấu hình `forge.config.cjs` chỉ đưa `package.json` và các file runtime đã liệt kê trong `dist/` vào app. Mỗi khi thêm tài nguyên runtime phải cập nhật danh sách này. Source nghiên cứu, hồ sơ người dùng, kết quả kiểm thử, `node_modules` và các bản build cũ đều nằm ngoài danh sách. Kiểm tra lại nội dung `app.asar` trước khi phân phối.
@@ -56,25 +56,25 @@ Sao chép gói đã kiểm chứng sang tên phát hành thống nhất và tạ
 
 ```sh
 mkdir -p outputs
-cp out-release/make/dmg/arm64/Gom-macOS-arm64-0.6.2.dmg outputs/
-cp 'out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.6.2.zip' outputs/Gom-macOS-arm64-0.6.2.zip
-cp outputs/Gom-macOS-arm64-0.6.2.dmg outputs/TinNhan-macOS-arm64-0.6.2.dmg
+cp out-release/make/dmg/arm64/Gom-macOS-arm64-0.6.3.dmg outputs/
+cp 'out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.6.3.zip' outputs/Gom-macOS-arm64-0.6.3.zip
+cp outputs/Gom-macOS-arm64-0.6.3.dmg outputs/TinNhan-macOS-arm64-0.6.3.dmg
 cd outputs
-shasum -a 256 Gom-macOS-arm64-0.6.2.dmg Gom-macOS-arm64-0.6.2.zip TinNhan-macOS-arm64-0.6.2.dmg > SHA256SUMS-Gom-0.6.2.txt
+shasum -a 256 Gom-macOS-arm64-0.6.3.dmg Gom-macOS-arm64-0.6.3.zip TinNhan-macOS-arm64-0.6.3.dmg > SHA256SUMS-Gom-0.6.3.txt
 ```
 
 ## Phát hành trên GitHub
 
-Build cục bộ không tự xuất bản Release. Khi sẵn sàng phân phối, người duy trì tạo một **Release ổn định**, tag `v0.6.2`, trong đúng repository `mhfed/gom`, kèm ghi chú thay đổi và các file:
+Build cục bộ không tự xuất bản Release. Khi sẵn sàng phân phối, người duy trì tạo một **Release ổn định**, tag `v0.6.3`, trong đúng repository `mhfed/gom`, kèm ghi chú thay đổi và các file:
 
-- `Gom-macOS-arm64-0.6.2.dmg`
-- `Gom-macOS-arm64-0.6.2.zip`
-- `SHA256SUMS-Gom-0.6.2.txt`
-- `TinNhan-macOS-arm64-0.6.2.dmg` — bản sao cùng nội dung DMG Gom, giữ tên gói cũ.
+- `Gom-macOS-arm64-0.6.3.dmg`
+- `Gom-macOS-arm64-0.6.3.zip`
+- `SHA256SUMS-Gom-0.6.3.txt`
+- `TinNhan-macOS-arm64-0.6.3.dmg` — bản sao cùng nội dung DMG Gom, giữ tên gói cũ.
 
-Gom nhận cả tên gói Gom và TinNhan cũ. Asset tên cũ được giữ cho tính tương thích tên file; nó không sửa lỗi địa chỉ repository trong các app cũ. Tạo bằng `cp outputs/Gom-macOS-arm64-0.6.2.dmg outputs/TinNhan-macOS-arm64-0.6.2.dmg` và đưa cả file này vào checksum. Đây vẫn là bundle Gom, không phải bản chương trình khác.
+Gom nhận cả tên gói Gom và TinNhan cũ. Asset tên cũ được giữ cho tính tương thích tên file; nó không sửa lỗi địa chỉ repository trong các app cũ. Tạo bằng `cp outputs/Gom-macOS-arm64-0.6.3.dmg outputs/TinNhan-macOS-arm64-0.6.3.dmg` và đưa cả file này vào checksum. Đây vẫn là bundle Gom, không phải bản chương trình khác.
 
-Tag phải khớp version trong `package.json`; tên gói cần chứa version và kiến trúc. Chỉ đăng bản ổn định sau khi có đủ gói đã kiểm chứng. Bộ kiểm tra bỏ qua draft/prerelease; bản cài mới hơn bản public sẽ thông báo rõ tình trạng đó. Các bản sau tăng version và lặp lại quy trình. Sau lần nâng cấp trực tiếp lên 0.6.2, chức năng kiểm tra dùng repository mới.
+Tag phải khớp version trong `package.json`; tên gói cần chứa version và kiến trúc. Chỉ đăng bản ổn định sau khi có đủ gói đã kiểm chứng. Bộ kiểm tra bỏ qua draft/prerelease; bản cài mới hơn bản public sẽ thông báo rõ tình trạng đó. Các bản sau tăng version và lặp lại quy trình. Sau lần nâng cấp trực tiếp lên 0.6.2 hoặc mới hơn, chức năng kiểm tra dùng repository mới.
 
 ## Công cụ đóng gói
 

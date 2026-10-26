@@ -93,6 +93,75 @@ async function top() {
   });
 }
 
+async function openPicker(selector, keyboard = false) {
+  const select = page.locator(selector);
+  await select.scrollIntoViewIfNeeded();
+  if (keyboard) {
+    await select.focus();
+    await page.keyboard.press("Space");
+  } else await select.click();
+  await page.waitForFunction(
+    (selector) => document.querySelector(selector).matches(":open"),
+    selector,
+  );
+  const snapshot = await select.evaluate((node) => {
+    const picker = getComputedStyle(node, "::picker(select)");
+    return {
+      appearance: getComputedStyle(node).appearance,
+      pickerAppearance: picker.appearance,
+      pickerBackground: picker.backgroundColor,
+      options: [...node.options].map((option) => {
+        const rect = option.getBoundingClientRect();
+        return {
+          text: option.textContent.trim(),
+          width: rect.width,
+          height: rect.height,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+        };
+      }),
+      viewport: [innerWidth, innerHeight],
+    };
+  });
+  assert.equal(snapshot.appearance, "base-select");
+  assert.equal(snapshot.pickerAppearance, "base-select");
+  assert.ok(
+    snapshot.options.length,
+    `${selector}: picker must contain options`,
+  );
+  for (const option of snapshot.options) {
+    assert.ok(
+      option.width > 0 && option.height > 0,
+      `${selector}: ${option.text} must render in the open picker`,
+    );
+    assert.ok(
+      option.left >= -1 && option.right <= snapshot.viewport[0] + 1,
+      `${selector}: ${option.text} must fit the window horizontally`,
+    );
+    assert.ok(
+      option.top >= -1 && option.bottom <= snapshot.viewport[1] + 1,
+      `${selector}: ${option.text} must fit the window vertically`,
+    );
+  }
+  return snapshot;
+}
+
+async function closePicker(selector) {
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(
+    (selector) => !document.querySelector(selector).matches(":open"),
+    selector,
+  );
+  assert.ok(
+    await page
+      .locator(selector)
+      .evaluate((node) => document.activeElement === node),
+    `${selector}: Escape must restore focus to the select`,
+  );
+}
+
 async function geometry() {
   return page.evaluate(() => {
     const panel = document.getElementById("settings-panel");
@@ -467,7 +536,31 @@ require(${JSON.stringify(join(root, "dist/main.cjs"))});
         await page.waitForFunction(
           () => document.getElementById("account-editor").open,
         );
+        await page.locator("#account-name").fill("   ");
+        await page.locator("#account-editor-save").click();
+        assert.equal(
+          await page
+            .locator("#account-name")
+            .evaluate((node) => node.validity.customError),
+          true,
+          "A whitespace-only account name must be rejected",
+        );
+        assert.equal(
+          await page.locator("#account-editor").evaluate((node) => node.open),
+          true,
+        );
+        assert.equal(
+          (await page.evaluate(() => window.desktop.state())).accounts.length,
+          6,
+        );
         await page.locator("#account-name").fill("Tài khoản chưa lưu");
+        assert.equal(
+          await page
+            .locator("#account-name")
+            .evaluate((node) => node.validity.customError),
+          false,
+          "Typing a valid name must clear the inline validation error",
+        );
         await page.locator("#account-editor-cancel").click();
         await page.waitForFunction(
           () => !document.getElementById("account-editor").open,
@@ -529,6 +622,265 @@ require(${JSON.stringify(join(root, "dist/main.cjs"))});
             window.__settingsCheckState.preferences.notifications.zalo ===
             "mute",
         );
+      },
+    );
+    await check(
+      "notification pickers render in both themes, select by click, and fit near the window edge",
+      async () => {
+        await setSize(1024, 720);
+        await selectSection("notifications");
+        await page.locator("#notification-zalo").selectOption("ask");
+        const backgrounds = [];
+        for (const theme of ["light", "dark"]) {
+          await setTheme(theme);
+          await top();
+          const picker = await openPicker("#notification-zalo");
+          backgrounds.push(picker.pickerBackground);
+          await page.screenshot({
+            path: join(output, `${prefix}-${theme}-notification-picker.png`),
+            animations: "disabled",
+          });
+          await closePicker("#notification-zalo");
+          assert.equal(
+            await page.locator("#notification-zalo").inputValue(),
+            "ask",
+          );
+        }
+        assert.notEqual(
+          backgrounds[0],
+          backgrounds[1],
+          "Picker must follow the app theme",
+        );
+        await openPicker("#notification-zalo");
+        await page.locator('#notification-zalo option[value="allow"]').click();
+        await page.waitForFunction(
+          () =>
+            window.__settingsCheckState.preferences.notifications.zalo ===
+              "allow" &&
+            !document.getElementById("notification-zalo").matches(":open"),
+        );
+        assert.equal(await page.locator("#test-zalo").isDisabled(), false);
+        const last = page.locator(".notification-row select").last();
+        const lastSelector = `#${await last.getAttribute("id")}`;
+        await openPicker(lastSelector);
+        await closePicker(lastSelector);
+      },
+    );
+    await check(
+      "select keyboard interaction commits a choice and Escape cancels without changing it",
+      async () => {
+        await selectSection("appearance");
+        await page.locator("#theme-mode").selectOption("system");
+        await page.waitForFunction(
+          () => window.__settingsCheckState.presentation.theme === "system",
+        );
+        await openPicker("#theme-mode", true);
+        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("Enter");
+        await page.waitForFunction(
+          () =>
+            !document.getElementById("theme-mode").matches(":open") &&
+            window.__settingsCheckState.presentation.theme === "light",
+        );
+        await openPicker("#theme-mode", true);
+        await page.keyboard.press("ArrowDown");
+        await closePicker("#theme-mode");
+        assert.equal(await page.locator("#theme-mode").inputValue(), "light");
+        assert.equal(
+          await page.evaluate(
+            () => window.__settingsCheckState.presentation.theme,
+          ),
+          "light",
+        );
+        await page.keyboard.press("Tab");
+        assert.equal(
+          await page
+            .locator("#theme-mode")
+            .evaluate((node) => document.activeElement === node),
+          false,
+          "Tab must move out of the closed select",
+        );
+      },
+    );
+    await check(
+      "notification switches support the full label and keyboard with an explained disabled action",
+      async () => {
+        await selectSection("notifications");
+        const pause = page.locator("#pause-notifications");
+        assert.equal(await pause.getAttribute("role"), "switch");
+        await pause.locator("..").locator("span").first().click();
+        await page.waitForFunction(
+          () => window.__settingsCheckState.preferences.paused,
+        );
+        assert.equal(await pause.isChecked(), true);
+        const test = page.locator("#test-zalo");
+        assert.equal(await test.isDisabled(), true);
+        const hintId = await test.getAttribute("aria-describedby");
+        assert.equal(hintId, "notification-hint-zalo");
+        const hint = page.locator(`#${hintId}`);
+        assert.equal(await hint.isVisible(), true);
+        assert.match(await hint.textContent(), /bật lại thông báo/i);
+        await test.evaluate((node) =>
+          Promise.all(
+            node.getAnimations().map((animation) => animation.finished),
+          ),
+        );
+        const background = await test.evaluate(
+          (node) => getComputedStyle(node).backgroundColor,
+        );
+        await test.hover();
+        await test.evaluate((node) =>
+          Promise.all(
+            node.getAnimations().map((animation) => animation.finished),
+          ),
+        );
+        assert.equal(
+          await test.evaluate((node) => getComputedStyle(node).backgroundColor),
+          background,
+          "Disabled action must not show an enabled hover state",
+        );
+        await pause.focus();
+        await page.keyboard.press("Space");
+        await page.waitForFunction(
+          () => !window.__settingsCheckState.preferences.paused,
+        );
+        assert.equal(await test.isDisabled(), false);
+        const focus = await pause.evaluate((node) => ({
+          visible: node.matches(":focus-visible"),
+          outline: getComputedStyle(node).outlineStyle,
+          width: parseFloat(getComputedStyle(node).outlineWidth),
+          shadow: getComputedStyle(node).boxShadow,
+        }));
+        assert.ok(
+          focus.visible &&
+            ((focus.outline !== "none" && focus.width > 0) ||
+              focus.shadow !== "none"),
+        );
+        await page.locator("#notification-zalo").selectOption("mute");
+        await page.waitForFunction(
+          () =>
+            window.__settingsCheckState.preferences.notifications.zalo ===
+            "mute",
+        );
+        assert.equal(await test.isDisabled(), true);
+        assert.match(await hint.textContent(), /cho phép/i);
+      },
+    );
+    await check(
+      "account provider picker stays above its modal and Escape preserves the editor",
+      async () => {
+        await selectSection("accounts");
+        await page.locator("#add-account-settings").click();
+        await page.waitForFunction(
+          () => document.getElementById("account-editor").open,
+        );
+        const previous = await page.locator("#account-provider").inputValue();
+        await openPicker("#account-provider", true);
+        await page.keyboard.press("ArrowDown");
+        await page.screenshot({
+          path: join(output, `${prefix}-account-editor-picker.png`),
+          animations: "disabled",
+        });
+        await closePicker("#account-provider");
+        assert.equal(
+          await page.locator("#account-provider").inputValue(),
+          previous,
+        );
+        assert.equal(
+          await page.locator("#account-editor").evaluate((node) => node.open),
+          true,
+        );
+        await openPicker("#account-provider");
+        await page
+          .locator('#account-provider option[value="telegram"]')
+          .click();
+        assert.equal(
+          await page.locator("#account-provider").inputValue(),
+          "telegram",
+        );
+        await page.locator("#account-editor-cancel").click();
+        await page.waitForFunction(
+          () => !document.getElementById("account-editor").open,
+        );
+      },
+    );
+    await check(
+      "import pickers contain long labels and empty sources expose explanatory placeholders",
+      async () => {
+        await selectSection("accounts");
+        await page.locator(".import-section summary").click();
+        const closedProfile = await page
+          .locator("#profiles")
+          .evaluate((node) => ({
+            height: node.getBoundingClientRect().height,
+            targetHeight: document
+              .getElementById("messenger-target")
+              .getBoundingClientRect().height,
+            whiteSpace: getComputedStyle(node).whiteSpace,
+          }));
+        assert.equal(
+          closedProfile.height,
+          36,
+          "A long selected profile must stay on one line",
+        );
+        assert.equal(
+          closedProfile.height,
+          closedProfile.targetHeight,
+          "Import fields must remain aligned",
+        );
+        assert.equal(closedProfile.whiteSpace, "nowrap");
+        await openPicker("#profiles");
+        await page.screenshot({
+          path: join(output, `${prefix}-import-profile-picker.png`),
+          animations: "disabled",
+        });
+        await closePicker("#profiles");
+        const original = await page.evaluate(() => window.desktop.state());
+        try {
+          // Only renderer state is replaced; the fixture's real account catalog
+          // and source discovery remain unchanged and are restored below.
+          const empty = {
+            ...original,
+            profiles: [],
+            accounts: original.accounts.map((account) => ({
+              ...account,
+              archived: account.provider === "messenger" || account.archived,
+            })),
+          };
+          await client.evaluate(({ BrowserWindow }, state) => {
+            BrowserWindow.getAllWindows()[0].webContents.send("state", state);
+          }, empty);
+          await page.waitForFunction(
+            () =>
+              document.getElementById("profiles").disabled &&
+              document.getElementById("messenger-target").disabled,
+          );
+          for (const selector of ["#profiles", "#messenger-target"]) {
+            assert.equal(await page.locator(selector).inputValue(), "");
+            assert.ok(
+              (
+                await page.locator(`${selector} option:checked`).textContent()
+              ).trim(),
+            );
+          }
+          assert.equal(await page.locator("#import").isDisabled(), true);
+          assert.equal(await page.locator("#import-hint").isVisible(), true);
+          assert.ok((await page.locator("#import-hint").textContent()).trim());
+          await page.locator("#profiles").scrollIntoViewIfNeeded();
+          await assertGeometry("empty-import-sources");
+          await page.screenshot({
+            path: join(output, `${prefix}-import-empty-sources.png`),
+            animations: "disabled",
+          });
+        } finally {
+          await client.evaluate(({ BrowserWindow }, state) => {
+            BrowserWindow.getAllWindows()[0].webContents.send("state", state);
+          }, original);
+        }
+        await page.waitForFunction(
+          () => !document.getElementById("profiles").disabled,
+        );
+        await page.locator(".import-section summary").click();
       },
     );
     await check(

@@ -161,7 +161,7 @@ test("unchanged layout avoids native writes while switch, resize and new views s
   assert.equal(a.visible.length, 1);
   assert.equal(b.bounds.length, 1);
   assert.equal(b.visible.length, 1);
-  assert.deepEqual(a.bounds[0], { x: 0, y: 64, width: 1024, height: 656 });
+  assert.deepEqual(a.bounds[0], { x: 0, y: 52, width: 1024, height: 668 });
   layoutViews(views, 1024, 720, "b", "service");
   assert.deepEqual(a.visible, [true, false]);
   assert.deepEqual(b.visible, [false, true]);
@@ -169,7 +169,7 @@ test("unchanged layout avoids native writes while switch, resize and new views s
   layoutViews(views, 1100, 800, "b", "service");
   assert.equal(a.bounds.length, 2);
   assert.equal(b.bounds.length, 2);
-  assert.deepEqual(b.bounds[1], { x: 0, y: 64, width: 1100, height: 736 });
+  assert.deepEqual(b.bounds[1], { x: 0, y: 52, width: 1100, height: 748 });
   assert.deepEqual(b.visible, [false, true]);
   layoutViews(views, 1100, 800, "b", "settings");
   assert.deepEqual(b.visible, [false, true, false]);

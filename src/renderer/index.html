@@ -164,23 +164,29 @@
         </nav>
         <div class="toolbar-space"></div>
         <div class="account-picker">
-          <i
-            id="active-account-status"
-            class="account-status dot"
-            aria-hidden="true"
-          ></i>
-          <select
+          <button
             id="account-select"
+            type="button"
             aria-label="Tài khoản đang dùng"
             aria-describedby="subtitle"
-          ></select>
+            aria-haspopup="menu"
+            aria-expanded="false"
+          >
+            <i
+              id="active-account-status"
+              class="account-status dot"
+              aria-hidden="true"
+            ></i>
+            <span id="account-select-label"></span>
+            <svg aria-hidden="true"><use href="#i-down" /></svg>
+          </button>
           <button
             id="add-account-toolbar"
             class="icon-button"
             aria-label="Thêm tài khoản"
             title="Thêm tài khoản"
           >
-            <svg><use href="#i-plus" /></svg>
+            <svg aria-hidden="true"><use href="#i-plus" /></svg>
           </button>
         </div>
         <span class="tool-divider" aria-hidden="true"></span>
@@ -191,7 +197,7 @@
             aria-label="Chuyển nhanh tài khoản"
             title="Chuyển nhanh (⌘K)"
           >
-            <svg><use href="#i-search" /></svg>
+            <svg aria-hidden="true"><use href="#i-search" /></svg>
           </button>
           <button
             id="theme-toggle"
@@ -199,7 +205,7 @@
             aria-label="Đổi sáng tối"
             title="Đổi sáng/tối"
           >
-            <svg><use href="#i-moon" /></svg>
+            <svg aria-hidden="true"><use href="#i-moon" /></svg>
           </button>
           <button
             id="settings"
@@ -207,7 +213,7 @@
             aria-label="Cài đặt"
             title="Cài đặt (⌘,)"
           >
-            <svg><use href="#i-settings" /></svg>
+            <svg aria-hidden="true"><use href="#i-settings" /></svg>
           </button>
           <button
             id="navigation-menu"
@@ -216,7 +222,7 @@
             title="Thao tác với trang chat"
             aria-haspopup="menu"
           >
-            <svg><use href="#i-more" /></svg>
+            <svg aria-hidden="true"><use href="#i-more" /></svg>
           </button>
         </div>
         <p id="subtitle" class="sr-only" role="status">Đang kết nối…</p>
@@ -245,10 +251,8 @@
                 aria-selected="true"
                 tabindex="0"
               >
-                <svg><use href="#i-users" /></svg>Tài khoản<span
-                  id="account-count"
-                  class="tab-count"
-                ></span>
+                <svg aria-hidden="true"><use href="#i-users" /></svg>Tài
+                khoản<span id="account-count" class="tab-count"></span>
               </button>
               <button
                 id="settings-tab-appearance"
@@ -258,7 +262,7 @@
                 aria-selected="false"
                 tabindex="-1"
               >
-                <svg><use href="#i-sun" /></svg>Giao diện
+                <svg aria-hidden="true"><use href="#i-sun" /></svg>Giao diện
               </button>
               <button
                 id="settings-tab-notifications"
@@ -268,7 +272,7 @@
                 aria-selected="false"
                 tabindex="-1"
               >
-                <svg><use href="#i-bell" /></svg>Thông báo
+                <svg aria-hidden="true"><use href="#i-bell" /></svg>Thông báo
               </button>
               <button
                 id="settings-tab-macos"
@@ -278,7 +282,7 @@
                 aria-selected="false"
                 tabindex="-1"
               >
-                <svg><use href="#i-desktop" /></svg>macOS
+                <svg aria-hidden="true"><use href="#i-desktop" /></svg>macOS
               </button>
               <button
                 id="settings-tab-updates"
@@ -288,11 +292,12 @@
                 aria-selected="false"
                 tabindex="-1"
               >
-                <svg><use href="#i-download" /></svg>Cập nhật
+                <svg aria-hidden="true"><use href="#i-download" /></svg>Cập nhật
               </button>
             </nav>
             <button id="close-settings" class="settings-back">
-              <svg><use href="#i-back" /></svg>Quay lại trò chuyện
+              <svg aria-hidden="true"><use href="#i-back" /></svg>Quay lại trò
+              chuyện
             </button>
             <div class="sidebar-version">
               Gom <span id="version"></span><span>Dành cho macOS</span>
@@ -307,7 +312,8 @@
                 </p>
               </div>
               <button id="add-account-settings" class="primary">
-                <svg><use href="#i-plus" /></svg>Thêm tài khoản
+                <svg aria-hidden="true"><use href="#i-plus" /></svg>Thêm tài
+                khoản
               </button>
             </div>
             <p
@@ -337,7 +343,7 @@
               </div>
               <div id="account-manager" class="account-table"></div>
               <div id="account-empty" class="empty-state" hidden>
-                <svg><use href="#i-users" /></svg
+                <svg aria-hidden="true"><use href="#i-users" /></svg
                 ><strong>Chưa có tài khoản ở đây</strong>
                 <p>Chọn “Thêm tài khoản” để kết nối nền tảng này.</p>
               </div>
@@ -345,7 +351,7 @@
               <p id="account-feedback" class="hint" role="status"></p>
               <div class="privacy-note">
                 <span class="note-icon"
-                  ><svg><use href="#i-lock" /></svg
+                  ><svg aria-hidden="true"><use href="#i-lock" /></svg
                 ></span>
                 <div>
                   <strong>Chung một nơi. Riêng từng tài khoản.</strong>
@@ -357,12 +363,12 @@
               </div>
               <details class="import-section">
                 <summary>
-                  <svg><use href="#i-file" /></svg
+                  <svg aria-hidden="true"><use href="#i-file" /></svg
                   ><span
                     >Dùng phiên Messenger có sẵn<small
                       >Kết nối từ một profile Chrome trên máy này</small
                     ></span
-                  ><svg class="disclosure-chevron">
+                  ><svg aria-hidden="true" class="disclosure-chevron">
                     <use href="#i-chevron" />
                   </svg>
                 </summary>
@@ -375,12 +381,28 @@
                     <label
                       >Tài khoản đích<select
                         id="messenger-target"
-                      ></select></label
-                    ><label>Profile Chrome<select id="profiles"></select></label
-                    ><button id="import" class="secondary">
+                        aria-describedby="import-hint"
+                      >
+                        <button type="button">
+                          <selectedcontent></selectedcontent>
+                        </button></select></label
+                    ><label
+                      >Profile Chrome<select
+                        id="profiles"
+                        aria-describedby="import-hint"
+                      >
+                        <button type="button">
+                          <selectedcontent></selectedcontent>
+                        </button></select></label
+                    ><button
+                      id="import"
+                      class="secondary"
+                      aria-describedby="import-hint"
+                    >
                       Dùng phiên có sẵn
                     </button>
                   </div>
+                  <p id="import-hint" class="hint field-hint" role="status"></p>
                   <p class="hint">
                     Với Zalo và Telegram, mở tài khoản rồi quét QR trên điện
                     thoại.
@@ -406,9 +428,11 @@
                       ><span class="sample-messages"
                         ><i></i><i></i><i></i></span></span></span
                   ><span class="theme-caption"
-                    ><svg><use href="#i-sun" /></svg><strong>Sáng</strong
+                    ><svg aria-hidden="true"><use href="#i-sun" /></svg
+                    ><strong>Sáng</strong
                     ><span class="choice-check"
-                      ><svg><use href="#i-check" /></svg></span
+                      ><svg aria-hidden="true">
+                        <use href="#i-check" /></svg></span
                   ></span>
                 </button>
                 <button data-theme-choice="dark" aria-pressed="false">
@@ -419,9 +443,11 @@
                       ><span class="sample-messages"
                         ><i></i><i></i><i></i></span></span></span
                   ><span class="theme-caption"
-                    ><svg><use href="#i-moon" /></svg><strong>Tối</strong
+                    ><svg aria-hidden="true"><use href="#i-moon" /></svg
+                    ><strong>Tối</strong
                     ><span class="choice-check"
-                      ><svg><use href="#i-check" /></svg></span
+                      ><svg aria-hidden="true">
+                        <use href="#i-check" /></svg></span
                   ></span>
                 </button>
               </div>
@@ -440,7 +466,7 @@
                 >
               </div>
               <div class="inline-note">
-                <svg><use href="#i-info" /></svg>
+                <svg aria-hidden="true"><use href="#i-info" /></svg>
                 <p>
                   Lựa chọn này áp dụng cho Gom. Giao diện bên trong trang chat
                   do từng nền tảng quản lý.
@@ -474,7 +500,8 @@
               <div id="notification-providers" class="settings-group"></div>
               <div class="settings-action-row">
                 <button class="secondary" id="notification-settings">
-                  Quyền thông báo macOS <svg><use href="#i-external" /></svg>
+                  Quyền thông báo macOS
+                  <svg aria-hidden="true"><use href="#i-external" /></svg>
                 </button>
               </div>
               <p
@@ -483,10 +510,11 @@
                 role="status"
               ></p>
               <div class="inline-note">
-                <svg><use href="#i-info" /></svg>
+                <svg aria-hidden="true"><use href="#i-info" /></svg>
                 <p>
-                  Bật thông báo trong từng nền tảng. Nút “Thử” gửi một thông báo
-                  từ Gom; chế độ Tập trung của macOS có thể ẩn thông báo này.
+                  Bật thông báo trong từng nền tảng. Nút “Gửi thử” gửi một thông
+                  báo từ Gom; chế độ Tập trung của macOS có thể ẩn thông báo
+                  này.
                 </p>
               </div>
             </div>
@@ -567,7 +595,8 @@
                   <button id="check-updates" class="secondary">
                     Kiểm tra cập nhật</button
                   ><button id="download-update" class="primary" hidden>
-                    Tải bản mới <svg><use href="#i-external" /></svg>
+                    Tải bản mới
+                    <svg aria-hidden="true"><use href="#i-external" /></svg>
                   </button>
                 </div>
               </div>
@@ -586,7 +615,7 @@
                 /></label>
               </div>
               <div class="inline-note update-install-hint">
-                <svg><use href="#i-info" /></svg>
+                <svg aria-hidden="true"><use href="#i-info" /></svg>
                 <p>
                   “Tải bản mới” mở trang tải trong trình duyệt. Kéo Gom vào
                   Applications và chọn thay thế để cài. Lưu nội dung đang soạn
@@ -623,7 +652,7 @@
     </main>
     <dialog id="command-dialog" aria-labelledby="command-label">
       <div class="command-input">
-        <svg><use href="#i-search" /></svg
+        <svg aria-hidden="true"><use href="#i-search" /></svg
         ><label id="command-label" class="sr-only" for="command-search"
           >Tìm tài khoản hoặc thao tác</label
         ><input
@@ -653,7 +682,7 @@
       </div>
     </dialog>
     <dialog id="account-editor" aria-labelledby="account-editor-title">
-      <form id="account-form">
+      <form id="account-form" aria-describedby="account-editor-error">
         <div class="dialog-brand">
           <img src="app.png" alt="" /><span
             >Gom <span>· Tài khoản riêng</span></span
@@ -687,7 +716,7 @@
           Tài khoản mới đăng nhập riêng trong app. Các tài khoản đang dùng vẫn
           giữ nguyên phiên.
         </p>
-        <p id="account-editor-error" class="hint" role="status"></p>
+        <p id="account-editor-error" class="form-error" role="alert"></p>
         <div class="dialog-actions">
           <button id="account-editor-cancel" type="button" class="secondary">
             Hủy</button

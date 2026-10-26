@@ -993,6 +993,63 @@ function showNavigationMenu() {
     },
   ]).popup({ window: win });
 }
+async function showAccountMenu(anchor: unknown) {
+  if (closing || accountEditorOpen || state.commandOpen) return;
+  if (
+    !anchor ||
+    typeof anchor !== "object" ||
+    !("x" in anchor) ||
+    !("y" in anchor) ||
+    typeof anchor.x !== "number" ||
+    typeof anchor.y !== "number" ||
+    !Number.isFinite(anchor.x) ||
+    !Number.isFinite(anchor.y)
+  )
+    return;
+  const active = findAccount(state.active);
+  if (!active) return;
+  const panel = state.panel;
+  const peers = state.accounts.filter(
+    (account) => account.provider === active.provider && !account.archived,
+  );
+  const [width, height] = win.getContentSize();
+  const x = Math.max(0, Math.min(width - 1, Math.round(anchor.x)));
+  const y = Math.max(0, Math.min(height - 1, Math.round(anchor.y)));
+  let selected: AccountId | null = null;
+  const menu = Menu.buildFromTemplate(
+    peers.map((account) => ({
+      id: "account-" + account.id,
+      label: account.name,
+      type: "radio" as const,
+      checked: account.id === active.id,
+      click: () => {
+        selected = account.id;
+      },
+    })),
+  );
+  await new Promise<void>((resolve) => {
+    menu.popup({
+      window: win,
+      x,
+      y,
+      callback: () => {
+        const target = selected ? findAccount(selected) : undefined;
+        // Focus the page after the native menu closes so it cannot take focus
+        // back from the newly selected conversation.
+        if (
+          !closing &&
+          !accountEditorOpen &&
+          !state.commandOpen &&
+          state.active === active.id &&
+          state.panel === panel &&
+          target?.provider === active.provider
+        )
+          activate(target.id);
+        resolve();
+      },
+    });
+  });
+}
 async function changeAccount(
   command: string,
   arg: unknown,
@@ -1216,7 +1273,7 @@ else {
       minHeight: Math.min(640, bounds.height),
       title: "Gom",
       titleBarStyle: "hiddenInset",
-      trafficLightPosition: { x: 20, y: 21 },
+      trafficLightPosition: { x: 20, y: 15 },
       backgroundColor: "#F7F7F2",
       webPreferences: {
         preload: join(__dirname, "preload.cjs"),
@@ -1278,6 +1335,8 @@ else {
         case "navigation-menu":
           showNavigationMenu();
           return;
+        case "account-menu":
+          return showAccountMenu(arg);
         case "account-editor":
           if (typeof arg !== "boolean") return;
           accountEditorOpen = arg;

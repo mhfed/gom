@@ -58,7 +58,15 @@ await writeFile(
   bootstrap,
   `
 const e=require('electron');e.app.setPath('appData',${JSON.stringify(root)});require('node:os').homedir=()=>${JSON.stringify(root)};
-globalThis.fixture={checks:{},requests:{},notifications:[],imports:0};
+globalThis.fixture={checks:{},requests:{},notifications:[],imports:0,accountMenu:null};
+const originalPopup=e.Menu.prototype.popup;
+e.Menu.prototype.popup=function(options){
+ if(this.items.some(item=>item.id?.startsWith('account-'))){
+  if(fixture.accountMenu)throw Error('Account menu opened twice');
+  fixture.accountMenu={menu:this,options};return;
+ }
+ return originalPopup.call(this,options);
+};
 e.dialog.showMessageBox=async()=>({response:1});
 e.Notification.isSupported=()=>true;e.Notification.prototype.show=function(){fixture.notifications.push(this);this.emit('show');};e.Notification.prototype.close=function(){this.emit('close');};
 const cp=require('node:child_process'),util=require('node:util');
@@ -164,7 +172,7 @@ async function assertToolbar(provider, accountId) {
   );
   assert.equal(
     await page.locator("#account-select").evaluate((node) => node.tagName),
-    "SELECT",
+    "BUTTON",
   );
   for (const id of Object.keys(providers)) {
     assert.equal(
@@ -176,14 +184,58 @@ async function assertToolbar(provider, accountId) {
       String(id === provider),
     );
   }
-  const accountIds = (await snapshot()).accounts
-    .filter((account) => account.provider === provider && !account.archived)
-    .map((account) => account.id);
+  const account = (await snapshot()).accounts.find(
+    (account) => account.id === accountId,
+  );
+  assert.equal(
+    await page.locator("#account-select-label").textContent(),
+    account.name,
+  );
+  assert.equal(
+    await page.locator("#account-select").getAttribute("aria-haspopup"),
+    "menu",
+  );
+}
+async function selectAccount(accountId) {
+  const before = await snapshot();
+  const provider = before.accounts.find(
+    (account) => account.id === before.active,
+  ).provider;
+  await page.locator("#account-select").click();
+  const deadline = Date.now() + 10_000;
+  while (!(await client.evaluate(() => !!globalThis.fixture.accountMenu))) {
+    assert.ok(Date.now() < deadline, "Native account menu must open");
+    await new Promise((resolve) => setTimeout(resolve, 60));
+  }
   assert.deepEqual(
-    await page
-      .locator("#account-select option")
-      .evaluateAll((options) => options.map((option) => option.value)),
-    accountIds,
+    await client.evaluate(() =>
+      globalThis.fixture.accountMenu.menu.items.map((item) => ({
+        id: item.id,
+        type: item.type,
+        checked: item.checked,
+      })),
+    ),
+    before.accounts
+      .filter((account) => !account.archived && account.provider === provider)
+      .map((account) => ({
+        id: `account-${account.id}`,
+        type: "radio",
+        checked: account.id === before.active,
+      })),
+  );
+  await client.evaluate(({ BrowserWindow }, accountId) => {
+    const captured = globalThis.fixture.accountMenu;
+    globalThis.fixture.accountMenu = null;
+    const item = captured.menu.getMenuItemById(`account-${accountId}`);
+    if (!item) throw Error(`Missing account menu item ${accountId}`);
+    item.click(item, BrowserWindow.getAllWindows()[0], {});
+    captured.options.callback();
+  }, accountId);
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector("#account-select")
+        .getAttribute("aria-expanded") === "false",
   );
 }
 try {
@@ -284,10 +336,10 @@ try {
       s.unread.telegram.count === 2 && s.unread[added.telegram].count === 9,
     "per-account unread",
   );
-  await page.locator("#account-select").selectOption("telegram");
+  await selectAccount("telegram");
   await wait((s) => s.active === "telegram", "select legacy Telegram account");
   await assertToolbar("telegram", "telegram");
-  await page.locator("#account-select").selectOption(added.telegram);
+  await selectAccount(added.telegram);
   await wait(
     (s) => s.active === added.telegram,
     "select second Telegram account",

@@ -1,9 +1,9 @@
 export function providerBounds(width: number, height: number) {
   return {
     x: 0,
-    y: 64,
+    y: 52,
     width: Math.max(0, width),
-    height: Math.max(0, height - 64),
+    height: Math.max(0, height - 52),
   };
 }
 

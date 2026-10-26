@@ -74,6 +74,7 @@ try {
       },
       commandRequested: () => {},
       commandClosed: async () => {},
+      accountMenu: async () => {},
     };
   });
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
@@ -95,7 +96,7 @@ try {
   }
   assert.equal(
     await page.locator("#account-select").evaluate((node) => node.tagName),
-    "SELECT",
+    "BUTTON",
   );
   assert.equal(
     await page

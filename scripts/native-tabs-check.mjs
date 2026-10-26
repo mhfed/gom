@@ -36,7 +36,18 @@ require('node:os').homedir = () => root;
 // Confirm only synthetic archive dialogs; no OS/external actions are exercised.
 e.dialog.showMessageBox = async () => ({ response: 1 });
 e.shell.openExternal = async () => { throw Error('Unexpected external navigation in fixture'); };
-globalThis.nativeTabsFixture = { requests: {}, sessions: new Map() };
+globalThis.nativeTabsFixture = { requests: {}, sessions: new Map(), accountMenu: null };
+// Intercept only the native popup surface. Items and their click handlers are
+// the production Electron Menu, while the fixture controls selection/cancel.
+const originalPopup = e.Menu.prototype.popup;
+e.Menu.prototype.popup = function (options) {
+  if (this.items.some((item) => item.id?.startsWith('account-'))) {
+    if (globalThis.nativeTabsFixture.accountMenu) throw Error('Account menu opened twice');
+    globalThis.nativeTabsFixture.accountMenu = { menu: this, options };
+    return;
+  }
+  return originalPopup.call(this, options);
+};
 const original = e.session.fromPartition.bind(e.session);
 e.session.fromPartition = (...args) => {
   const ses = original(...args);
@@ -127,7 +138,18 @@ async function active(account, { focus = true } = {}) {
     await page.locator(`#platform-${provider}`).getAttribute("aria-selected"),
     "true",
   );
-  assert.equal(await page.locator("#account-select").inputValue(), account);
+  assert.equal(
+    await page.locator("#account-select").evaluate((node) => node.value),
+    account,
+  );
+  assert.equal(
+    await page.locator("#account-select-label").textContent(),
+    current.accounts.find((item) => item.id === account).name,
+  );
+  assert.equal(
+    await page.locator("#account-select").getAttribute("aria-haspopup"),
+    "menu",
+  );
   const tabs = await page
     .locator('[role="tab"][id^="platform-"]')
     .evaluateAll((nodes) =>
@@ -146,15 +168,91 @@ async function active(account, { focus = true } = {}) {
     tabs.map((tab) => tab.index),
     providers.map((id) => (id === provider ? 0 : -1)),
   );
-  const options = await page
-    .locator("#account-select option")
-    .evaluateAll((nodes) => nodes.map((node) => node.value));
-  assert.deepEqual(
-    options,
-    current.accounts
-      .filter((item) => !item.archived && item.provider === provider)
-      .map((item) => item.id),
+}
+async function openAccountMenu({ keyboard = false } = {}) {
+  const before = await state();
+  const provider = before.accounts.find(
+    (account) => account.id === before.active,
+  ).provider;
+  const button = page.locator("#account-select");
+  assert.equal(await button.evaluate((node) => node.tagName), "BUTTON");
+  const anchor = await button.boundingBox();
+  if (keyboard) {
+    await client.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].webContents.focus(),
+    );
+    await button.focus();
+    await page.keyboard.press("ArrowDown");
+  } else await button.click();
+  await eventually("native account menu", () =>
+    client.evaluate(() => !!globalThis.nativeTabsFixture.accountMenu),
   );
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector("#account-select")
+        .getAttribute("aria-expanded") === "true",
+  );
+  const menu = await client.evaluate(({ BrowserWindow }) => {
+    const { menu, options } = globalThis.nativeTabsFixture.accountMenu;
+    return {
+      entries: menu.items.map((item) => ({
+        id: item.id,
+        type: item.type,
+        checked: item.checked,
+        enabled: item.enabled,
+      })),
+      x: options.x,
+      y: options.y,
+      correctWindow: options.window === BrowserWindow.getAllWindows()[0],
+    };
+  });
+  assert.deepEqual(
+    menu.entries,
+    before.accounts
+      .filter((account) => !account.archived && account.provider === provider)
+      .map((account) => ({
+        id: `account-${account.id}`,
+        type: "radio",
+        checked: account.id === before.active,
+        enabled: true,
+      })),
+  );
+  assert.equal(menu.correctWindow, true);
+  assert.ok(
+    Number.isInteger(menu.x) && Math.abs(menu.x - anchor.x) <= 1,
+    "Menu starts at its account button",
+  );
+  assert.ok(
+    Number.isInteger(menu.y) &&
+      menu.y >= anchor.y + anchor.height &&
+      menu.y <= 60,
+    "Menu opens below the compact header control",
+  );
+  return before;
+}
+async function finishAccountMenu(account) {
+  await client.evaluate(({ BrowserWindow }, account) => {
+    const captured = globalThis.nativeTabsFixture.accountMenu;
+    if (!captured) throw Error("Missing captured native account menu");
+    globalThis.nativeTabsFixture.accountMenu = null;
+    if (account) {
+      const item = captured.menu.getMenuItemById(`account-${account}`);
+      if (!item) throw Error(`Missing account menu item ${account}`);
+      item.click(item, BrowserWindow.getAllWindows()[0], {});
+    }
+    captured.options.callback();
+  }, account);
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector("#account-select")
+        .getAttribute("aria-expanded") === "false",
+  );
+}
+async function selectAccount(account) {
+  await openAccountMenu();
+  await finishAccountMenu(account);
 }
 async function check(name, run) {
   // Input assertions concern the foreground fixture. Production intentionally
@@ -329,19 +427,70 @@ try {
   );
 
   await check(
+    "native account menu filters archived and other-provider accounts, cancels without losing drafts",
+    async () => {
+      const before = await openAccountMenu();
+      assert.equal(
+        await page
+          .locator("#account-select")
+          .evaluate((node) => node.matches(":focus-visible")),
+        false,
+        "Pointer clicks should not add a keyboard focus ring",
+      );
+      await finishAccountMenu();
+      await active(before.active, { focus: false });
+      await preserved();
+    },
+  );
+
+  await check(
+    "keyboard account menu cancellation retains shell keyboard focus",
+    async () => {
+      const before = await openAccountMenu({ keyboard: true });
+      await finishAccountMenu();
+      await active(before.active, { focus: false });
+      assert.equal(
+        await page.evaluate(() => document.activeElement?.id),
+        "account-select",
+      );
+      assert.equal(
+        await client.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()[0].webContents.isFocused(),
+        ),
+        true,
+      );
+      await preserved();
+    },
+  );
+
+  await check(
+    "stale native account menu cannot switch after changing provider",
+    async () => {
+      await openAccountMenu();
+      await page.evaluate(() => window.desktop.activateProvider("telegram"));
+      await active("telegram");
+      await finishAccountMenu("zalo");
+      await active("telegram");
+      await preserved();
+      await page.evaluate(() => window.desktop.activateProvider("zalo"));
+      await active(second.accountId);
+    },
+  );
+
+  await check(
     "platform tabs remember the selected account and preserve loaded pages",
     async () => {
       await page.locator("#platform-telegram").click();
       await active("telegram");
       await page.locator("#platform-zalo").click();
       await active(second.accountId);
-      await page.locator("#account-select").selectOption("zalo");
+      await selectAccount("zalo");
       await active("zalo");
       await page.locator("#platform-messenger").click();
       await active("messenger");
       await page.locator("#platform-zalo").click();
       await active("zalo");
-      await page.locator("#account-select").selectOption(second.accountId);
+      await selectAccount(second.accountId);
       await active(second.accountId);
       await page.locator("#platform-telegram").click();
       await active("telegram");
@@ -476,7 +625,7 @@ try {
   );
 
   await check(
-    "native views fill the window below the 64px toolbar at 940 and 1280",
+    "native views fill the window below the 52px toolbar at 940 and 1280",
     async () => {
       for (const [width, height] of [
         [940, 640],
@@ -490,15 +639,18 @@ try {
         await eventually("native resize", async () =>
           (await native()).every(
             (view) =>
-              view.bounds.width === width && view.bounds.height === height - 64,
+              view.bounds.width === width && view.bounds.height === height - 52,
           ),
         );
+        const header = await page.locator("header").boundingBox();
+        assert.equal(header.y, 0);
+        assert.equal(header.height, 52);
         for (const view of await native())
           assert.deepEqual(view.bounds, {
             x: 0,
-            y: 64,
+            y: 52,
             width,
-            height: height - 64,
+            height: height - 52,
           });
         assert.equal(
           await page.evaluate(
@@ -522,11 +674,77 @@ try {
               rect.x >= 0 &&
               rect.y >= 0 &&
               rect.x + rect.width <= width &&
-              rect.y + rect.height <= 64,
+              rect.y + rect.height <= 52,
             `${id} must fit in toolbar at ${width}`,
           );
         }
       }
+    },
+  );
+
+  await check(
+    "long account names stay truncated inside the compact header",
+    async () => {
+      const current = await state();
+      const account = current.accounts.find(
+        (item) => item.id === current.active,
+      );
+      const name = "Tài khoản công việc của nhóm thiết kế";
+      try {
+        await page.evaluate(
+          ({ id, name, avatar }) =>
+            window.desktop.editAccount(id, name, avatar),
+          { id: account.id, name, avatar: account.avatar },
+        );
+        await page.waitForFunction(
+          (name) =>
+            document.querySelector("#account-select-label").textContent ===
+            name,
+          name,
+        );
+        await client.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()[0].setContentSize(940, 640),
+        );
+        await page.waitForFunction(() => innerWidth === 940);
+        const layout = await page
+          .locator("#account-select-label")
+          .evaluate((node) => {
+            const style = getComputedStyle(node);
+            const label = node.getBoundingClientRect();
+            const picker = node.closest("button").getBoundingClientRect();
+            return {
+              overflow: style.overflow,
+              ellipsis: style.textOverflow,
+              truncated: node.scrollWidth > node.clientWidth,
+              contained:
+                label.left >= picker.left && label.right <= picker.right,
+              pickerHeight: picker.height,
+            };
+          });
+        assert.deepEqual(layout, {
+          overflow: "hidden",
+          ellipsis: "ellipsis",
+          truncated: true,
+          contained: true,
+          pickerHeight: 30,
+        });
+        assert.equal(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth > innerWidth,
+          ),
+          false,
+        );
+        await page
+          .locator("header")
+          .screenshot({ path: join(output, "header-long-name.png") });
+      } finally {
+        await page.evaluate(
+          ({ id, name, avatar }) =>
+            window.desktop.editAccount(id, name, avatar),
+          account,
+        );
+      }
+      await preserved();
     },
   );
 
@@ -633,7 +851,11 @@ try {
         cases,
         syntheticOnly: true,
         realProfilesAccessed: false,
-        screenshots: ["light-1024.png", "dark-1024.png"],
+        screenshots: [
+          "light-1024.png",
+          "dark-1024.png",
+          "header-long-name.png",
+        ],
         screenshotMethod:
           "Composite of actual shell and native fixture captures",
         preservedNativePages: baseline.length,

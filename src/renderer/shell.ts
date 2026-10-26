@@ -121,6 +121,35 @@ function iconAction(name: string, title: string, click: () => void) {
   b.append(icon(name));
   return b;
 }
+function syncSelectOptions(
+  select: HTMLSelectElement,
+  choices: { value: string; label: string }[],
+  emptyLabel: string,
+) {
+  const options = choices.length
+    ? choices.map(({ value, label }) => [value, label, false] as const)
+    : [["", emptyLabel, true] as const];
+  if (
+    JSON.stringify(
+      [...select.options].map((o) => [o.value, o.textContent, o.disabled]),
+    ) === JSON.stringify(options)
+  )
+    return;
+  const selected = select.value;
+  const trigger = select.querySelector<HTMLButtonElement>(":scope > button");
+  select.replaceChildren(
+    ...(trigger ? [trigger] : []),
+    ...options.map(([value, label, disabled]) => {
+      const option = element("option", "", label);
+      option.value = value;
+      option.disabled = disabled;
+      return option;
+    }),
+  );
+  select.value = options.some(([value]) => value === selected)
+    ? selected
+    : options[0][0];
+}
 function applyAccountFilter() {
   for (const row of document.querySelectorAll<HTMLElement>(
     "#account-manager [data-provider]",
@@ -246,7 +275,9 @@ async function openEditor(a?: Account, provider?: ProviderId) {
     provider ||
     current.accounts.find((a) => a.id === current.active)!.provider;
   select.disabled = !!a;
-  $<HTMLInputElement>("account-name").value = a?.name || "";
+  const name = $<HTMLInputElement>("account-name");
+  name.value = a?.name || "";
+  name.setCustomValidity("");
   $<HTMLInputElement>("account-avatar").value = a?.avatar || "";
   $("account-editor-error").textContent = "";
   const dialog = $<HTMLDialogElement>("account-editor");
@@ -380,12 +411,17 @@ function rebuildAccounts(state: AppState) {
           select.value as NotificationChoice,
         );
       const test = action(
-        "Thử",
-        "Thử thông báo " + nameOf(a),
+        "Gửi thử",
+        "Gửi thử thông báo " + nameOf(a),
         () => void window.desktop.testNotification(a.id),
       );
       test.id = "test-" + a.id;
-      nrow.append(avatar(a), nlabel, select, test);
+      const hint = element("small", "notification-hint");
+      hint.id = "notification-hint-" + a.id;
+      test.setAttribute("aria-describedby", hint.id);
+      const controls = element("div", "notification-controls");
+      controls.append(select, test, hint);
+      nrow.append(avatar(a), nlabel, controls);
       $("notification-providers").append(nrow);
     }
   }
@@ -413,18 +449,13 @@ function rebuildAccounts(state: AppState) {
     }
   }
   const target = $<HTMLSelectElement>("messenger-target");
-  const selected = target.value;
-  target.replaceChildren(
-    ...state.accounts
+  syncSelectOptions(
+    target,
+    state.accounts
       .filter((a) => a.provider === "messenger" && !a.archived)
-      .map((a) => {
-        const option = element("option", "", a.name);
-        option.value = a.id;
-        return option;
-      }),
+      .map((a) => ({ value: a.id, label: a.name })),
+    "Chưa có tài khoản Messenger",
   );
-  if ([...target.options].some((o) => o.value === selected))
-    target.value = selected;
   applyAccountFilter();
   const nextFocus = focusId
     ? document.getElementById(focusId)
@@ -436,7 +467,6 @@ function rebuildAccounts(state: AppState) {
   nextFocus?.focus({ preventScroll: true });
   return true;
 }
-let pickerSignature = "";
 function renderToolbar(state: AppState, active: Account) {
   for (const [index, provider] of PROVIDER_ORDER.entries()) {
     const tab = $("platform-" + provider);
@@ -463,22 +493,10 @@ function renderToolbar(state: AppState, active: Account) {
       `${PROVIDERS[provider].label}${unread ? " · Có tin chưa đọc" : ""}`,
     );
   }
-  const peers = state.accounts.filter(
-    (a) => a.provider === active.provider && !a.archived,
-  );
-  const key = JSON.stringify(peers.map((a) => [a.id, a.name]));
-  const select = $<HTMLSelectElement>("account-select");
-  if (key !== pickerSignature) {
-    pickerSignature = key;
-    select.replaceChildren(
-      ...peers.map((a) => {
-        const option = element("option", "", a.name);
-        option.value = a.id;
-        return option;
-      }),
-    );
-  }
+  const select = $<HTMLButtonElement>("account-select");
   setProperty(select, "value", active.id);
+  setProperty($("account-select-label"), "textContent", active.name);
+  setAttribute(select, "aria-label", "Tài khoản đang dùng: " + active.name);
   setProperty(
     select,
     "title",
@@ -530,8 +548,25 @@ for (const [index, provider] of PROVIDER_ORDER.entries()) {
     void selectProvider(PROVIDER_ORDER[next], false);
   };
 }
-$("account-select").onchange = (event) =>
-  void window.desktop.activate((event.target as HTMLSelectElement).value);
+async function openAccountMenu() {
+  const picker = $("account-select");
+  if (picker.getAttribute("aria-expanded") === "true") return;
+  const rect = picker.getBoundingClientRect();
+  setAttribute(picker, "aria-expanded", "true");
+  try {
+    await window.desktop.accountMenu({ x: rect.left, y: rect.bottom + 5 });
+  } finally {
+    setAttribute(picker, "aria-expanded", "false");
+  }
+}
+$("account-select").onclick = () => void openAccountMenu();
+$("account-select").onkeydown = (event) => {
+  if (event.isComposing || event.metaKey || event.ctrlKey) return;
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    void openAccountMenu();
+  }
+};
 $("navigation-menu").onclick = () => void window.desktop.navigationMenu();
 function render(state: AppState) {
   const previous = current;
@@ -569,11 +604,10 @@ function render(state: AppState) {
   }
   if (themeChanged || !previous)
     $("theme-toggle").replaceChildren(icon(mode === "dark" ? "sun" : "moon"));
-  setProperty(
-    $("theme-toggle"),
-    "title",
-    mode === "dark" ? "Chuyển sang sáng" : "Chuyển sang tối",
-  );
+  const themeToggleLabel =
+    mode === "dark" ? "Chuyển sang sáng" : "Chuyển sang tối";
+  setProperty($("theme-toggle"), "title", themeToggleLabel);
+  setAttribute($("theme-toggle"), "aria-label", themeToggleLabel);
   renderToolbar(state, active);
   renderUpdates(state);
   for (const a of state.accounts.filter((a) => !a.archived)) {
@@ -607,6 +641,14 @@ function render(state: AppState) {
         state.preferences.paused ||
           state.preferences.notifications[a.id] !== "allow",
       );
+      const hint = $("notification-hint-" + a.id);
+      const testHint = state.preferences.paused
+        ? "Bật lại thông báo để gửi thử."
+        : state.preferences.notifications[a.id] !== "allow"
+          ? "Chọn “Cho phép” để gửi thử."
+          : "";
+      setProperty(hint, "textContent", testHint);
+      setProperty(hint, "hidden", !testHint);
     }
   }
   setClass($("settings"), "active", settings);
@@ -693,31 +735,38 @@ function render(state: AppState) {
     setProperty($("notice"), "textContent", state.notice);
     setProperty($("version"), "textContent", state.version);
     const select = $<HTMLSelectElement>("profiles");
-    if (
-      JSON.stringify([...select.options].map((o) => o.value)) !==
-      JSON.stringify(state.profiles.map((p) => p.id))
-    )
-      select.replaceChildren(
-        ...state.profiles.map((p) => {
-          const o = element(
-            "option",
-            "",
-            p.email ? `${p.label} · ${p.email}` : p.label,
-          );
-          o.value = p.id;
-          return o;
-        }),
-      );
+    syncSelectOptions(
+      select,
+      state.profiles.map((p) => ({
+        value: p.id,
+        label: p.email ? `${p.label} · ${p.email}` : p.label,
+      })),
+      "Chưa tìm thấy profile Chrome",
+    );
+    const target = $<HTMLSelectElement>("messenger-target");
     if (settings && lastPanel !== "settings" && active.provider === "messenger")
-      setProperty($<HTMLSelectElement>("messenger-target"), "value", active.id);
+      setProperty(target, "value", active.id);
+    const importBusy = state.importing || state.accountBusy;
+    setProperty(select, "disabled", importBusy || !state.profiles.length);
+    setProperty(target, "disabled", importBusy || !target.value);
+    setProperty(
+      $("import-hint"),
+      "textContent",
+      state.importing
+        ? "Đang kiểm tra phiên đã chọn. Anh đợi một chút nhé."
+        : state.accountBusy
+          ? "Đợi thao tác tài khoản hoàn tất để dùng phiên Chrome."
+          : !target.value
+            ? "Thêm một tài khoản Messenger trước khi chọn phiên Chrome."
+            : !state.profiles.length
+              ? "Chưa tìm thấy profile Chrome trên máy. Anh có thể mở Messenger và đăng nhập trực tiếp."
+              : "Chọn đúng tài khoản Messenger và profile Chrome muốn sử dụng.",
+    );
     const button = $<HTMLButtonElement>("import");
     setProperty(
       button,
       "disabled",
-      state.importing ||
-        state.accountBusy ||
-        !state.profiles.length ||
-        !$<HTMLSelectElement>("messenger-target").value,
+      importBusy || !state.profiles.length || !target.value,
     );
     setProperty(
       button,
@@ -810,8 +859,15 @@ $("add-account-settings").onclick = () => void openEditor();
 $("account-editor").onclose = () => void window.desktop.accountEditor(false);
 $("account-editor-cancel").onclick = () =>
   $<HTMLDialogElement>("account-editor").close();
+$("account-name").oninput = () => {
+  const name = $<HTMLInputElement>("account-name");
+  name.setCustomValidity(
+    name.value && !name.value.trim() ? "Nhập tên để phân biệt tài khoản." : "",
+  );
+};
 $("account-form").onsubmit = async (event) => {
   event.preventDefault();
+  $("account-editor-error").textContent = "";
   const name = $<HTMLInputElement>("account-name").value,
     avatar = $<HTMLInputElement>("account-avatar").value;
   const button = $<HTMLButtonElement>("account-editor-save");
@@ -871,6 +927,16 @@ for (const b of document.querySelectorAll<HTMLElement>("[data-theme-choice]"))
   b.onclick = () =>
     void window.desktop.setTheme(b.dataset.themeChoice as "light" | "dark");
 const settingsTabs = [...document.querySelectorAll<HTMLElement>("[data-tab]")];
+const horizontalSettingsTabs = matchMedia("(max-width: 800px)");
+function syncSettingsOrientation() {
+  setAttribute(
+    document.querySelector(".settings-tabs")!,
+    "aria-orientation",
+    horizontalSettingsTabs.matches ? "horizontal" : "vertical",
+  );
+}
+syncSettingsOrientation();
+horizontalSettingsTabs.addEventListener("change", syncSettingsOrientation);
 for (const [index, b] of settingsTabs.entries()) {
   b.onclick = () => showTab(b.dataset.tab!);
   b.onkeydown = (event) => {

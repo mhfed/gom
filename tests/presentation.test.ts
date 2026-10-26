@@ -71,9 +71,9 @@ test("settings and command overlays hide all provider views while retaining thei
     for (const record of records)
       assert.deepEqual(record.bounds, {
         x: 0,
-        y: 64,
+        y: 52,
         width: 1024,
-        height: 656,
+        height: 668,
       });
   }
   layoutViews(views, 1024, 720, "telegram", "service");
