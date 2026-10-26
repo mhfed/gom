@@ -1,16 +1,9 @@
-import { sidebarWidth } from "./presentation.ts";
-export function providerBounds(
-  width: number,
-  height: number,
-  collapsed: boolean,
-  expandedWidth = 224,
-) {
-  const sidebar = collapsed ? 72 : sidebarWidth(expandedWidth);
+export function providerBounds(width: number, height: number) {
   return {
-    x: sidebar,
-    y: 76,
-    width: Math.max(0, width - sidebar),
-    height: Math.max(0, height - 76),
+    x: 0,
+    y: 64,
+    width: Math.max(0, width),
+    height: Math.max(0, height - 64),
   };
 }
 
@@ -18,18 +11,35 @@ interface HostedView {
   setVisible(value: boolean): void;
   setBounds(bounds: ReturnType<typeof providerBounds>): void;
 }
+// Weak ownership: archived/replaced views must not be kept alive by layout.
+const applied = new WeakMap<
+  HostedView,
+  {
+    visible: boolean;
+    bounds: ReturnType<typeof providerBounds>;
+  }
+>();
 export function layoutViews(
   views: Iterable<readonly [string, HostedView]>,
   width: number,
   height: number,
-  collapsed: boolean,
   active: string,
   panel: string,
-  expandedWidth = 224,
 ) {
-  const bounds = providerBounds(width, height, collapsed, expandedWidth);
+  const bounds = providerBounds(width, height);
   for (const [id, view] of views) {
-    view.setVisible(panel === "service" && active === id);
-    view.setBounds(bounds);
+    const visible = panel === "service" && active === id;
+    const previous = applied.get(view);
+    const visibilityChanged = !previous || previous.visible !== visible;
+    const boundsChanged =
+      !previous ||
+      previous.bounds.x !== bounds.x ||
+      previous.bounds.y !== bounds.y ||
+      previous.bounds.width !== bounds.width ||
+      previous.bounds.height !== bounds.height;
+    if (visibilityChanged) view.setVisible(visible);
+    if (boundsChanged) view.setBounds(bounds);
+    if (visibilityChanged || boundsChanged)
+      applied.set(view, { visible, bounds });
   }
 }

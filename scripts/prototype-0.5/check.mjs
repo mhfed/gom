@@ -2,17 +2,17 @@ import { chromium } from "playwright-core";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
-import { homedir } from "node:os";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import sharp from "sharp";
-const output = resolve("../../outputs/TinNhan-0.5-prototype");
-const screenshots = resolve("../prototype-0.5-check");
+const output = fileURLToPath(
+  new URL("../../outputs/TinNhan-0.5-prototype", import.meta.url),
+);
+const screenshots = fileURLToPath(
+  new URL("../../outputs/prototype-0.5-check", import.meta.url),
+);
 await mkdir(screenshots, { recursive: true });
 const browser = await chromium.launch({
-  executablePath: resolve(
-    homedir(),
-    "Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
-  ),
+  executablePath: process.env.TIN_NHAN_CHROMIUM || undefined,
   headless: true,
 });
 const page = await browser.newPage({

@@ -72,6 +72,19 @@ test("preferences reject malformed values without enabling startup or broadening
     "ask",
   );
 });
+test("update checks default on for older settings and preserve an explicit opt-out", () => {
+  assert.equal(defaultPreferences().updateChecks, true);
+  assert.equal(normalizePreferences({}).updateChecks, true);
+  assert.equal(
+    normalizePreferences({ updateChecks: false }).updateChecks,
+    false,
+  );
+  assert.equal(normalizePreferences({ updateChecks: true }).updateChecks, true);
+  assert.equal(
+    normalizePreferences({ updateChecks: "false" }).updateChecks,
+    true,
+  );
+});
 test("restored bounds stay visible after monitor removal and preserve a valid secondary screen position", () => {
   const displays = [
     { x: 0, y: 25, width: 1440, height: 875 },

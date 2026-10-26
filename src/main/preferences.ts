@@ -6,6 +6,7 @@ export const defaultPreferences = (
 ): Preferences => ({
   paused: false,
   shortcut: false,
+  updateChecks: true,
   notifications: Object.fromEntries(ids.map((id) => [id, "ask"])),
 });
 export function normalizePreferences(
@@ -17,6 +18,7 @@ export function normalizePreferences(
   const r = raw as Record<string, unknown>;
   out.paused = r.paused === true;
   out.shortcut = r.shortcut === true;
+  out.updateChecks = r.updateChecks !== false;
   if (
     r.notifications &&
     typeof r.notifications === "object" &&

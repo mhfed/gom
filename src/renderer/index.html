@@ -7,7 +7,7 @@
       content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'"
     />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Tin Nhan</title>
+    <title>Gom</title>
     <link rel="stylesheet" href="shell.css" />
   </head>
   <body>
@@ -109,104 +109,107 @@
       </defs>
     </svg>
 
-    <aside aria-label="Tài khoản nhắn tin">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true"
-          >t<span>n</span><i></i
-        ></span>
-        <div>Tin Nhan<small>Mọi kết nối, một nơi.</small></div>
-      </div>
-      <button id="quick-switch" class="quick-switch" title="Chuyển nhanh (⌘K)">
-        <svg><use href="#i-search" /></svg><span>Chuyển nhanh</span
-        ><kbd>⌘ K</kbd>
-      </button>
-      <nav id="providers" aria-label="Các tài khoản"></nav>
-      <div class="sidebar-bottom">
-        <button
-          id="add-account-sidebar"
-          title="Thêm tài khoản"
-          aria-label="Thêm tài khoản"
-        >
-          <svg><use href="#i-plus" /></svg><span>Thêm tài khoản</span>
-        </button>
-        <button
-          id="settings"
-          title="Tài khoản & cài đặt"
-          aria-label="Tài khoản & cài đặt"
-        >
-          <svg><use href="#i-settings" /></svg><span>Tài khoản & cài đặt</span>
-        </button>
-        <p>
-          <svg><use href="#i-lock" /></svg><span>Phiên riêng trên máy</span>
-        </p>
-      </div>
-    </aside>
-    <div
-      id="sidebar-resizer"
-      role="separator"
-      tabindex="0"
-      aria-orientation="vertical"
-      aria-label="Chiều rộng sidebar"
-      aria-valuemin="200"
-      aria-valuemax="300"
-      aria-valuenow="224"
-      title="Kéo để đổi kích thước · Nhấp đúp để đặt lại"
-    ></div>
     <main>
-      <header>
-        <div class="header-main">
+      <header aria-label="Điều hướng Gom">
+        <nav
+          class="platform-tabs"
+          role="tablist"
+          aria-label="Nền tảng nhắn tin"
+        >
           <button
-            id="sidebar-toggle"
+            id="platform-zalo"
+            role="tab"
+            aria-selected="true"
+            tabindex="0"
+          >
+            <img src="logos/zalo.png" alt="" /><span>Zalo</span
+            ><i class="platform-unread" hidden aria-hidden="true"></i>
+          </button>
+          <button
+            id="platform-telegram"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            <img src="logos/telegram.svg" alt="" /><span>Telegram</span
+            ><i class="platform-unread" hidden aria-hidden="true"></i>
+          </button>
+          <button
+            id="platform-messenger"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            <img src="logos/messenger.svg" alt="" /><span>Messenger</span
+            ><i class="platform-unread" hidden aria-hidden="true"></i>
+          </button>
+        </nav>
+        <div class="toolbar-space"></div>
+        <div class="account-picker">
+          <i
+            id="active-account-status"
+            class="account-status dot"
+            aria-hidden="true"
+          ></i>
+          <select
+            id="account-select"
+            aria-label="Tài khoản đang dùng"
+            aria-describedby="subtitle"
+          ></select>
+          <button
+            id="add-account-toolbar"
             class="icon-button"
-            aria-label="Thu gọn sidebar"
-            aria-expanded="true"
-            title="Thu gọn sidebar"
+            aria-label="Thêm tài khoản"
+            title="Thêm tài khoản"
           >
-            <svg><use href="#i-sidebar" /></svg></button
-          ><img id="header-logo" alt="" />
-          <div class="header-identity">
-            <h1 id="title">Tin Nhan</h1>
-            <p id="subtitle">Đang kết nối…</p>
-          </div>
+            <svg><use href="#i-plus" /></svg>
+          </button>
         </div>
+        <span class="tool-divider" aria-hidden="true"></span>
         <div class="tools">
-          <button id="back" aria-label="Quay lại" title="Quay lại (⌘[)">
-            ‹</button
-          ><button
-            id="home"
-            aria-label="Trang đầu nền tảng"
-            title="Trang đầu nền tảng"
+          <button
+            id="quick-switch"
+            class="icon-button"
+            aria-label="Chuyển nhanh tài khoản"
+            title="Chuyển nhanh (⌘K)"
           >
-            ⌂</button
-          ><button
-            id="reload"
-            aria-label="Tải lại nền tảng"
-            title="Tải lại (⌘R)"
-          >
-            <svg><use href="#i-refresh" /></svg></button
-          ><button
-            id="browser"
-            aria-label="Mở trong trình duyệt"
-            title="Mở trong trình duyệt"
-          >
-            <svg><use href="#i-external" /></svg></button
-          ><span class="tool-divider"></span
-          ><button
+            <svg><use href="#i-search" /></svg>
+          </button>
+          <button
             id="theme-toggle"
+            class="icon-button"
             aria-label="Đổi sáng tối"
             title="Đổi sáng/tối"
           >
             <svg><use href="#i-moon" /></svg>
           </button>
+          <button
+            id="settings"
+            class="icon-button"
+            aria-label="Cài đặt"
+            title="Cài đặt (⌘,)"
+          >
+            <svg><use href="#i-settings" /></svg>
+          </button>
+          <button
+            id="navigation-menu"
+            class="icon-button"
+            aria-label="Thao tác với trang chat"
+            title="Thao tác với trang chat"
+            aria-haspopup="menu"
+          >
+            <svg><use href="#i-more" /></svg>
+          </button>
         </div>
+        <p id="subtitle" class="sr-only" role="status">Đang kết nối…</p>
       </header>
       <section id="settings-panel" hidden>
         <div class="settings-content">
           <div class="settings-heading">
             <div>
-              <span class="eyebrow">KHÔNG GIAN CỦA ANH</span>
-              <h2>Kết nối theo cách của mình.</h2>
-              <p>Mỗi tài khoản một không gian. Mọi thứ đều trong tầm tay.</p>
+              <span class="eyebrow">GOM</span>
+              <h2>Cài đặt</h2>
+              <p>Tài khoản và tùy chọn của anh.</p>
             </div>
             <button id="add-account-settings" class="primary">
               <svg><use href="#i-plus" /></svg>Thêm tài khoản
@@ -225,7 +228,8 @@
               Giao diện</button
             ><button data-tab="notifications" aria-pressed="false">
               Thông báo</button
-            ><button data-tab="macos" aria-pressed="false">macOS</button>
+            ><button data-tab="macos" aria-pressed="false">macOS</button
+            ><button data-tab="updates" aria-pressed="false">Cập nhật</button>
           </nav>
           <div id="tab-accounts" class="settings-pane">
             <div class="accounts-tools">
@@ -269,8 +273,8 @@
                 </button>
               </div>
               <p class="hint">
-                Zalo và Telegram: mở tài khoản ở sidebar, rồi quét QR trên điện
-                thoại.
+                Zalo và Telegram: chọn nền tảng và tài khoản, rồi quét QR trên
+                điện thoại.
               </p>
             </details>
           </div>
@@ -281,16 +285,16 @@
           >
             <h3>Vừa mắt, cả ngày lẫn đêm.</h3>
             <p>
-              Chọn màu cho sidebar và thanh điều hướng. Nội dung chat dùng giao
-              diện của từng nền tảng.
+              Chọn màu cho thanh điều hướng. Nội dung chat dùng giao diện của
+              từng nền tảng.
             </p>
             <div class="theme-options">
               <button data-theme-choice="light">
                 <span class="theme-sample light"><i></i><i></i></span
-                ><strong>Sáng · Ivory</strong></button
+                ><strong>Sáng</strong></button
               ><button data-theme-choice="dark">
                 <span class="theme-sample dark"><i></i><i></i></span
-                ><strong>Tối · Graphite</strong>
+                ><strong>Tối</strong>
               </button>
             </div>
             <label class="setting-row"
@@ -305,22 +309,6 @@
                 <option value="dark">Luôn tối</option>
               </select></label
             >
-            <label class="setting-row"
-              ><span
-                >Sidebar gọn<small
-                  >Hiển thị tài khoản dưới dạng biểu tượng.</small
-                ></span
-              ><input id="compact-setting" type="checkbox"
-            /></label>
-            <div class="setting-row">
-              <span
-                >Chiều rộng sidebar<small
-                  >Kéo đường phân cách hoặc dùng phím mũi tên.</small
-                ></span
-              ><button id="reset-width" class="secondary">
-                Đặt lại 224 px
-              </button>
-            </div>
           </div>
           <div
             id="tab-notifications"
@@ -345,8 +333,7 @@
             <p class="hint" id="notification-status" role="status"></p>
             <p class="hint">
               Bật thông báo trong cài đặt của từng nền tảng. Nút thử kiểm tra
-              thông báo từ Tin Nhan tới macOS; chế độ Tập trung có thể ẩn
-              banner.
+              thông báo từ Gom tới macOS; chế độ Tập trung có thể ẩn banner.
             </p>
           </div>
           <div id="tab-macos" class="settings-pane preference-panel" hidden>
@@ -354,7 +341,7 @@
             <label class="setting-row"
               ><span
                 >Chạy cùng macOS<small
-                  >Mở Tin Nhan khi anh đăng nhập máy.</small
+                  >Mở Gom khi anh đăng nhập máy.</small
                 ></span
               ><input id="open-at-login" type="checkbox"
             /></label>
@@ -371,14 +358,61 @@
               <p><span>Ẩn cửa sổ</span><kbd>⌘ W</kbd></p>
               <p><span>Thoát app</span><kbd>⌘ Q</kbd></p>
               <p>
-                <span>Zalo · Messenger · Telegram</span><kbd>⌘ 1 / 2 / 3</kbd>
+                <span>Zalo · Telegram · Messenger</span><kbd>⌘ 1 / 2 / 3</kbd>
               </p>
             </div>
           </div>
+          <div id="tab-updates" class="settings-pane preference-panel" hidden>
+            <h3>Cập nhật Gom</h3>
+            <p>Bản mới, khi anh sẵn sàng.</p>
+            <div class="update-card">
+              <dl class="update-versions">
+                <div>
+                  <dt>Đang dùng</dt>
+                  <dd id="update-current"></dd>
+                </div>
+                <div id="update-latest-row" hidden>
+                  <dt>Bản phát hành mới nhất</dt>
+                  <dd id="update-latest"></dd>
+                </div>
+              </dl>
+              <p id="update-message" role="status" aria-live="polite"></p>
+              <p id="update-checked" class="hint"></p>
+              <div class="update-actions">
+                <button id="check-updates" class="secondary">
+                  Kiểm tra cập nhật
+                </button>
+                <button id="download-update" class="primary" hidden>
+                  Tải bản mới <svg><use href="#i-external" /></svg>
+                </button>
+              </div>
+            </div>
+            <details id="update-notes-container" class="update-notes" hidden>
+              <summary>Nội dung bản phát hành</summary>
+              <pre id="update-notes"></pre>
+            </details>
+            <label class="setting-row"
+              ><span
+                >Tự kiểm tra bản mới<small
+                  >Kiểm tra khi mở app và mỗi 12 giờ. Chỉ báo khi có bản
+                  mới.</small
+                ></span
+              ><input id="auto-check-updates" type="checkbox"
+            /></label>
+            <p class="hint update-install-hint">
+              “Tải bản mới” mở trang tải trong trình duyệt. Anh tự cài bằng cách
+              kéo Gom vào Applications; nếu đã có Gom thì chọn thay thế. Khi
+              chuyển từ Tin Nhan, thoát app cũ trước khi mở Gom. Lưu lại nội
+              dung đang soạn trước khi thoát app để cài; khả năng khôi phục bản
+              nháp tùy từng nền tảng.
+            </p>
+          </div>
           <p id="notice" role="status"></p>
           <footer>
-            Tin Nhan <span id="version"></span
-            ><span>Không gian nhắn tin của riêng anh.</span>
+            <span class="settings-brand"
+              ><img src="gom-mark.svg" alt="" />Gom</span
+            >
+            <span id="version"></span><span>Trò chuyện, gọn một nơi.</span>
           </footer>
         </div>
       </section>

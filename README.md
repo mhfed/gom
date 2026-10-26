@@ -1,12 +1,18 @@
-# Tin nhắn — macOS
+> **Phạm vi hiện tại — Gom 0.6.0:** chat riêng trên trang chính thức của Zalo / Telegram / Messenger, chọn bằng tab ở thanh trên. Mỗi tab nhớ tài khoản cuối; bộ chọn tài khoản và nút **+** ở bên phải. Giao diện Mac tối giản, bỏ sidebar app. ⌘1 / ⌘2 / ⌘3 theo thứ tự Zalo / Telegram / Messenger. ⌘K chuyển nhanh, nút **…** chứa thao tác trang. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
+>
+> Kiểm tra giao diện hiện hành: `npm run test:shell` (fixture cách ly, không dùng phiên cá nhân). Connector chat thống nhất đã dừng theo yêu cầu; mã nghiên cứu không được đóng gói.
 
-Ứng dụng cá nhân bọc giao diện web chính thức của Zalo, Messenger và Telegram. Hỗ trợ nhiều tài khoản cho mỗi nền tảng, mỗi tài khoản giữ phiên riêng và trang đang mở khi chuyển qua lại.
+# Gom — macOS
+
+**Trò chuyện, gọn một nơi.** Gom (trước đây là Tin Nhan) là ứng dụng cá nhân bọc giao diện web chính thức của Zalo, Messenger và Telegram. Hỗ trợ nhiều tài khoản cho mỗi nền tảng, mỗi tài khoản giữ phiên riêng và trang đang mở khi chuyển qua lại.
 
 ## Tải app
 
+Bản cài mới trên máy: [Gom 0.6.0 DMG — Apple Silicon](outputs/Gom-macOS-arm64-0.6.0.dmg), kèm [ZIP](outputs/Gom-macOS-arm64-0.6.0.zip). Tên, icon và bộ màu xanh ngọc mới; giữ dữ liệu tài khoản và khóa mã hóa của Tin Nhan. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Kiểm chứng 0.6.0](docs/release-0.6.0.md). Bản công khai bên dưới vẫn là Tin Nhan 0.5.0.
+
 [Tải Tin Nhan 0.5.0 cho macOS Apple Silicon (arm64)](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.5.0/TinNhan-macOS-arm64-0.5.0.zip)
 
-Giải nén ZIP, kéo `Tin Nhan.app` vào Applications rồi mở app. Bản cá nhân ký ad-hoc, chưa có Developer ID / notarization. Repository public, có thể tải trực tiếp.
+Với bản mới: thoát Tin Nhan/Gom bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications rồi mở Gom. Bản ZIP công khai 0.5.0 ở trên vẫn chứa `Tin Nhan.app`. Bản cá nhân ký ad-hoc, chưa có Developer ID / notarization. Repository public, có thể tải trực tiếp.
 
 Chi tiết và SHA-256 nằm trong [Release 0.5.0](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.5.0). Khi nâng cấp, thoát bản đang chạy bằng ⌘Q rồi thay app; giữ nguyên thư mục dữ liệu để tiếp tục dùng các tài khoản hiện có.
 
@@ -23,7 +29,7 @@ npm start
 npm run make
 ```
 
-Bản app nằm trong `out-release/Tin Nhan-darwin-arm64/`; ZIP trong `out-release/make/`. Bản cá nhân dùng chữ ký ad-hoc, chưa có Developer ID / notarization để phân phối công khai.
+Bản app nằm trong `out-release/Gom-darwin-arm64/`; DMG và ZIP trong `out-release/make/`. Bản này dùng chữ ký ad-hoc, chưa có Developer ID / notarization; người nhận có thể cần cho phép mở trong Cài đặt hệ thống. Xem [hướng dẫn phân phối](docs/distribution.md).
 
 ## Tài khoản
 
@@ -31,19 +37,43 @@ Bản app nằm trong `out-release/Tin Nhan-darwin-arm64/`; ZIP trong `out-relea
 - Phiên được thử trong cửa sổ tạm trước; chỉ chấp nhận sau khi Messenger đích đã xác minh đăng nhập. Thất bại sẽ khôi phục cặp cookie cũ. Đóng app trong lúc nhập sẽ đợi giao dịch kết thúc.
 - Zalo và Telegram: đăng nhập QR trực tiếp trên giao diện chính thức. Nếu nền tảng thu hồi hoặc hết hạn phiên, phải đăng nhập lại.
 - Dữ liệu của app lưu tại `~/Library/Application Support/TinNhanDesktop`. Không sao chép toàn bộ Chrome profile; không xuất token ra log hoặc renderer.
-- Cmd+W hoặc nút đóng cửa sổ chỉ ẩn cửa sổ; app vẫn chạy và giữ các trang đang mở. Bấm icon Dock để mở lại. Cmd+Q mới thoát app sau khi ghi dữ liệu. Chuyển sidebar giữ nguyên view và bản nháp đang mở; khôi phục bản nháp sau thoát phụ thuộc chính nền tảng.
+- Cmd+W hoặc nút đóng cửa sổ chỉ ẩn cửa sổ; app vẫn chạy và giữ các trang đang mở. Bấm icon Dock để mở lại. Cmd+Q mới thoát app sau khi ghi dữ liệu. Chuyển tab hoặc tài khoản giữ nguyên view và bản nháp đang mở; khôi phục bản nháp sau thoát phụ thuộc chính nền tảng.
 
 ## Kiểm thử
 
 ```sh
 npm test
 npm run test:persistence
-npm run test:live
+npm run test:desktop
+npm run test:multi-account
+npm run test:shell
+npm run test:updates
 ```
 
-`test:persistence` dùng dữ liệu giả ở `../persistence-fixture`, chạy hai tiến trình Electron để kiểm tra cookie bền vững, localStorage, IndexedDB, cách ly ba partition và tái sử dụng view.
+`test:persistence` tạo thư mục tạm riêng cho mỗi lần chạy và dọn sau khi kết thúc, chạy hai tiến trình Electron để kiểm tra cookie bền vững, localStorage, IndexedDB, cách ly ba partition và tái sử dụng view. Ảnh kiểm thử giao diện được lưu trong `outputs/<tên-kiểm-thử>/` của repository; thư mục này không được theo dõi bởi Git hoặc đóng gói vào app.
 
-`test:live` là harness phát triển riêng, không được đóng gói vào app. Nó mở bản app đã đóng gói trên phiên cá nhân thật; chỉ chạy trong phạm vi người dùng đã đồng ý. Lệnh stdin: `status`, `activate zalo`, `activate messenger`, `activate telegram`, `settings`, `import Default`, `resize 1024x720`, `screenshot`, `quit`, `launch`. `import` chỉ dùng khi chủ tài khoản yêu cầu. Không gửi tin nhắn trong các kiểm thử.
+Đo hiệu năng bằng Electron native, với hồ sơ tạm và trang giả cố định:
+
+```sh
+npm run build
+npm run test:performance -- --label after
+# So sánh hai bản đã đo bằng cùng cấu hình:
+npm run test:performance -- --compare outputs/performance-comparison/before.json outputs/performance-comparison/after.json
+```
+
+Mặc định đo hai lượt cho 3/6/12 tài khoản và ba trang chờ đăng nhập; mỗi ca chờ 32 giây rồi đo 20,4 giây khi ẩn cửa sổ. `--dist <thư-mục-build>` chọn bản trước/sau; `--only-activity` đo riêng fixture đăng nhập có hoạt ảnh. Bộ đo kiểm tra bản nháp, trạng thái trang và dữ liệu phiên giữ nguyên qua chuyển tài khoản/ẩn/hiện. Tổng working set có thể đếm trùng bộ nhớ dùng chung; fixture không đại diện CPU, RAM hay pin của nền tảng thật. Xem `--help` để điều chỉnh thời lượng.
+
+`npm run test:renderer-performance` kiểm tra DOM thật bằng Chromium riêng; cần browser của Playwright hoặc đặt `TIN_NHAN_CHROMIUM` tới executable Chromium/Chrome đã cài. Test này không mở profile cá nhân.
+
+Lượt tối ưu hiện tại giữ mọi trang tài khoản để bảo toàn bản nháp và hoạt động nền. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition, không tự đóng trang để giảm RAM. Bản cài cục bộ mới nhất là **Gom 0.6.0**, dùng bộ nhận diện mới, giữ tab nền tảng, sửa lỗi Secure Input làm chặn EVKey và kiểm tra cập nhật: `outputs/Gom-macOS-arm64-0.6.0.dmg`, kèm `outputs/SHA256SUMS-Gom-0.6.0.txt`; bản ZIP công khai ở trên vẫn là 0.5.0. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
+
+Chi tiết thay đổi, phương pháp và kết quả đối chiếu: [báo cáo hiệu năng 26/10/2026](docs/performance-2026-10-26.md).
+
+Sửa lỗi EVKey dùng chế độ tương thích focus chỉ cho macOS với Electron 45.0.0 / Chromium 156.0.8078.48; vẫn bảo vệ ô mật khẩu đang dùng. `npm run build && npm run test:ime` kiểm tra Secure Input bằng Electron native và hồ sơ tạm, gồm chuyển cửa sổ, ẩn/thu nhỏ, iframe và popup. Chạy riêng, không đồng thời với các kiểm thử GUI khác; cần macOS, Python 3 và không có ứng dụng khác đang giữ Secure Input. Luôn chạy lại khi cập nhật Electron. Chi tiết: [điều tra EVKey](docs/evkey-2026-10-26.md).
+
+Theo yêu cầu xem thiết kế trước, giao diện chat thống nhất nằm riêng tại `outputs/unified-chat-design/index.html`, dùng dữ liệu mẫu và không gửi tin thật. [Đề xuất thiết kế](docs/superpowers/specs/2026-10-26-unified-chat-design.md) nêu giới hạn tích hợp cho tài khoản cá nhân. Giao diện này chưa được đưa vào bản cài đặt.
+
+`npm run test:live` là harness phát triển riêng, không nằm trong các kiểm tra cách ly ở trên và không được đóng gói vào app. Nó mở bản app đã đóng gói trên phiên cá nhân thật; chỉ chạy trong phạm vi người dùng đã đồng ý. Lệnh stdin: `status`, `activate zalo`, `activate messenger`, `activate telegram`, `settings`, `import Default`, `resize 1024x720`, `screenshot`, `quit`, `launch`. `import` chỉ dùng khi chủ tài khoản yêu cầu. Không gửi tin nhắn trong các kiểm thử.
 
 Remote views có sandbox, context isolation và tắt Node. Preload riêng của nền tảng chỉ thêm sự kiện bấm vào thông báo gốc; không nhận nội dung thông báo và không cấp API đọc file/tài khoản. IPC điều khiển app chỉ nhận từ main frame của shell cục bộ; kênh bấm thông báo chỉ nhận từ main frame của view/popup đã đăng ký đúng nền tảng và chỉ mở lại nền tảng đó; popup nội bộ giữ đúng session; link HTTP(S) bên ngoài yêu cầu xác nhận trước khi mở trình duyệt.
 
@@ -121,4 +151,4 @@ Nâng cấp không đổi `TinNhanDesktop`, `accounts.json` hay ID/partition c�
 npm run test:shell
 ```
 
-Kiểm tra cách ly gồm12 tổ hợp màn hình/sáng-tối/sidebar, bàn phím và focus native, không chồng hộp thoại, giữ view/bản nháp, tên an toàn, kéo kích thước, lưu giao diện và ID tài khoản qua thoát/mở lại. Các fixture không dùng phiên cá nhân. Bản ZIP public ở đầu README và mã nguồn hiện tại đều là **0.5.0**.
+Kiểm tra cách ly gồm12 tổ hợp màn hình/sáng-tối/sidebar, bàn phím và focus native, không chồng hộp thoại, giữ view/bản nháp, tên an toàn, kéo kích thước, lưu giao diện và ID tài khoản qua thoát/mở lại. Các fixture không dùng phiên cá nhân. Bản ZIP public ở đầu README là **0.5.0**; mã nguồn và bản cài thử cục bộ hiện tại là **0.5.3**.

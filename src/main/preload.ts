@@ -3,6 +3,11 @@ import type { DesktopBridge, AppState } from "../shared.ts";
 const bridge: DesktopBridge = {
   state: () => ipcRenderer.invoke("desktop", "state"),
   activate: (id) => ipcRenderer.invoke("desktop", "activate", id),
+  activateProvider: (provider, focusPage = true) =>
+    ipcRenderer.invoke("desktop", "activate-provider", { provider, focusPage }),
+  navigationMenu: () => ipcRenderer.invoke("desktop", "navigation-menu"),
+  accountEditor: (open) =>
+    ipcRenderer.invoke("desktop", "account-editor", open),
   addAccount: (provider, name, avatar) =>
     ipcRenderer.invoke("desktop", "account-add", { provider, name, avatar }),
   editAccount: (id, name, avatar) =>
@@ -38,6 +43,13 @@ const bridge: DesktopBridge = {
     return () => ipcRenderer.removeListener("command-toggle", listener);
   },
   settings: () => ipcRenderer.invoke("desktop", "settings"),
+  checkUpdates: () => ipcRenderer.invoke("desktop", "updates-check"),
+  openUpdateDownload: () => ipcRenderer.invoke("desktop", "updates-download"),
+  updatesRequested(callback) {
+    const listener = () => callback();
+    ipcRenderer.on("updates-requested", listener);
+    return () => ipcRenderer.removeListener("updates-requested", listener);
+  },
   importMessenger: (sourceId, accountId) =>
     ipcRenderer.invoke("desktop", "import", { sourceId, accountId }),
   changed(callback) {

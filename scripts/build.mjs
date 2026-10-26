@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { mkdir, copyFile, cp } from "node:fs/promises";
+import { mkdir, copyFile, cp, readFile } from "node:fs/promises";
 await mkdir("dist", { recursive: true });
 await cp("src/renderer/logos", "dist/logos", { recursive: true });
 await Promise.all([
@@ -37,13 +37,12 @@ await Promise.all([
   ...["index.html", "shell.css"].map((file) =>
     copyFile("src/renderer/" + file, "dist/" + file),
   ),
+  copyFile("assets/gom-mark.svg", "dist/gom-mark.svg"),
 ]);
 
 const { default: sharp } = await import("sharp");
-await sharp(
-  Buffer.from(
-    '<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg"><path d="M7 6h22a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H17l-9 6v-6H7a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3Z" fill="none" stroke="black" stroke-width="3" stroke-linejoin="round"/><circle cx="12" cy="16" r="2"/><circle cx="18" cy="16" r="2"/><circle cx="24" cy="16" r="2"/></svg>',
-  ),
-)
+await sharp(await readFile("assets/gom-mark.svg"))
+  .resize(36, 36)
+  .tint("#000000")
   .png()
   .toFile("dist/trayTemplate.png");

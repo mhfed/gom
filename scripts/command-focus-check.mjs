@@ -12,7 +12,7 @@ await writeFile(
 const client = await _electron.launch({
   executablePath:
     "./node_modules/electron/dist/Electron.app/Contents/MacOS/Electron",
-  args: [boot],
+  args: ["--use-mock-keychain", boot],
 });
 try {
   const page = await client.firstWindow();

@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, readFile, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
+const output = fileURLToPath(
+  new URL("../outputs/multi-account-check", import.meta.url),
+);
 const root = await mkdtemp(join(tmpdir(), "tin-nhan-multi-"));
 const executablePath =
   "./node_modules/electron/dist/Electron.app/Contents/MacOS/Electron";
@@ -81,7 +85,10 @@ require(${JSON.stringify(process.cwd() + "/dist/main.cjs")});
 );
 let client, page;
 async function launch(path = bootstrap) {
-  client = await _electron.launch({ executablePath, args: [path] });
+  client = await _electron.launch({
+    executablePath,
+    args: ["--use-mock-keychain", path],
+  });
   page = await client.firstWindow();
   if (path === bootstrap) {
     await page.waitForFunction(() => !!window.desktop);
@@ -146,6 +153,39 @@ async function viewIds() {
       .sort(),
   );
 }
+async function assertToolbar(provider, accountId) {
+  await page.waitForFunction(
+    ({ provider, accountId }) =>
+      document
+        .querySelector("#platform-" + provider)
+        ?.getAttribute("aria-selected") === "true" &&
+      document.querySelector("#account-select")?.value === accountId,
+    { provider, accountId },
+  );
+  assert.equal(
+    await page.locator("#account-select").evaluate((node) => node.tagName),
+    "SELECT",
+  );
+  for (const id of Object.keys(providers)) {
+    assert.equal(
+      await page.locator("#platform-" + id).getAttribute("role"),
+      "tab",
+    );
+    assert.equal(
+      await page.locator("#platform-" + id).getAttribute("aria-selected"),
+      String(id === provider),
+    );
+  }
+  const accountIds = (await snapshot()).accounts
+    .filter((account) => account.provider === provider && !account.archived)
+    .map((account) => account.id);
+  assert.deepEqual(
+    await page
+      .locator("#account-select option")
+      .evaluateAll((options) => options.map((option) => option.value)),
+    accountIds,
+  );
+}
 try {
   await launch(seedPath);
   assert.equal(
@@ -155,6 +195,7 @@ try {
   await quit();
   await launch();
   assert.equal((await snapshot()).active, "telegram");
+  await assertToolbar("telegram", "telegram");
   await wait(
     (s) =>
       ["zalo", "messenger", "telegram"].every(
@@ -181,7 +222,7 @@ try {
   );
   const added = {};
   for (const provider of Object.keys(providers)) {
-    await page.locator("#add-account-sidebar").click();
+    await page.locator("#add-account-toolbar").click();
     await page.locator("#account-editor").waitFor({ state: "visible" });
     await page.locator("#account-provider").selectOption(provider);
     await page.locator("#account-name").fill("Công việc " + provider);
@@ -198,6 +239,7 @@ try {
       (a) => a.provider === provider && a.id !== provider,
     );
     added[provider] = account.id;
+    await assertToolbar(provider, account.id);
     await wait(
       (s) => ["authenticated", "needs-login"].includes(s.statuses[account.id]),
       "new page loaded",
@@ -242,6 +284,24 @@ try {
       s.unread.telegram.count === 2 && s.unread[added.telegram].count === 9,
     "per-account unread",
   );
+  await page.locator("#account-select").selectOption("telegram");
+  await wait((s) => s.active === "telegram", "select legacy Telegram account");
+  await assertToolbar("telegram", "telegram");
+  await page.locator("#account-select").selectOption(added.telegram);
+  await wait(
+    (s) => s.active === added.telegram,
+    "select second Telegram account",
+  );
+  await assertToolbar("telegram", added.telegram);
+  assert.equal(
+    await remote("telegram", 'document.querySelector("#draft").value'),
+    "legacy draft",
+  );
+  assert.equal(
+    await remote(added.telegram, 'document.querySelector("#draft").value'),
+    "new draft",
+  );
+  assert.deepEqual(await viewIds(), before);
   await page.evaluate(
     (id) =>
       window.desktop.editAccount(id, "<img src=x onerror=window.bad=1>", "A"),
@@ -250,7 +310,9 @@ try {
   assert.equal(await page.evaluate(() => window.bad), undefined);
   assert.equal(
     await page
-      .locator("#provider-" + added.zalo + " .provider-label")
+      .locator(
+        `#account-manager [data-account-id="${added.zalo}"] .account-identity strong`,
+      )
       .textContent(),
     "<img src=x onerror=window.bad=1>",
   );
@@ -397,19 +459,21 @@ try {
   await client.evaluate(({ BrowserWindow }) =>
     BrowserWindow.getAllWindows()[0].setContentSize(1024, 720),
   );
-  await mkdir("../multi-account-check", { recursive: true });
+  await mkdir(output, { recursive: true });
   await page.waitForTimeout(250);
-  await page.screenshot({ path: "../multi-account-check/settings-dark.png" });
-  await page.evaluate(() => window.desktop.toggleSidebar());
-  await page.screenshot({ path: "../multi-account-check/collapsed-dark.png" });
+  await page.screenshot({ path: join(output, "settings-dark.png") });
+  await page.evaluate((id) => window.desktop.activate(id), added.telegram);
+  await assertToolbar("telegram", added.telegram);
+  await page.screenshot({ path: join(output, "toolbar-dark.png") });
   await page.evaluate(() => window.desktop.activate("zalo"));
   await page.evaluate(() => window.desktop.settings());
   await page.waitForTimeout(250);
-  await page.screenshot({ path: "../multi-account-check/settings-light.png" });
+  await page.screenshot({ path: join(output, "settings-light.png") });
   await page.evaluate((id) => window.desktop.activate(id), added.telegram);
   await quit();
   await launch();
   assert.equal((await snapshot()).active, added.telegram);
+  await assertToolbar("telegram", added.telegram);
   await wait(
     (s) =>
       s.accounts
@@ -436,7 +500,7 @@ try {
     });
   }
   console.log(
-    "PASS0.4 migration retains legacy cookie/localStorage/IndexedDB, six isolated accounts, safe labels/order/view identity, captured Messenger import, account unread/permission/click routing, reversible archive, saved identity/preferences after relaunch",
+    "PASS migration retains legacy cookie/localStorage/IndexedDB, six isolated accounts, platform tabs/native account selection and drafts, safe labels/order/view identity, captured Messenger import, account unread/permission/click routing, reversible archive, saved identity/preferences after relaunch",
   );
 } finally {
   await client?.close().catch(() => {});

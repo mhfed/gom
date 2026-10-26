@@ -1,4 +1,6 @@
+import type { UpdateState } from "./update-types.ts";
 export type ProviderId = "zalo" | "messenger" | "telegram";
+export const PROVIDER_ORDER = ["zalo", "telegram", "messenger"] as const;
 export type AccountId = string;
 export interface Account {
   id: AccountId;
@@ -66,6 +68,7 @@ export type NotificationChoice = "ask" | "allow" | "mute";
 export interface Preferences {
   paused: boolean;
   shortcut: boolean;
+  updateChecks: boolean;
   notifications: Record<AccountId, NotificationChoice>;
 }
 export interface ConnectionState {
@@ -100,10 +103,14 @@ export interface AppState {
   importing: boolean;
   notice: string;
   version: string;
+  updates: UpdateState;
 }
 export interface DesktopBridge {
   state(): Promise<AppState>;
   activate(id: AccountId): Promise<void>;
+  activateProvider(provider: ProviderId, focusPage?: boolean): Promise<void>;
+  navigationMenu(): Promise<void>;
+  accountEditor(open: boolean): Promise<void>;
   addAccount(
     provider: ProviderId,
     name: string,
@@ -120,6 +127,9 @@ export interface DesktopBridge {
   reload(): Promise<void>;
   openBrowser(): Promise<void>;
   settings(): Promise<void>;
+  checkUpdates(): Promise<void>;
+  openUpdateDownload(): Promise<void>;
+  updatesRequested(callback: () => void): () => void;
   toggleSidebar(): Promise<void>;
   setSidebarWidth(width: number): Promise<void>;
   setTheme(theme: Presentation["theme"]): Promise<void>;
@@ -130,7 +140,7 @@ export interface DesktopBridge {
   back(): Promise<void>;
   home(): Promise<void>;
   setPreference(
-    key: "paused" | "shortcut" | "openAtLogin",
+    key: "paused" | "shortcut" | "openAtLogin" | "updateChecks",
     value: boolean,
   ): Promise<void>;
   setNotification(id: AccountId, choice: NotificationChoice): Promise<void>;

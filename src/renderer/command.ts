@@ -32,7 +32,14 @@ export function createCommandPalette(options: PaletteOptions) {
     await close();
     fn();
   };
-  function select(index: number, focus = false) {
+  function select(index: number, focus = false, rebuilt = false) {
+    if (!rebuilt && selection === index) {
+      if (focus)
+        document
+          .getElementById("command-result-" + entries[index]?.id)
+          ?.focus({ preventScroll: true });
+      return;
+    }
     selection = index;
     for (const [i, row] of [
       ...results.querySelectorAll<HTMLElement>("[role=option]"),
@@ -87,6 +94,13 @@ export function createCommandPalette(options: PaletteOptions) {
         run: () => options.settings("notifications"),
       },
       {
+        id: "updates",
+        title: "Cập nhật Gom",
+        subtitle: "Kiểm tra phiên bản và tải bản mới",
+        icon: "refresh",
+        run: () => options.settings("updates"),
+      },
+      {
         id: "pause",
         title: state.preferences.paused
           ? "Tiếp tục thông báo"
@@ -100,13 +114,6 @@ export function createCommandPalette(options: PaletteOptions) {
               !options.getState().preferences.paused,
             ),
           ),
-      },
-      {
-        id: "collapse",
-        title: state.collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar",
-        subtitle: "Thêm không gian cho cuộc trò chuyện",
-        icon: "sidebar",
-        run: () => afterClose(() => window.desktop.toggleSidebar()),
       },
     ];
     const words = fold(search.value).trim().split(/\s+/).filter(Boolean);
@@ -165,7 +172,7 @@ export function createCommandPalette(options: PaletteOptions) {
       results.append(empty);
     }
     const retained = entries.findIndex((e) => e.id === previousId);
-    select(retained >= 0 ? retained : 0, focusedResult);
+    select(retained >= 0 ? retained : 0, focusedResult, true);
   }
   search.oninput = () => {
     selection = 0;
@@ -213,7 +220,6 @@ export function createCommandPalette(options: PaletteOptions) {
         state.accounts,
         state.presentation.pinned,
         state.preferences.paused,
-        state.collapsed,
       ]);
       if (state.commandOpen) {
         if (!dialog.open) {

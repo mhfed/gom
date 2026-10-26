@@ -2,22 +2,36 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { providerBounds } from "../src/main/layout.ts";
 import { normalizeUnread, badgeText } from "../src/main/unread.ts";
-test("collapsed and expanded sidebar bounds preserve the full remote view height", () => {
-  assert.deepEqual(providerBounds(1024, 720, false), {
-    x: 224,
-    y: 76,
-    width: 800,
-    height: 644,
+test("official chat fills the window below the toolbar without a sidebar inset", () => {
+  assert.deepEqual(providerBounds(1024, 720), {
+    x: 0,
+    y: 64,
+    width: 1024,
+    height: 656,
   });
-  assert.deepEqual(providerBounds(1024, 720, true), {
-    x: 72,
-    y: 76,
-    width: 952,
-    height: 644,
+  assert.deepEqual(providerBounds(940, 640), {
+    x: 0,
+    y: 64,
+    width: 940,
+    height: 576,
   });
-  assert.deepEqual(providerBounds(40, 40, true), {
-    x: 72,
-    y: 76,
+});
+test("small or empty windows never give native views negative dimensions", () => {
+  assert.deepEqual(providerBounds(40, 40), {
+    x: 0,
+    y: 64,
+    width: 40,
+    height: 0,
+  });
+  assert.deepEqual(providerBounds(0, 64), {
+    x: 0,
+    y: 64,
+    width: 0,
+    height: 0,
+  });
+  assert.deepEqual(providerBounds(-10, -10), {
+    x: 0,
+    y: 64,
     width: 0,
     height: 0,
   });
@@ -155,7 +169,7 @@ test("background views keep a real viewport so responsive clients can render the
         },
       ] as const,
   );
-  layoutViews(views, 1024, 720, true, "zalo", "service");
+  layoutViews(views, 1024, 720, "zalo", "service");
   assert.deepEqual(
     updates.map((x) => x.visible),
     [true, false, false],
@@ -164,7 +178,7 @@ test("background views keep a real viewport so responsive clients can render the
     updates.every(
       (x) =>
         JSON.stringify(x.bounds) ===
-        JSON.stringify({ x: 72, y: 76, width: 952, height: 644 }),
+        JSON.stringify({ x: 0, y: 64, width: 1024, height: 656 }),
     ),
   );
 });

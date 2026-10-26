@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, readFile, rm, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
+const output = fileURLToPath(
+  new URL("../outputs/desktop-check", import.meta.url),
+);
 const root = await mkdtemp(join(tmpdir(), "tin-nhan-03-"));
 const bootstrap = join(root, "bootstrap.cjs");
 await writeFile(
@@ -274,6 +278,15 @@ try {
     await page.evaluate(async () => (await window.desktop.state()).notice),
     /app khác/,
   );
+  // Repeating the rejected command leaves main state unchanged; the native
+  // checkbox still needs an authoritative acknowledgement to undo its toggle.
+  await page.evaluate(() => window.desktop.settings());
+  await page.locator('[data-tab="macos"]').click();
+  await page.locator("#global-shortcut").click();
+  await page.waitForFunction(
+    () => !document.querySelector("#global-shortcut").checked,
+  );
+  await page.evaluate(() => window.desktop.activate("messenger"));
   await client.evaluate(() => {
     globalThis.fixture.online = false;
   });
@@ -351,17 +364,17 @@ try {
   );
   await page.evaluate(() => window.desktop.setPreference("paused", true));
   await page.evaluate(() => window.desktop.settings());
-  await mkdir("../desktop-check", { recursive: true });
+  await mkdir(output, { recursive: true });
   await page.waitForTimeout(250);
   await page.screenshot({
-    path: "../desktop-check/settings-dark.png",
+    path: join(output, "settings-dark.png"),
     fullPage: true,
   });
   await page.evaluate(() => {
     document.querySelector("#settings-panel").scrollTop = 9999;
   });
   await page.screenshot({
-    path: "../desktop-check/settings-notifications.png",
+    path: join(output, "settings-notifications.png"),
   });
   await quit();
   const stored = JSON.parse(

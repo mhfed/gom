@@ -20,12 +20,18 @@ import {
   validNotificationFrame,
   hasUnread,
 } from "./notification-policy.ts";
-import { normalizeTheme, themeScript } from "./theme.ts";
+import { normalizeTheme } from "./theme.ts";
 import { normalizePresentation, sidebarWidth } from "./presentation.ts";
 import { layoutViews } from "./layout.ts";
 import { normalizeUnread } from "./unread.ts";
-import { unreadScript } from "./unread-snapshot.ts";
 import { authScript } from "./auth-detection.ts";
+import { pageSnapshotScript } from "./page-snapshot.ts";
+import { StatePublisher } from "./state-publisher.ts";
+import { limitBackgroundWarmup } from "./background-throttling.ts";
+import { ProbeQueue } from "./probe-queue.ts";
+import { configureMacOSInput } from "./macos-input.ts";
+import { ManualUpdateChecker } from "./update-check.ts";
+import { UpdateSchedule } from "./update-schedule.ts";
 import {
   app,
   BrowserWindow,
@@ -51,6 +57,7 @@ import { readFile, copyFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import {
   PROVIDERS,
+  PROVIDER_ORDER,
   type ProviderId,
   type AccountId,
   type Account,
@@ -67,6 +74,9 @@ import { ChromeSources, ImportFailure } from "./local-accounts.ts";
 import { replaceLoginCookies } from "./cookie-transaction.ts";
 import { OperationGate } from "./operation-gate.ts";
 import { ViewRegistry, flushBeforeClose } from "./view-registry.ts";
+configureMacOSInput(app.commandLine, process.platform, process.versions);
+// Electron 45 derives macOS cookie/safeStorage Keychain names from app.getName().
+// Retain the original encryption identity even though the visible app is Gom.
 app.setName("Tin Nhan");
 app.setPath("userData", join(app.getPath("appData"), "TinNhanDesktop"));
 const sources = new ChromeSources(
@@ -83,18 +93,29 @@ const lastAccounts = new Map<ProviderId, AccountId>();
 const popups = new Set<BrowserWindow>();
 const popupProviders = new Map<WebContents, AccountId>();
 const recovery = new RecoveryPolicy<AccountId>();
-const detecting = new Set<AccountId>();
+const probes = new ProbeQueue();
+const backgroundWarmups = new WeakMap<WebContents, () => void>();
 const navigationFailed = new Set<AccountId>();
 const epochs = new Map<AccountId, number>();
 let tray: Tray | undefined;
 let traySignature = "";
 let sleeping = false;
+let accountEditorOpen = false;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let wakeTimer: ReturnType<typeof setTimeout> | undefined;
 const lastNotificationClicks = new Map<AccountId, number>();
 const permissionPrompts = new Set<AccountId>();
 const testAlerts = new Map<AccountId, Notification>();
 const SHORTCUT = "CommandOrControl+Shift+Space";
+const updateChecker = new ManualUpdateChecker({
+  currentVersion: app.getVersion(),
+  arch: process.arch,
+  onChange: (updates) => {
+    state.updates = updates;
+    if (!closing) publish();
+  },
+});
+const updateSchedule = new UpdateSchedule(() => updateChecker.check());
 const state: AppState = {
   presentation: normalizePresentation(undefined, []),
   commandOpen: false,
@@ -134,6 +155,7 @@ const state: AppState = {
   importing: false,
   notice: "",
   version: app.getVersion(),
+  updates: updateChecker.snapshot(),
 };
 const settingsPath = join(app.getPath("userData"), "window.json");
 const settingsWriter = new SettingsWriter(settingsPath);
@@ -180,27 +202,32 @@ function initializeAccount(a: Account) {
   });
   state.preferences.notifications[a.id] ??= "ask";
 }
-const publish = () => {
-  if (win && !win.isDestroyed()) {
-    const active = [...views.entries()].find(
-      ([id]) => id === state.active,
-    )?.[1];
+let dockBadge: string | undefined;
+const statePublisher = new StatePublisher(
+  () => {
+    const active = views.peek(state.active);
     state.canGoBack =
       !!active &&
       !active.webContents.isDestroyed() &&
       active.webContents.navigationHistory.canGoBack();
-    win.webContents.send("state", state);
-    app.dock?.setBadge(
-      hasUnread(
-        state.accounts
-          .filter((a) => !a.archived)
-          .map((a) => state.unread[a.id]),
-      )
-        ? "•"
-        : "",
-    );
+    return state;
+  },
+  (snapshot) => {
+    win.webContents.send("state", snapshot);
+    const badge = hasUnread(
+      state.accounts.filter((a) => !a.archived).map((a) => state.unread[a.id]),
+    )
+      ? "•"
+      : "";
+    if (badge !== dockBadge) {
+      app.dock?.setBadge(badge);
+      dockBadge = badge;
+    }
     updateTray();
-  }
+  },
+);
+const publish = (force = false) => {
+  if (win && !win.isDestroyed()) statePublisher.publish(force);
 };
 function status(id: AccountId, value: ProviderStatus) {
   if (!findAccount(id)) return;
@@ -383,6 +410,10 @@ function createView(id: AccountId) {
       backgroundThrottling: false,
     },
   });
+  backgroundWarmups.set(
+    view.webContents,
+    limitBackgroundWarmup(view.webContents),
+  );
   view.setVisible(false);
   guard(view.webContents, id);
   view.webContents.on(
@@ -442,18 +473,19 @@ function layout() {
     views.entries(),
     width,
     height,
-    state.collapsed,
     state.active,
     state.commandOpen ||
       (state.panel === "service" && state.connections[state.active].reason)
       ? "settings"
       : state.panel,
-    state.presentation.sidebarWidth,
   );
 }
-function activate(id: AccountId) {
+function activate(id: AccountId, focusPage = true) {
+  if (accountEditorOpen) return;
   const account = findAccount(id);
   if (!account || closing) return;
+  const selectionChanged =
+    state.active !== id || lastAccounts.get(account.provider) !== id;
   lastAccounts.set(account.provider, id);
   state.active = id;
   state.commandOpen = false;
@@ -462,23 +494,33 @@ function activate(id: AccountId) {
   const view = views.activate(id);
   if (!known) win.contentView.addChildView(view);
   layout();
-  void detect(id, view.webContents);
+  if (
+    focusPage &&
+    win.isVisible() &&
+    !win.isMinimized() &&
+    win.isFocused() &&
+    !state.connections[id].reason
+  )
+    view.webContents.focus();
+  void detect(id, view.webContents, true);
   publish();
+  if (selectionChanged) scheduleSave();
 }
 
-async function detect(id: AccountId, contents: WebContents) {
+function detect(id: AccountId, contents: WebContents, refresh = false) {
+  return probes.run(contents, () => detectOnce(id, contents), refresh);
+}
+async function detectOnce(id: AccountId, contents: WebContents) {
   if (
     closing ||
     sleeping ||
     !isCurrent(id, contents) ||
-    detecting.has(id) ||
     recovery.reason(id) ||
     contents.isDestroyed() ||
     contents.isLoadingMainFrame() ||
     navigationPolicy(providerFor(id), contents.getURL()) !== "internal"
   )
     return;
-  detecting.add(id);
   const epoch = epochs.get(id) ?? 0;
   const valid = () =>
     !closing &&
@@ -488,11 +530,18 @@ async function detect(id: AccountId, contents: WebContents) {
     epoch === (epochs.get(id) ?? 0) &&
     !recovery.reason(id);
   try {
-    const theme = normalizeTheme(await contents.executeJavaScript(themeScript));
-    const result = await contents.executeJavaScript(authScript);
+    const snapshot = await contents.executeJavaScript(
+      pageSnapshotScript(
+        state.presentation.theme === "platform" &&
+          id === state.active &&
+          win.isVisible(),
+      ),
+    );
+    const result = snapshot.status;
+    const theme = normalizeTheme(snapshot.theme);
     const unread = normalizeUnread(
       result === "authenticated"
-        ? await contents.executeJavaScript(unreadScript)
+        ? snapshot.unread
         : {
             global: null,
             loaded: null,
@@ -500,17 +549,34 @@ async function detect(id: AccountId, contents: WebContents) {
           },
     );
     if (!valid()) return;
-    if (theme) state.themes[id] = theme;
-    state.unread[id] = unread;
-    if (["ready", "needs-login", "authenticated"].includes(result))
+    let changed = false;
+    if (theme && JSON.stringify(theme) !== JSON.stringify(state.themes[id])) {
+      state.themes[id] = theme;
+      changed = true;
+    }
+    const previous = state.unread[id];
+    if (
+      previous.count !== unread.count ||
+      previous.kind !== unread.kind ||
+      previous.source !== unread.source ||
+      previous.approximate !== unread.approximate
+    ) {
+      state.unread[id] = unread;
+      changed = true;
+    }
+    if (
+      ["ready", "needs-login", "authenticated"].includes(result) &&
+      state.statuses[id] !== result
+    ) {
       state.statuses[id] = result;
-    if (result === "authenticated" && !contents.getBackgroundThrottling())
-      contents.setBackgroundThrottling(true);
-    publish();
-  } catch {
-  } finally {
-    detecting.delete(id);
-  }
+      changed = true;
+    }
+    if (result === "authenticated") {
+      backgroundWarmups.get(contents)?.();
+      backgroundWarmups.delete(contents);
+    }
+    if (changed) statePublisher.schedule();
+  } catch {}
 }
 function isOnline() {
   return !sleeping && net.isOnline();
@@ -566,6 +632,8 @@ function showWindow() {
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
+  const active = views.peek(state.active);
+  if (active) void detect(state.active, active.webContents, true);
   if (
     !state.commandOpen &&
     state.panel === "service" &&
@@ -581,7 +649,17 @@ function showSettings() {
   publish();
   showWindow();
 }
+function showUpdates() {
+  if (closing) return;
+  // Keep an unfinished account form visible; the result can wait in Settings.
+  if (!accountEditorOpen) {
+    showSettings();
+    win.webContents.send("updates-requested");
+  }
+  void updateChecker.check();
+}
 function showCommand(open: boolean) {
+  if (accountEditorOpen) return;
   state.commandOpen = open;
   layout();
   publish();
@@ -597,7 +675,7 @@ function updateTray() {
   if (signature === traySignature) return;
   traySignature = signature;
   tray.setToolTip(
-    "Tin Nhan" +
+    "Gom" +
       (hasUnread(
         state.accounts
           .filter((a) => !a.archived)
@@ -608,7 +686,7 @@ function updateTray() {
   );
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: "Mở Tin Nhan", click: showWindow },
+      { label: "Mở Gom", click: showWindow },
       ...state.accounts
         .filter((a) => !a.archived)
         .map(({ id }) => ({
@@ -630,7 +708,7 @@ function updateTray() {
       },
       { label: "Cài đặt…", click: showSettings },
       { type: "separator" },
-      { label: "Thoát Tin Nhan", click: () => app.quit() },
+      { label: "Thoát Gom", click: () => app.quit() },
     ]),
   );
 }
@@ -649,8 +727,8 @@ function configureShortcut(enabled: boolean) {
       "Phím tắt Cmd+Shift+Space đang được app khác dùng. Anh có thể bật lại sau.";
   } else state.preferences.shortcut = true;
 }
-async function persist() {
-  publish();
+async function persist(forcePublish = false) {
+  publish(forcePublish);
   try {
     await save();
   } catch {
@@ -678,7 +756,7 @@ function testNotification(id: AccountId) {
   }
   testAlerts.get(id)?.close();
   const notification = new Notification({
-    title: accountLabel(id) + " · Tin Nhan",
+    title: accountLabel(id) + " · Gom",
     body: "Thông báo thử. Bấm để mở nền tảng này.",
     silent: true,
   });
@@ -696,7 +774,7 @@ function testNotification(id: AccountId) {
   });
   notification.on("failed", () => {
     state.notificationStatus =
-      "macOS chưa hiển thị được thông báo. Kiểm tra quyền thông báo cho Tin Nhan trong Cài đặt hệ thống.";
+      "macOS chưa hiển thị được thông báo. Kiểm tra quyền thông báo cho Gom trong Cài đặt hệ thống.";
     publish();
   });
   notification.on("close", () => {
@@ -858,13 +936,61 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
     publish();
   }
 }
-function activateProvider(provider: ProviderId) {
+function activateProvider(provider: ProviderId, focusPage = true) {
   const last = lastAccounts.get(provider);
+  const recent = last ? findAccount(last) : undefined;
   const target =
-    (last ? findAccount(last) : undefined) ||
+    (recent?.provider === provider ? recent : undefined) ||
     state.accounts.find((a) => a.provider === provider && !a.archived);
-  if (target) activate(target.id);
+  if (target) activate(target.id, focusPage);
   else showSettings();
+}
+function showNavigationMenu() {
+  if (closing || state.panel !== "service" || state.commandOpen) return;
+  const id = state.active;
+  const account = findAccount(id);
+  const contents = views.peek(id)?.webContents;
+  if (!account || !contents || contents.isDestroyed()) return;
+  // A notification or account change while the native menu is open must not
+  // redirect an action to a different account or a replaced view.
+  const current = () =>
+    !closing &&
+    state.active === id &&
+    state.panel === "service" &&
+    !state.commandOpen &&
+    !contents.isDestroyed() &&
+    isCurrent(id, contents);
+  Menu.buildFromTemplate([
+    {
+      label: "Quay lại",
+      accelerator: "CmdOrCtrl+[",
+      enabled: contents.navigationHistory.canGoBack(),
+      click: () => {
+        if (current() && contents.navigationHistory.canGoBack())
+          contents.navigationHistory.goBack();
+      },
+    },
+    {
+      label: "Trang đầu nền tảng",
+      click: () => {
+        if (current()) reloadProvider(id, true, true);
+      },
+    },
+    {
+      label: "Tải lại nền tảng",
+      accelerator: "CmdOrCtrl+R",
+      click: () => {
+        if (current()) reloadProvider(id, true);
+      },
+    },
+    { type: "separator" },
+    {
+      label: "Mở trong trình duyệt",
+      click: () => {
+        if (current()) void external(PROVIDERS[account.provider].entry);
+      },
+    },
+  ]).popup({ window: win });
 }
 async function changeAccount(
   command: string,
@@ -908,10 +1034,10 @@ async function changeAccount(
           next = archiveCatalogAccount(next, id);
           const answer = await dialog.showMessageBox(win, {
             type: "question",
-            message: `Gỡ ${accountLabel(id)} khỏi sidebar?`,
+            message: `Gỡ ${accountLabel(id)} khỏi danh sách?`,
             detail:
               "Dữ liệu đăng nhập vẫn được giữ trên máy. Anh có thể khôi phục tài khoản trong Cài đặt; thao tác này không đăng xuất hoặc xóa tin nhắn.",
-            buttons: ["Hủy", "Gỡ khỏi sidebar"],
+            buttons: ["Hủy", "Gỡ khỏi danh sách"],
             defaultId: 0,
             cancelId: 0,
           });
@@ -997,6 +1123,9 @@ async function quit() {
   clearInterval(poll);
   clearTimeout(saveTimer);
   clearTimeout(wakeTimer);
+  updateSchedule.stop();
+  updateChecker.cancel();
+  statePublisher.cancel();
   globalShortcut.unregisterAll();
   tray?.destroy();
   for (const alert of testAlerts.values()) alert.close();
@@ -1082,10 +1211,10 @@ else {
       ...bounds,
       minWidth: Math.min(940, bounds.width),
       minHeight: Math.min(640, bounds.height),
-      title: "Tin nhắn",
+      title: "Gom",
       titleBarStyle: "hiddenInset",
       trafficLightPosition: { x: 20, y: 21 },
-      backgroundColor: "#f9faf8",
+      backgroundColor: "#F7F7F2",
       webPreferences: {
         preload: join(__dirname, "preload.cjs"),
         sandbox: true,
@@ -1095,6 +1224,9 @@ else {
     });
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     win.webContents.on("will-navigate", (event) => event.preventDefault());
+    win.webContents.on("did-start-loading", () => {
+      accountEditorOpen = false;
+    });
     ipcMain.on("provider-notification-click", (event) => {
       if (closing || event.senderFrame !== event.sender.mainFrame) return;
       const provider =
@@ -1130,6 +1262,24 @@ else {
         case "activate":
           if (findAccount(arg)) activate(arg);
           return;
+        case "activate-provider":
+          if (
+            arg &&
+            typeof arg === "object" &&
+            !Array.isArray(arg) &&
+            validProviderId(arg.provider) &&
+            (arg.focusPage === undefined || typeof arg.focusPage === "boolean")
+          )
+            activateProvider(arg.provider, arg.focusPage);
+          return;
+        case "navigation-menu":
+          showNavigationMenu();
+          return;
+        case "account-editor":
+          if (typeof arg !== "boolean") return;
+          accountEditorOpen = arg;
+          if (arg) showSettings();
+          return;
         case "toggle-sidebar":
           state.collapsed = !state.collapsed;
           layout();
@@ -1138,6 +1288,7 @@ else {
           return;
         case "sidebar-width":
           if (typeof arg !== "number" || !Number.isFinite(arg)) return;
+          if (state.presentation.sidebarWidth === sidebarWidth(arg)) return;
           state.presentation.sidebarWidth = sidebarWidth(arg);
           layout();
           publish();
@@ -1146,6 +1297,10 @@ else {
         case "theme":
           if (!["platform", "system", "light", "dark"].includes(arg)) return;
           state.presentation.theme = arg;
+          if (arg === "platform") {
+            const active = views.peek(state.active);
+            if (active) void detect(state.active, active.webContents, true);
+          }
           await persist();
           return;
         case "pin-account":
@@ -1170,6 +1325,20 @@ else {
         case "settings":
           showSettings();
           return;
+        case "updates-check":
+          await updateChecker.check();
+          return;
+        case "updates-download": {
+          const update = updateChecker.snapshot();
+          if (update.phase !== "available" || !update.releaseUrl) return;
+          // Only the checker can supply this fixed-repository HTTPS release URL.
+          await shell.openExternal(update.releaseUrl).catch(() => {
+            state.notice =
+              "Chưa mở được trình duyệt. Anh thử lại nút Tải bản mới.";
+            publish();
+          });
+          return;
+        }
         case "reload":
           reloadProvider(state.active, true);
           return;
@@ -1187,7 +1356,10 @@ else {
             return;
           if (arg.key === "paused") state.preferences.paused = arg.value;
           else if (arg.key === "shortcut") configureShortcut(arg.value);
-          else if (arg.key === "openAtLogin" && app.isPackaged) {
+          else if (arg.key === "updateChecks") {
+            state.preferences.updateChecks = arg.value;
+            updateSchedule.configure(app.isPackaged && arg.value);
+          } else if (arg.key === "openAtLogin" && app.isPackaged) {
             try {
               app.setLoginItemSettings({ openAtLogin: arg.value });
               state.openAtLogin = app.getLoginItemSettings().openAtLogin;
@@ -1196,7 +1368,9 @@ else {
                 "Chưa đổi được chạy cùng macOS. Anh kiểm tra mục Đăng nhập trong Cài đặt hệ thống.";
             }
           } else return;
-          await persist();
+          // A rejected OS preference can leave state unchanged while the native
+          // checkbox has already toggled. Acknowledge with authoritative state.
+          await persist(true);
           return;
         }
         case "notification":
@@ -1248,12 +1422,18 @@ else {
           throw new Error("invalid-command");
       }
     });
+    app.setAboutPanelOptions({
+      applicationName: "Gom",
+      applicationVersion: app.getVersion(),
+      copyright: "Trò chuyện, gọn một nơi.",
+    });
     Menu.setApplicationMenu(
       Menu.buildFromTemplate([
         {
-          label: app.name,
+          label: "Gom",
           submenu: [
-            { role: "about" },
+            { role: "about", label: "Giới thiệu Gom" },
+            { label: "Kiểm tra cập nhật…", click: showUpdates },
             { type: "separator" },
             {
               label: "Tài khoản & cài đặt",
@@ -1261,7 +1441,7 @@ else {
               click: showSettings,
             },
             { type: "separator" },
-            { role: "quit" },
+            { role: "quit", label: "Thoát Gom" },
           ],
         },
         { role: "editMenu" },
@@ -1273,7 +1453,7 @@ else {
               accelerator: "CmdOrCtrl+K",
               click: () => win.webContents.send("command-toggle"),
             },
-            ...(Object.keys(PROVIDERS) as ProviderId[]).map((id, i) => ({
+            ...PROVIDER_ORDER.map((id, i) => ({
               label: PROVIDERS[id].label,
               accelerator: "CmdOrCtrl+" + (i + 1),
               click: () => {
@@ -1342,13 +1522,16 @@ else {
     configureShortcut(state.preferences.shortcut);
     powerMonitor.on("suspend", () => {
       sleeping = true;
+      updateSchedule.suspend();
     });
     powerMonitor.on("resume", () => {
       sleeping = false;
+      updateSchedule.resume();
       clearTimeout(wakeTimer);
       wakeTimer = setTimeout(tick, 1200);
     });
     poll = setInterval(tick, 4000);
+    updateSchedule.configure(app.isPackaged && state.preferences.updateChecks);
     tick();
   });
 }

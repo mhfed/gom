@@ -1,0 +1,146 @@
+{
+  "checkedAt": "2026-10-26T08:26:37.896Z",
+  "scope": "Unauthenticated native feasibility only; not a production connector or performance benchmark",
+  "dependencies": {
+    "tdl": "8.1.0",
+    "prebuilt-tdlib": "0.1008069.0"
+  },
+  "tdlib": {
+    "commit": "027780b87a66a2a0e69db644e812362bb300f1e1",
+    "version": "1.8.69"
+  },
+  "packageIntegrity": {
+    "tdl": {
+      "version": "8.1.0",
+      "resolved": "https://registry.npmjs.org/tdl/-/tdl-8.1.0.tgz",
+      "integrity": "sha512-idpw60gjJdiJALQg0+6UbxtJTMxVhzZAgCO6QzL81gqBYCkEFjm9zM9HwTTQGeOaAavw4yRHymR68yUUiCoKrA=="
+    },
+    "prebuilt-tdlib": {
+      "version": "0.1008069.0",
+      "resolved": "https://registry.npmjs.org/prebuilt-tdlib/-/prebuilt-tdlib-0.1008069.0.tgz",
+      "integrity": "sha512-7EJ1lmFevQB3REirvrIrZzYaKdxztvCkL+37ocgeG6XVi6+IQ2JZm9Rkzhl0IiTUJ/8wYLj95NMjZqU4X3MlJA=="
+    },
+    "@prebuilt-tdlib/darwin-arm64": {
+      "version": "0.1008069.0",
+      "resolved": "https://registry.npmjs.org/@prebuilt-tdlib/darwin-arm64/-/darwin-arm64-0.1008069.0.tgz",
+      "integrity": "sha512-PYOdN/ySXep3my+UhJ6ZCw3HNU6hl4fBbtQklv+Jsnl1U/ry+eQCS4/LJVvysIdTUa4DhvSUPSf+lQBPt5tJZg=="
+    }
+  },
+  "binarySha256": {
+    "addon": "2e37b77efc9e636aa3d63b9c01f85f2c09997bc0732324efaf9a1f25415e1056",
+    "tdjson": "5f92b5d4f44926ba24419d481692dfde2edc6e45e8292cb1b50371567d7d4ada"
+  },
+  "dependencyInstallationIsExternalToProbe": true,
+  "fixtureRoot": "/var/folders/5y/8zr17ybs2bs6by5lthtf9bc00000gp/T/tin-nhan-telegram-smoke-mZE6EL",
+  "exit": {
+    "code": 0,
+    "signal": null
+  },
+  "result": {
+    "pass": true,
+    "appVersions": {
+      "node": "24.22.0",
+      "acorn": "8.18.0",
+      "ada": "4.0.0",
+      "amaro": "1.1.11",
+      "ares": "1.34.8",
+      "brotli": "1.2.0",
+      "cldr": "48.0",
+      "icu": "78.2",
+      "llhttp": "9.4.3",
+      "merve": "1.2.2",
+      "modules": "150",
+      "napi": "10",
+      "nbytes": "0.1.4",
+      "ncrypto": "0.0.1",
+      "nghttp2": "1.70.0",
+      "nghttp3": "",
+      "ngtcp2": "",
+      "openssl": "0.0.0",
+      "simdjson": "4.6.11",
+      "simdutf": "7.7.0",
+      "sqlite": "3.53.4",
+      "tz": "2026e",
+      "undici": "7.29.1",
+      "unicode": "17.0",
+      "uv": "1.52.1",
+      "uvwasi": "0.0.23",
+      "v8": "15.6.75.19-electron.0",
+      "zlib": "1.3.2.1-motley",
+      "zstd": "1.6.0",
+      "electron": "45.0.0",
+      "chrome": "156.0.8078.48"
+    },
+    "isolatedUserData": true,
+    "workerExitCode": 0,
+    "worker": {
+      "pass": true,
+      "versions": {
+        "node": "24.22.0",
+        "acorn": "8.18.0",
+        "ada": "4.0.0",
+        "amaro": "1.1.11",
+        "ares": "1.34.8",
+        "brotli": "1.2.0",
+        "cldr": "48.0",
+        "icu": "78.2",
+        "llhttp": "9.4.3",
+        "merve": "1.2.2",
+        "modules": "150",
+        "napi": "10",
+        "nbytes": "0.1.4",
+        "ncrypto": "0.0.1",
+        "nghttp2": "1.70.0",
+        "nghttp3": "",
+        "ngtcp2": "",
+        "openssl": "0.0.0",
+        "simdjson": "4.6.11",
+        "simdutf": "7.7.0",
+        "sqlite": "3.53.4",
+        "tz": "2026e",
+        "undici": "7.29.1",
+        "unicode": "17.0",
+        "uv": "1.52.1",
+        "uvwasi": "0.0.23",
+        "v8": "15.6.75.19-electron.0",
+        "zlib": "1.3.2.1-motley",
+        "zstd": "1.6.0",
+        "electron": "45.0.0",
+        "chrome": "156.0.8078.48"
+      },
+      "arch": "arm64",
+      "platform": "darwin",
+      "tdlibVersion": "1.8.69",
+      "nativeLoadMs": 16.5065,
+      "totalMs": 22.85925,
+      "clientCount": 2,
+      "authStates": [
+        [
+          "authorizationStateWaitTdlibParameters",
+          "authorizationStateClosing",
+          "authorizationStateClosed"
+        ],
+        [
+          "authorizationStateWaitTdlibParameters",
+          "authorizationStateClosing",
+          "authorizationStateClosed"
+        ]
+      ],
+      "requests": [
+        "getAuthorizationState",
+        "getAuthorizationState",
+        "getOption",
+        "close",
+        "close"
+      ],
+      "clientErrors": [],
+      "initializedWithParameters": false,
+      "credentialsProvided": false,
+      "authenticated": false,
+      "accountOrMessageRequests": false,
+      "exitMode": "parent-acknowledged-exit-after-all-clients-closed"
+    },
+    "workerStderr": ""
+  },
+  "stderr": ""
+}

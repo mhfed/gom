@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, mkdir, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 const root = await mkdtemp(join(tmpdir(), "tin-nhan-05-"));
 const bootstrap = join(root, "bootstrap.cjs");
 await writeFile(
@@ -30,7 +31,9 @@ async function quit() {
   await exited;
   client = null;
 }
-const out = "../shell-05-check";
+const out = fileURLToPath(
+  new URL("../outputs/shell-05-check", import.meta.url),
+);
 async function native() {
   return client.evaluate(({ BrowserWindow }) =>
     BrowserWindow.getAllWindows()[0].contentView.children.map((v) => ({

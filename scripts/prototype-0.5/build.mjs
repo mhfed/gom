@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 const source = dirname(fileURLToPath(import.meta.url));
-const target = resolve(source, "../../../../outputs/TinNhan-0.5-prototype");
+const target = resolve(source, "../../outputs/TinNhan-0.5-prototype");
 await mkdir(target, { recursive: true });
 let html = await readFile(join(source, "index.html"), "utf8");
 let js = await readFile(join(source, "app.js"), "utf8");

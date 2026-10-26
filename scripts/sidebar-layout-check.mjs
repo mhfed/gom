@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+const output = fileURLToPath(
+  new URL("../outputs/sidebar-layout-check", import.meta.url),
+);
 const root = await mkdtemp(join(tmpdir(), "tin-nhan-sidebar-"));
 const bootstrap = join(root, "bootstrap.cjs");
 await writeFile(
@@ -33,7 +37,7 @@ try {
   await page.waitForFunction(
     () => document.documentElement.dataset.theme === "dark",
   );
-  await mkdir("../sidebar-layout-check", { recursive: true });
+  await mkdir(output, { recursive: true });
   for (const [width, height] of [
     [940, 640],
     [1024, 720],
@@ -116,7 +120,10 @@ try {
       );
       if (width === 1024 || width === 940)
         await page.screenshot({
-          path: `../sidebar-layout-check/${width}-${collapsed ? "collapsed" : "expanded"}.png`,
+          path: join(
+            output,
+            `${width}-${collapsed ? "collapsed" : "expanded"}.png`,
+          ),
         });
     }
   console.log(

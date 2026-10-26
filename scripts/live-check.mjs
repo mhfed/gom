@@ -4,7 +4,7 @@ import { mkdir, writeFile, readFile } from "node:fs/promises";
 const executablePath =
   process.env.TIN_NHAN_APP ||
   process.cwd() +
-    "/out-release/Tin Nhan-darwin-arm64/Tin Nhan.app/Contents/MacOS/Tin Nhan";
+    "/out-release/Gom-darwin-arm64/Gom.app/Contents/MacOS/Gom";
 let client, page;
 async function launch() {
   client = await _electron.launch({ executablePath, timeout: 30000 });

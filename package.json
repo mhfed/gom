@@ -1,10 +1,10 @@
 {
   "name": "tin-nhan-desktop",
   "type": "module",
-  "productName": "Tin Nhan",
-  "version": "0.5.0",
+  "productName": "Gom",
+  "version": "0.6.0",
   "description": "Không gian nhắn tin cá nhân cho macOS",
-  "author": "Tin Nhan",
+  "author": "Gom",
   "license": "UNLICENSED",
   "main": "dist/main.cjs",
   "scripts": {
@@ -19,13 +19,18 @@
     "format": "prettier --write src tests scripts forge.config.cjs",
     "test:desktop": "npm run build && node scripts/desktop-check.mjs",
     "test:multi-account": "npm run build && node scripts/multi-account-check.mjs",
-    "test:shell": "npm run build && node scripts/shell-05-check.mjs && node scripts/command-focus-check.mjs"
+    "test:shell": "npm run build && node scripts/native-tabs-check.mjs && node scripts/command-focus-check.mjs",
+    "test:performance": "node scripts/performance-check.mjs",
+    "test:renderer-performance": "node scripts/renderer-performance-check.mjs",
+    "test:ime": "node scripts/ime-check.mjs",
+    "test:updates": "npm run build && node scripts/manual-updates-check.mjs"
   },
   "config": {
     "forge": "./forge.config.cjs"
   },
   "devDependencies": {
     "@electron-forge/cli": "8.0.1",
+    "@electron-forge/maker-dmg": "8.0.1",
     "@electron-forge/maker-zip": "8.0.1",
     "@types/node": "24.19.2",
     "electron": "45.0.0",

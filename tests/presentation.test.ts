@@ -4,7 +4,7 @@ import {
   normalizePresentation,
   sidebarWidth,
 } from "../src/main/presentation.ts";
-import { providerBounds, layoutViews } from "../src/main/layout.ts";
+import { layoutViews } from "../src/main/layout.ts";
 
 test("legacy settings gain presentation defaults without modifying account IDs", () => {
   const ids = ["zalo", "messenger", "telegram", "acc_custom"];
@@ -40,14 +40,7 @@ test("presentation clamps finite widths and rejects malformed theme/pins", () =>
     { sidebarWidth: 250, theme: "platform", pinned: [] },
   );
 });
-test("custom sidebar bounds and overlays preserve native viewport while hiding every provider", () => {
-  assert.deepEqual(providerBounds(1024, 720, false, 280), {
-    x: 280,
-    y: 76,
-    width: 744,
-    height: 644,
-  });
-  assert.equal(providerBounds(1024, 720, true, 280).x, 72);
+test("settings and command overlays hide all provider views while retaining their full viewport", () => {
   const records = ["zalo", "telegram"].map((id) => ({
     id,
     visible: true,
@@ -67,13 +60,30 @@ test("custom sidebar bounds and overlays preserve native viewport while hiding e
         },
       ] as const,
   );
-  layoutViews(views, 1024, 720, false, "zalo", "command", 280);
+  for (const panel of ["settings", "command"]) {
+    layoutViews(views, 1024, 720, "zalo", "service");
+    assert.deepEqual(
+      records.map((r) => r.visible),
+      [true, false],
+    );
+    layoutViews(views, 1024, 720, "zalo", panel);
+    assert.ok(records.every((r) => !r.visible));
+    for (const record of records)
+      assert.deepEqual(record.bounds, {
+        x: 0,
+        y: 64,
+        width: 1024,
+        height: 656,
+      });
+  }
+  layoutViews(views, 1024, 720, "telegram", "service");
+  assert.deepEqual(
+    records.map((r) => r.visible),
+    [false, true],
+  );
+  layoutViews(views, 1024, 720, "missing-account", "service");
   assert.ok(records.every((r) => !r.visible));
-  assert.ok(
-    records.every(
-      (r) =>
-        JSON.stringify(r.bounds) ===
-        JSON.stringify({ x: 280, y: 76, width: 744, height: 644 }),
-    ),
+  assert.doesNotThrow(() =>
+    layoutViews([], 1024, 720, "missing-account", "service"),
   );
 });

@@ -1,11 +1,11 @@
 import { createCommandPalette } from "./command.ts";
 import {
   PROVIDERS,
+  PROVIDER_ORDER,
   type Account,
   type AccountId,
   type AccountResult,
   type AppState,
-  type UnreadInfo,
   type DesktopBridge,
   type ProviderId,
   type NotificationChoice,
@@ -36,18 +36,20 @@ let accountFilter = "all";
 let signature = "";
 let editing: AccountId | null = null;
 let lastPanel = "";
-let lastActive = "";
-let lastCollapsed: boolean | undefined;
-function unreadLabel(info: UnreadInfo) {
-  if (info.count === null) return "Chưa có số chưa đọc từ nền tảng";
-  return `${info.approximate ? "Ít nhất " : ""}${info.count} ${info.kind === "conversations" ? "cuộc trò chuyện" : "tin nhắn"} chưa đọc${info.source === "loaded" ? " trong danh sách đã tải" : ""}`;
+function setProperty<T, K extends keyof T>(node: T, key: K, value: T[K]) {
+  if (node[key] !== value) node[key] = value;
 }
-function unreadText(info: UnreadInfo) {
-  return info.count === null
-    ? "—"
-    : info.count > 99
-      ? "99+"
-      : String(info.count) + (info.approximate ? "+" : "");
+function setAttribute(node: Element, name: string, value: string) {
+  if (node.getAttribute(name) !== value) node.setAttribute(name, value);
+}
+function setClass(node: Element, name: string, enabled: boolean) {
+  if (node.classList.contains(name) !== enabled)
+    node.classList.toggle(name, enabled);
+}
+function setStyle(node: HTMLElement, name: string, value = "") {
+  if (node.style.getPropertyValue(name) === value) return;
+  if (value) node.style.setProperty(name, value);
+  else node.style.removeProperty(name);
 }
 function nameOf(a: Account) {
   return `${PROVIDERS[a.provider].label} · ${a.name}`;
@@ -96,21 +98,6 @@ function iconAction(name: string, title: string, click: () => void) {
   b.append(icon(name));
   return b;
 }
-function sidebarAccount(a: Account) {
-  const b = action(
-    "",
-    "",
-    () => void window.desktop.activate(a.id),
-    "account-button",
-  );
-  b.id = "provider-" + a.id;
-  const badge = element("span", "unread", "—");
-  badge.setAttribute("aria-hidden", "true");
-  const dot = element("i", "dot");
-  dot.setAttribute("aria-hidden", "true");
-  b.append(avatar(a), element("span", "provider-label", a.name), badge, dot);
-  return b;
-}
 function applyAccountFilter() {
   for (const row of document.querySelectorAll<HTMLElement>(
     "#account-manager [data-provider]",
@@ -126,9 +113,73 @@ function applyAccountFilter() {
 function showTab(tab: string) {
   activeTab = tab;
   for (const b of document.querySelectorAll<HTMLElement>("[data-tab]"))
-    b.setAttribute("aria-pressed", String(b.dataset.tab === tab));
+    setAttribute(b, "aria-pressed", String(b.dataset.tab === tab));
   for (const pane of document.querySelectorAll<HTMLElement>(".settings-pane"))
-    pane.hidden = pane.id !== "tab-" + tab;
+    setProperty(pane, "hidden", pane.id !== "tab-" + tab);
+}
+
+let updateCheckedAt: number | null | undefined;
+function renderUpdates(state: AppState) {
+  const updates = state.updates;
+  const available = updates?.phase === "available";
+  setClass($("settings"), "has-update", available);
+  setProperty(
+    $("settings"),
+    "title",
+    available ? "Cài đặt · Có bản cập nhật mới" : "Cài đặt (⌘,)",
+  );
+  setAttribute(
+    $("settings"),
+    "aria-label",
+    available ? "Cài đặt · Có bản cập nhật mới" : "Cài đặt",
+  );
+  setProperty(
+    $<HTMLInputElement>("auto-check-updates"),
+    "checked",
+    state.preferences.updateChecks !== false,
+  );
+  setProperty(
+    $("update-current"),
+    "textContent",
+    updates?.currentVersion || state.version,
+  );
+  if (!updates) return;
+  setProperty($("update-latest-row"), "hidden", !updates.latestVersion);
+  setProperty($("update-latest"), "textContent", updates.latestVersion || "");
+  setProperty($("update-message"), "textContent", updates.message);
+  setAttribute($("update-message"), "data-phase", updates.phase);
+  if (updateCheckedAt !== updates.checkedAt) {
+    updateCheckedAt = updates.checkedAt;
+    setProperty(
+      $("update-checked"),
+      "textContent",
+      updates.checkedAt === null
+        ? "Chưa kiểm tra bản mới."
+        : "Lần kiểm tra gần nhất: " +
+            new Date(updates.checkedAt).toLocaleString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+    );
+  }
+  const checking = updates.phase === "checking";
+  setProperty($<HTMLButtonElement>("check-updates"), "disabled", checking);
+  setProperty(
+    $("check-updates"),
+    "textContent",
+    checking ? "Đang kiểm tra…" : "Kiểm tra cập nhật",
+  );
+  setProperty(
+    $("download-update"),
+    "hidden",
+    !available || !updates.releaseUrl,
+  );
+  const notes = updates.releaseNotes.slice(0, 12000);
+  setProperty($("update-notes-container"), "hidden", !notes);
+  setProperty($("update-notes"), "textContent", notes);
 }
 
 async function accountAction(promise: Promise<AccountResult>) {
@@ -143,7 +194,7 @@ async function accountAction(promise: Promise<AccountResult>) {
   }
 }
 async function openEditor(a?: Account, provider?: ProviderId) {
-  await window.desktop.settings();
+  await window.desktop.accountEditor(true);
   render(await window.desktop.state());
   editing = a?.id ?? null;
   $("account-editor-title").textContent = a
@@ -173,46 +224,14 @@ function rebuildAccounts(state: AppState) {
   const openMenus = [
     ...document.querySelectorAll<HTMLDetailsElement>(".more-menu[open]"),
   ].map((e) => e.dataset.accountId);
-  $("providers").replaceChildren();
   $("account-manager").replaceChildren();
   $("notification-providers").replaceChildren();
   $("archived-accounts").replaceChildren();
-  const pinned = state.accounts.filter(
-    (a) => !a.archived && state.presentation.pinned.includes(a.id),
-  );
-  if (pinned.length) {
-    const group = element("div", "provider-group pinned-group");
-    const heading = element("div", "provider-group-heading");
-    heading.append(
-      icon("pin"),
-      element("span", "provider-group-label", "ĐÃ GHIM"),
-    );
-    group.append(heading, ...pinned.map(sidebarAccount));
-    $("providers").append(group);
-  }
-  for (const provider of Object.keys(PROVIDERS) as ProviderId[]) {
-    const group = element("div", "provider-group");
-    const heading = element("div", "provider-group-heading");
-    const logo = element("img", "provider-group-logo");
-    logo.src = "logos/" + icons[provider];
-    logo.alt = PROVIDERS[provider].label;
-    heading.append(
-      logo,
-      element("span", "provider-group-label", PROVIDERS[provider].label),
-      action(
-        "+",
-        "Thêm tài khoản " + PROVIDERS[provider].label,
-        () => void openEditor(undefined, provider),
-        "group-add",
-      ),
-    );
-    group.append(heading);
+  for (const provider of PROVIDER_ORDER) {
     const peers = state.accounts.filter(
       (a) => a.provider === provider && !a.archived,
     );
     for (const [index, a] of peers.entries()) {
-      if (!state.presentation.pinned.includes(a.id))
-        group.append(sidebarAccount(a));
       const row = element("div", "account-manage-row");
       row.dataset.accountId = a.id;
       row.dataset.provider = provider;
@@ -275,7 +294,7 @@ function rebuildAccounts(state: AppState) {
       down.dataset.boundary = String(index === peers.length - 1);
       const hide = action(
         "Gỡ",
-        "Gỡ " + nameOf(a) + " khỏi sidebar",
+        "Gỡ " + nameOf(a) + " khỏi danh sách",
         () => void accountAction(window.desktop.archiveAccount(a.id)),
       );
       hide.dataset.last = String(
@@ -318,12 +337,11 @@ function rebuildAccounts(state: AppState) {
       nrow.append(nlabel, select, test);
       $("notification-providers").append(nrow);
     }
-    if (group.querySelector(".account-button")) $("providers").append(group);
   }
   const archived = state.accounts.filter((a) => a.archived);
   if (archived.length) {
     $("archived-accounts").append(
-      element("h4", "", "Đã gỡ khỏi sidebar"),
+      element("h4", "", "Đã gỡ khỏi danh sách"),
       element(
         "p",
         "hint",
@@ -367,20 +385,122 @@ function rebuildAccounts(state: AppState) {
   nextFocus?.focus({ preventScroll: true });
   return true;
 }
+let pickerSignature = "";
+function renderToolbar(state: AppState, active: Account) {
+  for (const [index, provider] of PROVIDER_ORDER.entries()) {
+    const tab = $("platform-" + provider);
+    const selected = active.provider === provider;
+    const peers = state.accounts.filter(
+      (a) => a.provider === provider && !a.archived,
+    );
+    const unread = peers.some((a) => (state.unread[a.id]?.count ?? 0) > 0);
+    setAttribute(tab, "aria-selected", String(selected));
+    setProperty(tab, "tabIndex", selected ? 0 : -1);
+    setProperty(
+      tab.querySelector<HTMLElement>(".platform-unread")!,
+      "hidden",
+      !unread,
+    );
+    setProperty(
+      tab,
+      "title",
+      `${PROVIDERS[provider].label} (⌘${index + 1})${unread ? " · Có tin chưa đọc" : ""}`,
+    );
+    setAttribute(
+      tab,
+      "aria-label",
+      `${PROVIDERS[provider].label}${unread ? " · Có tin chưa đọc" : ""}`,
+    );
+  }
+  const peers = state.accounts.filter(
+    (a) => a.provider === active.provider && !a.archived,
+  );
+  const key = JSON.stringify(peers.map((a) => [a.id, a.name]));
+  const select = $<HTMLSelectElement>("account-select");
+  if (key !== pickerSignature) {
+    pickerSignature = key;
+    select.replaceChildren(
+      ...peers.map((a) => {
+        const option = element("option", "", a.name);
+        option.value = a.id;
+        return option;
+      }),
+    );
+  }
+  setProperty(select, "value", active.id);
+  setProperty(
+    select,
+    "title",
+    nameOf(active) + " · " + labels[state.statuses[active.id]],
+  );
+  setProperty(
+    $("active-account-status"),
+    "className",
+    "account-status dot " + state.statuses[active.id],
+  );
+  setProperty(
+    $("add-account-toolbar"),
+    "title",
+    "Thêm tài khoản " + PROVIDERS[active.provider].label,
+  );
+}
+async function selectProvider(provider: ProviderId, focusPage = true) {
+  const hasAccount = current.accounts.some(
+    (a) => a.provider === provider && !a.archived,
+  );
+  if (
+    !hasAccount &&
+    !current.accountBusy &&
+    !current.importing &&
+    !current.catalogWarning
+  )
+    await openEditor(undefined, provider);
+  else await window.desktop.activateProvider(provider, focusPage);
+}
+for (const [index, provider] of PROVIDER_ORDER.entries()) {
+  const tab = $("platform-" + provider);
+  tab.onclick = () => void selectProvider(provider);
+  tab.onkeydown = (event) => {
+    if (event.isComposing || event.altKey || event.metaKey || event.ctrlKey)
+      return;
+    const next =
+      event.key === "ArrowRight"
+        ? (index + 1) % PROVIDER_ORDER.length
+        : event.key === "ArrowLeft"
+          ? (index + PROVIDER_ORDER.length - 1) % PROVIDER_ORDER.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? PROVIDER_ORDER.length - 1
+              : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    $("platform-" + PROVIDER_ORDER[next]).focus();
+    void selectProvider(PROVIDER_ORDER[next], false);
+  };
+}
+$("account-select").onchange = (event) =>
+  void window.desktop.activate((event.target as HTMLSelectElement).value);
+$("navigation-menu").onclick = () => void window.desktop.navigationMenu();
 function render(state: AppState) {
+  const previous = current;
   const active = state.accounts.find((a) => a.id === state.active)!;
   current = state;
   const rebuilt = rebuildAccounts(state);
+  const settings = state.panel === "settings";
+  const refreshSettings = settings || !previous || rebuilt;
   const root = document.documentElement,
     choice = state.presentation.theme;
   const theme = choice === "platform" ? state.themes[state.active] : null;
-  root.dataset.theme =
+  const mode =
     theme?.mode ||
     (choice === "light" || choice === "dark"
       ? choice
       : matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light");
+  const themeChanged = root.dataset.theme !== mode;
+  setAttribute(root, "data-theme", mode);
   for (const [key, value] of Object.entries({
     cream: theme?.background,
     paper: theme?.surface,
@@ -388,183 +508,231 @@ function render(state: AppState) {
     ink: theme?.text,
     muted: theme?.muted,
   }))
-    if (value) root.style.setProperty("--" + key, value);
-    else root.style.removeProperty("--" + key);
-  root.style.setProperty(
-    "--sidebar-width",
-    state.presentation.sidebarWidth + "px",
-  );
-  $("sidebar-resizer").setAttribute(
-    "aria-valuenow",
-    String(state.presentation.sidebarWidth),
-  );
-  $("sidebar-resizer").tabIndex = state.collapsed ? -1 : 0;
-  $<HTMLSelectElement>("theme-mode").value = choice;
-  for (const b of document.querySelectorAll<HTMLElement>("[data-theme-choice]"))
-    b.setAttribute("aria-pressed", String(b.dataset.themeChoice === choice));
-  $<HTMLInputElement>("compact-setting").checked = state.collapsed;
-  $("theme-toggle").replaceChildren(
-    icon(root.dataset.theme === "dark" ? "sun" : "moon"),
-  );
-  $("theme-toggle").title =
-    root.dataset.theme === "dark" ? "Chuyển sang sáng" : "Chuyển sang tối";
-  document.body.classList.toggle("collapsed", state.collapsed);
-  const toggle = $("sidebar-toggle");
-  toggle.setAttribute("aria-expanded", String(!state.collapsed));
-  toggle.setAttribute(
-    "aria-label",
-    state.collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar",
-  );
-  toggle.title = toggle.getAttribute("aria-label")!;
-  for (const a of state.accounts.filter((a) => !a.archived)) {
-    const b = $("provider-" + a.id);
-    b.classList.toggle(
-      "active",
-      state.active === a.id && state.panel === "service",
-    );
-    const info = state.unread[a.id],
-      badge = b.querySelector<HTMLElement>(".unread")!;
-    badge.textContent = unreadText(info);
-    badge.classList.toggle("unknown", info.count === null);
-    badge.hidden = info.count === 0;
-    b.title = nameOf(a) + " · " + unreadLabel(info);
-    b.setAttribute("aria-label", b.title);
-    b.querySelector("i")!.className = "dot " + state.statuses[a.id];
-    b.setAttribute(
-      "aria-current",
-      state.active === a.id && state.panel === "service" ? "page" : "false",
-    );
-    const accountStatus = $("account-status-" + a.id);
-    accountStatus.textContent =
-      state.statuses[a.id] === "authenticated"
-        ? "● Đã kết nối"
-        : state.statuses[a.id] === "needs-login"
-          ? "Cần đăng nhập"
-          : state.connections[a.id].phase === "offline"
-            ? "Ngoại tuyến"
-            : labels[state.statuses[a.id]].split(" · ")[0];
-    accountStatus.classList.toggle(
-      "connected",
-      state.statuses[a.id] === "authenticated",
-    );
-    $<HTMLSelectElement>("notification-" + a.id).value =
-      state.preferences.notifications[a.id];
-    $<HTMLButtonElement>("test-" + a.id).disabled =
-      state.preferences.paused ||
-      state.preferences.notifications[a.id] !== "allow";
+    setStyle(root, "--" + key, value);
+  if (refreshSettings) {
+    setProperty($<HTMLSelectElement>("theme-mode"), "value", choice);
+    for (const b of document.querySelectorAll<HTMLElement>(
+      "[data-theme-choice]",
+    ))
+      setAttribute(b, "aria-pressed", String(b.dataset.themeChoice === choice));
   }
+  if (themeChanged || !previous)
+    $("theme-toggle").replaceChildren(icon(mode === "dark" ? "sun" : "moon"));
+  setProperty(
+    $("theme-toggle"),
+    "title",
+    mode === "dark" ? "Chuyển sang sáng" : "Chuyển sang tối",
+  );
+  renderToolbar(state, active);
+  renderUpdates(state);
+  for (const a of state.accounts.filter((a) => !a.archived)) {
+    if (refreshSettings) {
+      const accountStatus = $("account-status-" + a.id);
+      setProperty(
+        accountStatus,
+        "textContent",
+        state.statuses[a.id] === "authenticated"
+          ? "● Đã kết nối"
+          : state.statuses[a.id] === "needs-login"
+            ? "Cần đăng nhập"
+            : state.connections[a.id].phase === "offline"
+              ? "Ngoại tuyến"
+              : labels[state.statuses[a.id]].split(" · ")[0],
+      );
+      setClass(
+        accountStatus,
+        "connected",
+        state.statuses[a.id] === "authenticated",
+      );
+      setProperty(
+        $<HTMLSelectElement>("notification-" + a.id),
+        "value",
+        state.preferences.notifications[a.id],
+      );
+      setProperty(
+        $<HTMLButtonElement>("test-" + a.id),
+        "disabled",
+        state.preferences.paused ||
+          state.preferences.notifications[a.id] !== "allow",
+      );
+    }
+  }
+  setClass($("settings"), "active", settings);
+  setProperty(
+    $("account-count"),
+    "textContent",
+    String(state.accounts.filter((a) => !a.archived).length),
+  );
+  if (refreshSettings)
+    setProperty(
+      $("connected-count"),
+      "textContent",
+      state.accounts.filter(
+        (a) => !a.archived && state.statuses[a.id] === "authenticated",
+      ).length + " tài khoản đã kết nối",
+    );
+  const c = state.connections[state.active];
+  setProperty(
+    $("subtitle"),
+    "textContent",
+    settings
+      ? "Mỗi tài khoản một phiên riêng trên máy"
+      : c.phase === "offline"
+        ? "Máy đang ngoại tuyến · Phiên đăng nhập vẫn được giữ"
+        : c.phase === "error"
+          ? "Kết nối gián đoạn · Thử lại riêng tài khoản này"
+          : labels[state.statuses[state.active]],
+  );
+  const failed = !settings && !state.commandOpen && !!c.reason;
+  setProperty($("connection-panel"), "hidden", !failed);
+  if (failed) {
+    setProperty(
+      $("connection-title"),
+      "textContent",
+      c.reason === "crashed"
+        ? "Trang vừa dừng hoạt động."
+        : c.reason === "blocked"
+          ? "Liên kết chuyển hướng chưa được hỗ trợ."
+          : "Chưa kết nối được tài khoản.",
+    );
+    setProperty(
+      $("connection-detail"),
+      "textContent",
+      c.phase === "offline"
+        ? "Anh kết nối lại mạng; app sẽ kiểm tra lại khi có mạng."
+        : c.retryAt
+          ? "App đang tự thử lại có giới hạn. Các tài khoản khác vẫn hoạt động bình thường."
+          : "Anh có thể thử lại hoặc về trang đầu. App không xóa phiên đăng nhập.",
+    );
+  }
+  if (refreshSettings) {
+    setProperty(
+      $<HTMLInputElement>("open-at-login"),
+      "checked",
+      state.openAtLogin,
+    );
+    setProperty(
+      $<HTMLInputElement>("open-at-login"),
+      "disabled",
+      !state.startupAvailable,
+    );
+    setProperty(
+      $("startup-hint"),
+      "textContent",
+      state.startupAvailable
+        ? "Có thể quản lý thêm trong Cài đặt hệ thống → Cài đặt chung → Mục đăng nhập."
+        : "Tùy chọn này dùng trong bản app đã đóng gói.",
+    );
+    setProperty(
+      $<HTMLInputElement>("global-shortcut"),
+      "checked",
+      state.preferences.shortcut,
+    );
+    setProperty(
+      $<HTMLInputElement>("pause-notifications"),
+      "checked",
+      state.preferences.paused,
+    );
+    setProperty(
+      $("notification-status"),
+      "textContent",
+      state.notificationStatus,
+    );
+    setProperty($("notice"), "textContent", state.notice);
+    setProperty($("version"), "textContent", state.version);
+    const select = $<HTMLSelectElement>("profiles");
+    if (
+      JSON.stringify([...select.options].map((o) => o.value)) !==
+      JSON.stringify(state.profiles.map((p) => p.id))
+    )
+      select.replaceChildren(
+        ...state.profiles.map((p) => {
+          const o = element(
+            "option",
+            "",
+            p.email ? `${p.label} · ${p.email}` : p.label,
+          );
+          o.value = p.id;
+          return o;
+        }),
+      );
+    if (settings && lastPanel !== "settings" && active.provider === "messenger")
+      setProperty($<HTMLSelectElement>("messenger-target"), "value", active.id);
+    const button = $<HTMLButtonElement>("import");
+    setProperty(
+      button,
+      "disabled",
+      state.importing ||
+        state.accountBusy ||
+        !state.profiles.length ||
+        !$<HTMLSelectElement>("messenger-target").value,
+    );
+    setProperty(
+      button,
+      "textContent",
+      state.importing ? "Đang kiểm tra phiên…" : "Dùng phiên có sẵn",
+    );
+  }
+  setProperty($("settings-panel"), "hidden", !settings);
+  setProperty(
+    $("service-loading"),
+    "hidden",
+    settings || failed || state.commandOpen,
+  );
+  setProperty($("catalog-warning"), "textContent", state.catalogWarning);
+  setProperty($("catalog-warning"), "hidden", !state.catalogWarning);
   if (
     rebuilt ||
-    lastActive !== state.active ||
-    lastCollapsed !== state.collapsed
-  ) {
-    const selected = $("provider-" + state.active);
-    queueMicrotask(() => selected?.scrollIntoView({ block: "nearest" }));
-  }
-  lastActive = state.active;
-  lastCollapsed = state.collapsed;
-  const settings = state.panel === "settings";
-  $("title").textContent = settings ? "Không gian của anh" : nameOf(active);
-  $<HTMLImageElement>("header-logo").src = "logos/" + icons[active.provider];
-  $("header-logo").hidden = settings;
-  $("settings").classList.toggle("active", settings);
-  $("account-count").textContent = String(
-    state.accounts.filter((a) => !a.archived).length,
-  );
-  $("connected-count").textContent =
-    state.accounts.filter(
-      (a) => !a.archived && state.statuses[a.id] === "authenticated",
-    ).length + " tài khoản đã kết nối";
-  $("subtitle").textContent = settings
-    ? "Mỗi tài khoản một phiên riêng trên máy"
-    : labels[state.statuses[state.active]];
-  const c = state.connections[state.active];
-  if (!settings && c.phase === "offline")
-    $("subtitle").textContent =
-      "Máy đang ngoại tuyến · Phiên đăng nhập vẫn được giữ";
-  else if (!settings && c.phase === "error")
-    $("subtitle").textContent =
-      "Kết nối gián đoạn · Thử lại riêng tài khoản này";
-  $("back").toggleAttribute("disabled", !state.canGoBack || settings);
-  const failed = !settings && !state.commandOpen && !!c.reason;
-  $("connection-panel").hidden = !failed;
-  $("connection-title").textContent =
-    c.reason === "crashed"
-      ? "Trang vừa dừng hoạt động."
-      : c.reason === "blocked"
-        ? "Liên kết chuyển hướng chưa được hỗ trợ."
-        : "Chưa kết nối được tài khoản.";
-  $("connection-detail").textContent =
-    c.phase === "offline"
-      ? "Anh kết nối lại mạng; app sẽ kiểm tra lại khi có mạng."
-      : c.retryAt
-        ? "App đang tự thử lại có giới hạn. Các tài khoản khác vẫn hoạt động bình thường."
-        : "Anh có thể thử lại hoặc về trang đầu. App không xóa phiên đăng nhập.";
-  $<HTMLInputElement>("open-at-login").checked = state.openAtLogin;
-  $<HTMLInputElement>("open-at-login").disabled = !state.startupAvailable;
-  $("startup-hint").textContent = state.startupAvailable
-    ? "Có thể quản lý thêm trong Cài đặt hệ thống → Cài đặt chung → Mục đăng nhập."
-    : "Tùy chọn này dùng trong bản app đã đóng gói.";
-  $<HTMLInputElement>("global-shortcut").checked = state.preferences.shortcut;
-  $<HTMLInputElement>("pause-notifications").checked = state.preferences.paused;
-  $("notification-status").textContent = state.notificationStatus;
-  $("settings-panel").hidden = !settings;
-  $("service-loading").hidden = settings || failed || state.commandOpen;
-  $("catalog-warning").textContent = state.catalogWarning;
-  $("catalog-warning").hidden = !state.catalogWarning;
-  for (const b of document.querySelectorAll<HTMLButtonElement>(
-    ".account-actions button,#archived-accounts button,.group-add,#add-account-settings,#add-account-sidebar,#account-editor-save",
-  ))
-    b.disabled =
-      state.accountBusy ||
-      state.importing ||
-      !!state.catalogWarning ||
-      b.dataset.boundary === "true" ||
-      b.dataset.last === "true";
-  $("notice").textContent = state.notice;
-  $("version").textContent = state.version;
-  const select = $<HTMLSelectElement>("profiles");
-  if (
-    JSON.stringify([...select.options].map((o) => o.value)) !==
-    JSON.stringify(state.profiles.map((p) => p.id))
+    previous?.accountBusy !== state.accountBusy ||
+    previous?.importing !== state.importing ||
+    previous?.catalogWarning !== state.catalogWarning
   )
-    select.replaceChildren(
-      ...state.profiles.map((p) => {
-        const o = element(
-          "option",
-          "",
-          p.email ? `${p.label} · ${p.email}` : p.label,
-        );
-        o.value = p.id;
-        return o;
-      }),
-    );
-  if (settings && lastPanel !== "settings" && active.provider === "messenger")
-    $<HTMLSelectElement>("messenger-target").value = active.id;
+    for (const b of document.querySelectorAll<HTMLButtonElement>(
+      ".account-actions button,#archived-accounts button,#add-account-settings,#add-account-toolbar,#account-editor-save",
+    ))
+      setProperty(
+        b,
+        "disabled",
+        state.accountBusy ||
+          state.importing ||
+          !!state.catalogWarning ||
+          b.dataset.boundary === "true" ||
+          b.dataset.last === "true",
+      );
   lastPanel = state.panel;
-  const button = $<HTMLButtonElement>("import");
-  button.disabled =
-    state.importing ||
-    state.accountBusy ||
-    !state.profiles.length ||
-    !$<HTMLSelectElement>("messenger-target").value;
-  button.textContent = state.importing
-    ? "Đang kiểm tra phiên…"
-    : "Dùng phiên có sẵn";
   command.sync(state);
-  showTab(activeTab);
+  if (!previous) showTab(activeTab);
 }
-$("sidebar-toggle").onclick = () => void window.desktop.toggleSidebar();
-$("settings").onclick = () => void window.desktop.settings();
-$("reload").onclick = () => void window.desktop.reload();
-$("browser").onclick = () => void window.desktop.openBrowser();
+$("settings").onclick = () => {
+  if (current.updates?.phase === "available") showTab("updates");
+  void window.desktop.settings();
+};
+$("check-updates").onclick = () =>
+  void window.desktop.checkUpdates().catch(() => {
+    setProperty(
+      $("update-message"),
+      "textContent",
+      "Chưa kiểm tra được bản mới. Anh thử lại nhé.",
+    );
+  });
+$("download-update").onclick = () =>
+  void window.desktop.openUpdateDownload().catch(() => {
+    setProperty(
+      $("update-message"),
+      "textContent",
+      "Chưa mở được trang tải. Anh thử lại nhé.",
+    );
+  });
+$("auto-check-updates").onchange = (event) =>
+  void window.desktop.setPreference(
+    "updateChecks",
+    (event.target as HTMLInputElement).checked,
+  );
 $("import").onclick = () =>
   void window.desktop.importMessenger(
     $<HTMLSelectElement>("profiles").value,
     $<HTMLSelectElement>("messenger-target").value,
   );
-$("back").onclick = () => void window.desktop.back();
-$("home").onclick = () => void window.desktop.home();
 $("retry-connection").onclick = () => void window.desktop.reload();
 $("open-at-login").onchange = (e) =>
   void window.desktop.setPreference(
@@ -583,8 +751,9 @@ $("pause-notifications").onchange = (e) =>
   );
 $("notification-settings").onclick = () =>
   void window.desktop.notificationSettings();
-$("add-account-sidebar").onclick = () => void openEditor();
+$("add-account-toolbar").onclick = () => void openEditor();
 $("add-account-settings").onclick = () => void openEditor();
+$("account-editor").onclose = () => void window.desktop.accountEditor(false);
 $("account-editor-cancel").onclick = () =>
   $<HTMLDialogElement>("account-editor").close();
 $("account-form").onsubmit = async (event) => {
@@ -608,6 +777,7 @@ $("account-form").onsubmit = async (event) => {
     }
     const wasNew = !editing;
     $<HTMLDialogElement>("account-editor").close();
+    await window.desktop.accountEditor(false);
     if (wasNew && result.accountId)
       await window.desktop.activate(result.accountId);
   } catch {
@@ -631,6 +801,9 @@ function requestCommand() {
   void window.desktop.command(!current.commandOpen);
 }
 window.desktop.commandRequested(requestCommand);
+window.desktop.updatesRequested?.(() => {
+  if (!$<HTMLDialogElement>("account-editor").open) showTab("updates");
+});
 $("quick-switch").onclick = requestCommand;
 $("theme-toggle").onclick = () =>
   void window.desktop.setTheme(
@@ -650,50 +823,6 @@ for (const b of document.querySelectorAll<HTMLElement>("[data-filter]"))
     accountFilter = b.dataset.filter!;
     applyAccountFilter();
   };
-$("compact-setting").onchange = () => void window.desktop.toggleSidebar();
-$("reset-width").onclick = () => void window.desktop.setSidebarWidth(224);
-const resizer = $("sidebar-resizer");
-let resizing: number | null = null;
-let resizeFrame: number | null = null;
-let pendingWidth = 224;
-function scheduleWidth(width: number) {
-  pendingWidth = Math.max(200, Math.min(300, Math.round(width)));
-  if (resizeFrame === null)
-    resizeFrame = requestAnimationFrame(() => {
-      resizeFrame = null;
-      void window.desktop.setSidebarWidth(pendingWidth);
-    });
-}
-resizer.onpointerdown = (e) => {
-  if (e.button !== 0 || current.collapsed) return;
-  resizing = e.pointerId;
-  resizer.setPointerCapture(e.pointerId);
-  document.body.classList.add("resizing");
-  e.preventDefault();
-  resizer.focus();
-};
-resizer.onpointermove = (e) => {
-  if (resizing === e.pointerId) scheduleWidth(e.clientX);
-};
-const stopResize = () => {
-  resizing = null;
-  document.body.classList.remove("resizing");
-};
-resizer.onpointerup = stopResize;
-resizer.onpointercancel = stopResize;
-resizer.onlostpointercapture = stopResize;
-resizer.ondblclick = () => void window.desktop.setSidebarWidth(224);
-resizer.onkeydown = (e) => {
-  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
-  e.preventDefault();
-  const next =
-    e.key === "Home"
-      ? 200
-      : e.key === "End"
-        ? 300
-        : current.presentation.sidebarWidth + (e.key === "ArrowLeft" ? -8 : 8);
-  void window.desktop.setSidebarWidth(next);
-};
 window.desktop.changed(render);
 void window.desktop.state().then(render);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {

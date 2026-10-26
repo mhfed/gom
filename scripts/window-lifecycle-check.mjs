@@ -7,7 +7,19 @@ const profile = await mkdtemp(join(tmpdir(), "tin-nhan-window-"));
 const bootstrap = join(profile, "bootstrap.cjs");
 await writeFile(
   bootstrap,
-  `const {app}=require('electron'); app.setPath('appData', ${JSON.stringify(profile)}); require(${JSON.stringify(process.cwd() + "/dist/main.cjs")});`,
+  `const {app,session}=require('electron');
+app.setPath('appData',${JSON.stringify(profile)});
+require('node:os').homedir=()=>${JSON.stringify(profile)};
+const original=session.fromPartition.bind(session);
+session.fromPartition=(...args)=>{
+  const ses=original(...args);
+  if(!ses.__fixture){
+    ses.__fixture=true;
+    ses.protocol.handle('https',()=>new Response('<html><body>Window lifecycle fixture</body></html>',{headers:{'content-type':'text/html'}}));
+  }
+  return ses;
+};
+require(${JSON.stringify(process.cwd() + "/dist/main.cjs")});`,
 );
 let client;
 try {
