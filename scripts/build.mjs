@@ -41,6 +41,9 @@ await Promise.all([
 ]);
 
 const { default: sharp } = await import("sharp");
+await sharp(await readFile("assets/app.svg"))
+  .png()
+  .toFile("dist/app.png");
 await sharp(await readFile("assets/gom-mark.svg"))
   .resize(36, 36)
   .tint("#000000")

@@ -36,6 +36,29 @@ let accountFilter = "all";
 let signature = "";
 let editing: AccountId | null = null;
 let lastPanel = "";
+const settingsSections: Record<string, { title: string; description: string }> =
+  {
+    accounts: {
+      title: "Tài khoản",
+      description: "Tất cả kết nối, gọn trong một nơi.",
+    },
+    appearance: {
+      title: "Giao diện",
+      description: "Một không gian vừa mắt, cả ngày lẫn đêm.",
+    },
+    notifications: {
+      title: "Thông báo",
+      description: "Giữ kết nối theo cách của anh.",
+    },
+    macos: {
+      title: "macOS",
+      description: "Những tùy chọn giúp Gom thân quen trên Mac.",
+    },
+    updates: {
+      title: "Cập nhật",
+      description: "Phiên bản mới, khi anh sẵn sàng.",
+    },
+  };
 function setProperty<T, K extends keyof T>(node: T, key: K, value: T[K]) {
   if (node[key] !== value) node[key] = value;
 }
@@ -111,11 +134,27 @@ function applyAccountFilter() {
   );
 }
 function showTab(tab: string) {
+  const section = settingsSections[tab];
+  if (!section) return;
+  const changed = activeTab !== tab;
   activeTab = tab;
-  for (const b of document.querySelectorAll<HTMLElement>("[data-tab]"))
-    setAttribute(b, "aria-pressed", String(b.dataset.tab === tab));
+  for (const b of document.querySelectorAll<HTMLElement>("[data-tab]")) {
+    const selected = b.dataset.tab === tab;
+    setAttribute(b, "aria-selected", String(selected));
+    setProperty(b, "tabIndex", selected ? 0 : -1);
+  }
   for (const pane of document.querySelectorAll<HTMLElement>(".settings-pane"))
     setProperty(pane, "hidden", pane.id !== "tab-" + tab);
+  setProperty($("settings-title"), "textContent", section.title);
+  setProperty($("settings-description"), "textContent", section.description);
+  setProperty($("add-account-settings"), "hidden", tab !== "accounts");
+  if (changed) {
+    $("settings-panel").scrollTop = 0;
+    for (const menu of document.querySelectorAll<HTMLDetailsElement>(
+      ".more-menu[open]",
+    ))
+      menu.open = false;
+  }
 }
 
 let updateCheckedAt: number | null | undefined;
@@ -237,10 +276,13 @@ function rebuildAccounts(state: AppState) {
       row.dataset.provider = provider;
       const identity = element("div", "account-identity");
       const label = element("div");
-      label.append(
-        element("strong", "", a.name),
-        element("small", "", PROVIDERS[provider].label),
-      );
+      const name = element("strong", "", a.name);
+      name.title = a.name;
+      const status = element("span", "account-status");
+      status.id = "account-status-" + a.id;
+      const meta = element("div", "account-meta");
+      meta.append(element("small", "", PROVIDERS[provider].label), status);
+      label.append(name, meta);
       identity.append(avatar(a), label);
       const tools = element("div", "account-actions");
       const pin = iconAction(
@@ -271,6 +313,7 @@ function rebuildAccounts(state: AppState) {
         rename,
       );
       const more = element("details", "more-menu");
+      more.name = "account-actions";
       more.dataset.accountId = a.id;
       const summary = element("summary");
       summary.title = "Thao tác khác · " + nameOf(a);
@@ -281,19 +324,19 @@ function rebuildAccounts(state: AppState) {
       more.append(summary, menu);
       more.open = openMenus.includes(a.id);
       const up = action(
-        "↑",
+        "Đưa lên trên",
         "Đưa lên " + nameOf(a),
         () => void accountAction(window.desktop.moveAccount(a.id, -1)),
       );
       up.dataset.boundary = String(index === 0);
       const down = action(
-        "↓",
+        "Đưa xuống dưới",
         "Đưa xuống " + nameOf(a),
         () => void accountAction(window.desktop.moveAccount(a.id, 1)),
       );
       down.dataset.boundary = String(index === peers.length - 1);
       const hide = action(
-        "Gỡ",
+        "Gỡ khỏi danh sách",
         "Gỡ " + nameOf(a) + " khỏi danh sách",
         () => void accountAction(window.desktop.archiveAccount(a.id)),
       );
@@ -303,13 +346,21 @@ function rebuildAccounts(state: AppState) {
       for (const [i, b] of [up, down, hide].entries())
         b.dataset.focus = "account-" + a.id + "-" + i;
       menu.append(up, down, hide);
+      menu.addEventListener("click", (event) => {
+        if ((event.target as HTMLElement).closest("button:not(:disabled)")) {
+          more.open = false;
+          summary.focus();
+        }
+      });
       tools.append(more);
-      const status = element("span", "account-status");
-      status.id = "account-status-" + a.id;
-      row.append(identity, status, tools);
+      row.append(identity, tools);
       $("account-manager").append(row);
       const nrow = element("div", "notification-row");
-      const nlabel = element("label", "", nameOf(a));
+      const nlabel = element("label");
+      nlabel.append(
+        element("strong", "", a.name),
+        element("small", "", PROVIDERS[provider].label),
+      );
       nlabel.htmlFor = "notification-" + a.id;
       const select = element("select");
       select.id = "notification-" + a.id;
@@ -334,7 +385,7 @@ function rebuildAccounts(state: AppState) {
         () => void window.desktop.testNotification(a.id),
       );
       test.id = "test-" + a.id;
-      nrow.append(nlabel, select, test);
+      nrow.append(avatar(a), nlabel, select, test);
       $("notification-providers").append(nrow);
     }
   }
@@ -528,6 +579,7 @@ function render(state: AppState) {
   for (const a of state.accounts.filter((a) => !a.archived)) {
     if (refreshSettings) {
       const accountStatus = $("account-status-" + a.id);
+      setAttribute(accountStatus, "data-status", state.statuses[a.id]);
       setProperty(
         accountStatus,
         "textContent",
@@ -707,6 +759,8 @@ $("settings").onclick = () => {
   if (current.updates?.phase === "available") showTab("updates");
   void window.desktop.settings();
 };
+$("close-settings").onclick = () =>
+  void window.desktop.activate(current.active);
 $("check-updates").onclick = () =>
   void window.desktop.checkUpdates().catch(() => {
     setProperty(
@@ -816,8 +870,50 @@ $<HTMLSelectElement>("theme-mode").onchange = (e) =>
 for (const b of document.querySelectorAll<HTMLElement>("[data-theme-choice]"))
   b.onclick = () =>
     void window.desktop.setTheme(b.dataset.themeChoice as "light" | "dark");
-for (const b of document.querySelectorAll<HTMLElement>("[data-tab]"))
+const settingsTabs = [...document.querySelectorAll<HTMLElement>("[data-tab]")];
+for (const [index, b] of settingsTabs.entries()) {
   b.onclick = () => showTab(b.dataset.tab!);
+  b.onkeydown = (event) => {
+    if (event.isComposing || event.altKey || event.metaKey || event.ctrlKey)
+      return;
+    const next =
+      event.key === "ArrowDown" || event.key === "ArrowRight"
+        ? (index + 1) % settingsTabs.length
+        : event.key === "ArrowUp" || event.key === "ArrowLeft"
+          ? (index + settingsTabs.length - 1) % settingsTabs.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? settingsTabs.length - 1
+              : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    showTab(settingsTabs[next].dataset.tab!);
+    settingsTabs[next].focus({ preventScroll: true });
+  };
+}
+document.addEventListener("pointerdown", (event) => {
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>(
+    ".more-menu[open]",
+  ))
+    if (!menu.contains(event.target as Node)) menu.open = false;
+});
+document.addEventListener("keydown", (event) => {
+  if (
+    event.key !== "Escape" ||
+    event.isComposing ||
+    document.querySelector("dialog[open]")
+  )
+    return;
+  for (const menu of document.querySelectorAll<HTMLDetailsElement>(
+    ".more-menu[open]",
+  )) {
+    const restoreFocus = menu.contains(document.activeElement);
+    menu.open = false;
+    if (restoreFocus) menu.querySelector("summary")?.focus();
+    event.preventDefault();
+  }
+});
 for (const b of document.querySelectorAll<HTMLElement>("[data-filter]"))
   b.onclick = () => {
     accountFilter = b.dataset.filter!;

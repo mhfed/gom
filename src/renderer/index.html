@@ -8,6 +8,7 @@
     />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Gom</title>
+    <link rel="icon" href="app.png" />
     <link rel="stylesheet" href="shell.css" />
   </head>
   <body>
@@ -106,11 +107,28 @@
             d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m3 10v-3a6 6 0 0 0-2-4"
           />
         </symbol>
+        <symbol id="i-desktop" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="13" rx="2" />
+          <path d="M8 21h8m-4-4v4" />
+        </symbol>
+        <symbol id="i-download" viewBox="0 0 24 24">
+          <path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4" />
+        </symbol>
+        <symbol id="i-back" viewBox="0 0 24 24">
+          <path d="M19 12H5m5-5-5 5 5 5" />
+        </symbol>
+        <symbol id="i-info" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 11v6m0-10v.01" />
+        </symbol>
       </defs>
     </svg>
 
     <main>
       <header aria-label="Điều hướng Gom">
+        <div class="toolbar-brand" title="Gom · Trò chuyện, gọn một nơi.">
+          <img src="app.png" alt="" draggable="false" /><span>Gom</span>
+        </div>
         <nav
           class="platform-tabs"
           role="tablist"
@@ -203,222 +221,389 @@
         </div>
         <p id="subtitle" class="sr-only" role="status">Đang kết nối…</p>
       </header>
-      <section id="settings-panel" hidden>
+      <section id="settings-panel" hidden aria-label="Cài đặt Gom">
         <div class="settings-content">
-          <div class="settings-heading">
-            <div>
-              <span class="eyebrow">GOM</span>
-              <h2>Cài đặt</h2>
-              <p>Tài khoản và tùy chọn của anh.</p>
+          <aside class="settings-sidebar">
+            <div class="settings-brand">
+              <img src="app.png" alt="" draggable="false" />
+              <div>
+                <strong>Gom</strong><span>Trò chuyện, gọn một nơi.</span>
+              </div>
             </div>
-            <button id="add-account-settings" class="primary">
-              <svg><use href="#i-plus" /></svg>Thêm tài khoản
+            <h1>Cài đặt</h1>
+            <nav
+              class="settings-tabs"
+              role="tablist"
+              aria-orientation="vertical"
+              aria-label="Danh mục cài đặt"
+            >
+              <button
+                id="settings-tab-accounts"
+                data-tab="accounts"
+                role="tab"
+                aria-controls="tab-accounts"
+                aria-selected="true"
+                tabindex="0"
+              >
+                <svg><use href="#i-users" /></svg>Tài khoản<span
+                  id="account-count"
+                  class="tab-count"
+                ></span>
+              </button>
+              <button
+                id="settings-tab-appearance"
+                data-tab="appearance"
+                role="tab"
+                aria-controls="tab-appearance"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                <svg><use href="#i-sun" /></svg>Giao diện
+              </button>
+              <button
+                id="settings-tab-notifications"
+                data-tab="notifications"
+                role="tab"
+                aria-controls="tab-notifications"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                <svg><use href="#i-bell" /></svg>Thông báo
+              </button>
+              <button
+                id="settings-tab-macos"
+                data-tab="macos"
+                role="tab"
+                aria-controls="tab-macos"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                <svg><use href="#i-desktop" /></svg>macOS
+              </button>
+              <button
+                id="settings-tab-updates"
+                data-tab="updates"
+                role="tab"
+                aria-controls="tab-updates"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                <svg><use href="#i-download" /></svg>Cập nhật
+              </button>
+            </nav>
+            <button id="close-settings" class="settings-back">
+              <svg><use href="#i-back" /></svg>Quay lại trò chuyện
             </button>
-          </div>
-          <p
-            id="catalog-warning"
-            class="catalog-warning"
-            role="status"
-            hidden
-          ></p>
-          <nav class="settings-tabs" aria-label="Danh mục cài đặt">
-            <button data-tab="accounts" aria-pressed="true">
-              Tài khoản <span id="account-count"></span></button
-            ><button data-tab="appearance" aria-pressed="false">
-              Giao diện</button
-            ><button data-tab="notifications" aria-pressed="false">
-              Thông báo</button
-            ><button data-tab="macos" aria-pressed="false">macOS</button
-            ><button data-tab="updates" aria-pressed="false">Cập nhật</button>
-          </nav>
-          <div id="tab-accounts" class="settings-pane">
-            <div class="accounts-tools">
-              <div class="platform-filters" aria-label="Lọc nền tảng">
-                <button data-filter="all" aria-pressed="true">Tất cả</button
-                ><button data-filter="zalo" aria-pressed="false">Zalo</button
-                ><button data-filter="messenger" aria-pressed="false">
-                  Messenger</button
-                ><button data-filter="telegram" aria-pressed="false">
-                  Telegram
+            <div class="sidebar-version">
+              Gom <span id="version"></span><span>Dành cho macOS</span>
+            </div>
+          </aside>
+          <div class="settings-main">
+            <div class="settings-heading">
+              <div>
+                <h2 id="settings-title">Tài khoản</h2>
+                <p id="settings-description">
+                  Tất cả kết nối, gọn trong một nơi.
+                </p>
+              </div>
+              <button id="add-account-settings" class="primary">
+                <svg><use href="#i-plus" /></svg>Thêm tài khoản
+              </button>
+            </div>
+            <p
+              id="catalog-warning"
+              class="catalog-warning"
+              role="status"
+              hidden
+            ></p>
+            <div
+              id="tab-accounts"
+              class="settings-pane"
+              role="tabpanel"
+              aria-labelledby="settings-tab-accounts"
+              tabindex="0"
+            >
+              <div class="accounts-tools">
+                <div class="platform-filters" aria-label="Lọc nền tảng">
+                  <button data-filter="all" aria-pressed="true">Tất cả</button
+                  ><button data-filter="zalo" aria-pressed="false">Zalo</button
+                  ><button data-filter="telegram" aria-pressed="false">
+                    Telegram</button
+                  ><button data-filter="messenger" aria-pressed="false">
+                    Messenger
+                  </button>
+                </div>
+                <span id="connected-count"></span>
+              </div>
+              <div id="account-manager" class="account-table"></div>
+              <div id="account-empty" class="empty-state" hidden>
+                <svg><use href="#i-users" /></svg
+                ><strong>Chưa có tài khoản ở đây</strong>
+                <p>Chọn “Thêm tài khoản” để kết nối nền tảng này.</p>
+              </div>
+              <div id="archived-accounts"></div>
+              <p id="account-feedback" class="hint" role="status"></p>
+              <div class="privacy-note">
+                <span class="note-icon"
+                  ><svg><use href="#i-lock" /></svg
+                ></span>
+                <div>
+                  <strong>Chung một nơi. Riêng từng tài khoản.</strong>
+                  <p>
+                    Mỗi tài khoản có phiên đăng nhập riêng trên máy. Đổi tên,
+                    ghim hoặc sắp xếp sẽ không làm mất phiên.
+                  </p>
+                </div>
+              </div>
+              <details class="import-section">
+                <summary>
+                  <svg><use href="#i-file" /></svg
+                  ><span
+                    >Dùng phiên Messenger có sẵn<small
+                      >Kết nối từ một profile Chrome trên máy này</small
+                    ></span
+                  ><svg class="disclosure-chevron">
+                    <use href="#i-chevron" />
+                  </svg>
+                </summary>
+                <div class="import-body">
+                  <p>
+                    Chọn tài khoản đích và profile Chrome. Tài khoản đã đăng
+                    nhập được bảo vệ khỏi ghi đè.
+                  </p>
+                  <div class="import-controls">
+                    <label
+                      >Tài khoản đích<select
+                        id="messenger-target"
+                      ></select></label
+                    ><label>Profile Chrome<select id="profiles"></select></label
+                    ><button id="import" class="secondary">
+                      Dùng phiên có sẵn
+                    </button>
+                  </div>
+                  <p class="hint">
+                    Với Zalo và Telegram, mở tài khoản rồi quét QR trên điện
+                    thoại.
+                  </p>
+                </div>
+              </details>
+            </div>
+            <div
+              id="tab-appearance"
+              class="settings-pane preference-panel"
+              role="tabpanel"
+              aria-labelledby="settings-tab-appearance"
+              tabindex="0"
+              hidden
+            >
+              <div class="section-label">MÀU GIAO DIỆN</div>
+              <div class="theme-options">
+                <button data-theme-choice="light" aria-pressed="false">
+                  <span class="theme-sample light" aria-hidden="true"
+                    ><span class="sample-toolbar"><i></i><i></i><i></i></span
+                    ><span class="sample-layout"
+                      ><span class="sample-sidebar"><i></i><i></i><i></i></span
+                      ><span class="sample-messages"
+                        ><i></i><i></i><i></i></span></span></span
+                  ><span class="theme-caption"
+                    ><svg><use href="#i-sun" /></svg><strong>Sáng</strong
+                    ><span class="choice-check"
+                      ><svg><use href="#i-check" /></svg></span
+                  ></span>
+                </button>
+                <button data-theme-choice="dark" aria-pressed="false">
+                  <span class="theme-sample dark" aria-hidden="true"
+                    ><span class="sample-toolbar"><i></i><i></i><i></i></span
+                    ><span class="sample-layout"
+                      ><span class="sample-sidebar"><i></i><i></i><i></i></span
+                      ><span class="sample-messages"
+                        ><i></i><i></i><i></i></span></span></span
+                  ><span class="theme-caption"
+                    ><svg><use href="#i-moon" /></svg><strong>Tối</strong
+                    ><span class="choice-check"
+                      ><svg><use href="#i-check" /></svg></span
+                  ></span>
                 </button>
               </div>
-              <span id="connected-count"></span>
-            </div>
-            <div id="account-manager" class="account-table"></div>
-            <p id="account-empty" hidden>Chưa có tài khoản cho nền tảng này.</p>
-            <div id="archived-accounts"></div>
-            <p id="account-feedback" class="hint" role="status"></p>
-            <div class="privacy-note">
-              <svg><use href="#i-lock" /></svg>
-              <div>
-                <strong>Một nơi chung. Những phiên riêng.</strong>
+              <div class="settings-group">
+                <label class="setting-row"
+                  ><span
+                    >Chế độ giao diện<small
+                      >Tự đổi theo nền tảng, macOS hoặc giữ màu đã chọn.</small
+                    ></span
+                  ><select id="theme-mode" aria-label="Chế độ giao diện">
+                    <option value="platform">Theo nền tảng</option>
+                    <option value="system">Theo macOS</option>
+                    <option value="light">Luôn sáng</option>
+                    <option value="dark">Luôn tối</option>
+                  </select></label
+                >
+              </div>
+              <div class="inline-note">
+                <svg><use href="#i-info" /></svg>
                 <p>
-                  Đổi tên, ghim hay sắp xếp tài khoản không làm thay đổi phiên
-                  đăng nhập.
+                  Lựa chọn này áp dụng cho Gom. Giao diện bên trong trang chat
+                  do từng nền tảng quản lý.
                 </p>
               </div>
             </div>
-            <details class="import-section">
-              <summary>Dùng phiên Messenger có sẵn trên máy</summary>
-              <p>
-                Chọn đúng tài khoản đích và profile Chrome. Tài khoản đã đăng
-                nhập được bảo vệ khỏi ghi đè.
-              </p>
-              <div class="import-controls">
-                <label
-                  >Tài khoản đích<select id="messenger-target"></select></label
-                ><label>Profile Chrome<select id="profiles"></select></label
-                ><button id="import" class="secondary">
-                  Dùng phiên có sẵn
+            <div
+              id="tab-notifications"
+              class="settings-pane preference-panel"
+              role="tabpanel"
+              aria-labelledby="settings-tab-notifications"
+              tabindex="0"
+              hidden
+            >
+              <div class="settings-group">
+                <label class="setting-row"
+                  ><span
+                    >Tạm dừng thông báo<small
+                      >Giữ yên lặng cho tất cả tài khoản trong Gom.</small
+                    ></span
+                  ><input
+                    id="pause-notifications"
+                    type="checkbox"
+                    role="switch"
+                /></label>
+              </div>
+              <div class="section-heading">
+                <h3>Theo tài khoản</h3>
+                <p>Chọn những tài khoản có thể gửi thông báo.</p>
+              </div>
+              <div id="notification-providers" class="settings-group"></div>
+              <div class="settings-action-row">
+                <button class="secondary" id="notification-settings">
+                  Quyền thông báo macOS <svg><use href="#i-external" /></svg>
                 </button>
               </div>
-              <p class="hint">
-                Zalo và Telegram: chọn nền tảng và tài khoản, rồi quét QR trên
-                điện thoại.
-              </p>
-            </details>
-          </div>
-          <div
-            id="tab-appearance"
-            class="settings-pane preference-panel"
-            hidden
-          >
-            <h3>Vừa mắt, cả ngày lẫn đêm.</h3>
-            <p>
-              Chọn màu cho thanh điều hướng. Nội dung chat dùng giao diện của
-              từng nền tảng.
-            </p>
-            <div class="theme-options">
-              <button data-theme-choice="light">
-                <span class="theme-sample light"><i></i><i></i></span
-                ><strong>Sáng</strong></button
-              ><button data-theme-choice="dark">
-                <span class="theme-sample dark"><i></i><i></i></span
-                ><strong>Tối</strong>
-              </button>
-            </div>
-            <label class="setting-row"
-              ><span
-                >Đồng bộ tự động<small
-                  >Theo nền tảng đang chọn hoặc giao diện macOS.</small
-                ></span
-              ><select id="theme-mode" aria-label="Chế độ giao diện">
-                <option value="platform">Theo nền tảng</option>
-                <option value="system">Theo macOS</option>
-                <option value="light">Luôn sáng</option>
-                <option value="dark">Luôn tối</option>
-              </select></label
-            >
-          </div>
-          <div
-            id="tab-notifications"
-            class="settings-pane preference-panel"
-            hidden
-          >
-            <h3>Chỉ những kết nối anh muốn.</h3>
-            <p>
-              Thông báo gốc do nền tảng gửi. Bấm thông báo để mở đúng tài khoản.
-            </p>
-            <label class="setting-row"
-              ><span
-                >Tạm dừng thông báo<small
-                  >Áp dụng cho tất cả tài khoản.</small
-                ></span
-              ><input id="pause-notifications" type="checkbox"
-            /></label>
-            <div id="notification-providers"></div>
-            <button class="secondary" id="notification-settings">
-              Quyền thông báo macOS ↗
-            </button>
-            <p class="hint" id="notification-status" role="status"></p>
-            <p class="hint">
-              Bật thông báo trong cài đặt của từng nền tảng. Nút thử kiểm tra
-              thông báo từ Gom tới macOS; chế độ Tập trung có thể ẩn banner.
-            </p>
-          </div>
-          <div id="tab-macos" class="settings-pane preference-panel" hidden>
-            <h3>Thân quen như chiếc Mac của anh.</h3>
-            <label class="setting-row"
-              ><span
-                >Chạy cùng macOS<small
-                  >Mở Gom khi anh đăng nhập máy.</small
-                ></span
-              ><input id="open-at-login" type="checkbox"
-            /></label>
-            <p id="startup-hint" class="hint"></p>
-            <label class="setting-row"
-              ><span
-                >Phím tắt hiện / ẩn<small
-                  >⌘ ⇧ Space · giữ nguyên các trang đang mở.</small
-                ></span
-              ><input id="global-shortcut" type="checkbox"
-            /></label>
-            <div class="shortcut-list">
-              <p><span>Chuyển nhanh tài khoản</span><kbd>⌘ K</kbd></p>
-              <p><span>Ẩn cửa sổ</span><kbd>⌘ W</kbd></p>
-              <p><span>Thoát app</span><kbd>⌘ Q</kbd></p>
-              <p>
-                <span>Zalo · Telegram · Messenger</span><kbd>⌘ 1 / 2 / 3</kbd>
-              </p>
-            </div>
-          </div>
-          <div id="tab-updates" class="settings-pane preference-panel" hidden>
-            <h3>Cập nhật Gom</h3>
-            <p>Bản mới, khi anh sẵn sàng.</p>
-            <div class="update-card">
-              <dl class="update-versions">
-                <div>
-                  <dt>Đang dùng</dt>
-                  <dd id="update-current"></dd>
-                </div>
-                <div id="update-latest-row" hidden>
-                  <dt>Bản phát hành mới nhất</dt>
-                  <dd id="update-latest"></dd>
-                </div>
-              </dl>
-              <p id="update-message" role="status" aria-live="polite"></p>
-              <p id="update-checked" class="hint"></p>
-              <div class="update-actions">
-                <button id="check-updates" class="secondary">
-                  Kiểm tra cập nhật
-                </button>
-                <button id="download-update" class="primary" hidden>
-                  Tải bản mới <svg><use href="#i-external" /></svg>
-                </button>
+              <p
+                class="hint feedback"
+                id="notification-status"
+                role="status"
+              ></p>
+              <div class="inline-note">
+                <svg><use href="#i-info" /></svg>
+                <p>
+                  Bật thông báo trong từng nền tảng. Nút “Thử” gửi một thông báo
+                  từ Gom; chế độ Tập trung của macOS có thể ẩn thông báo này.
+                </p>
               </div>
             </div>
-            <details id="update-notes-container" class="update-notes" hidden>
-              <summary>Nội dung bản phát hành</summary>
-              <pre id="update-notes"></pre>
-            </details>
-            <label class="setting-row"
-              ><span
-                >Tự kiểm tra bản mới<small
-                  >Kiểm tra khi mở app và mỗi 12 giờ. Chỉ báo khi có bản
-                  mới.</small
-                ></span
-              ><input id="auto-check-updates" type="checkbox"
-            /></label>
-            <p class="hint update-install-hint">
-              “Tải bản mới” mở trang tải trong trình duyệt. Anh tự cài bằng cách
-              kéo Gom vào Applications; nếu đã có Gom thì chọn thay thế. Khi
-              chuyển từ Tin Nhan, thoát app cũ trước khi mở Gom. Lưu lại nội
-              dung đang soạn trước khi thoát app để cài; khả năng khôi phục bản
-              nháp tùy từng nền tảng.
-            </p>
-          </div>
-          <p id="notice" role="status"></p>
-          <footer>
-            <span class="settings-brand"
-              ><img src="gom-mark.svg" alt="" />Gom</span
+            <div
+              id="tab-macos"
+              class="settings-pane preference-panel"
+              role="tabpanel"
+              aria-labelledby="settings-tab-macos"
+              tabindex="0"
+              hidden
             >
-            <span id="version"></span><span>Trò chuyện, gọn một nơi.</span>
-          </footer>
+              <div class="section-label">KHỞI ĐỘNG &amp; TRUY CẬP</div>
+              <div class="settings-group">
+                <label class="setting-row"
+                  ><span
+                    >Chạy cùng macOS<small
+                      >Mở Gom khi đăng nhập máy.</small
+                    ></span
+                  ><input
+                    id="open-at-login"
+                    type="checkbox"
+                    role="switch"
+                    aria-describedby="startup-hint" /></label
+                ><label class="setting-row"
+                  ><span
+                    >Phím tắt hiện / ẩn<small
+                      >⌘ ⇧ Space · giữ nguyên các trang đang mở.</small
+                    ></span
+                  ><input id="global-shortcut" type="checkbox" role="switch"
+                /></label>
+              </div>
+              <p id="startup-hint" class="hint field-hint"></p>
+              <div class="section-heading">
+                <h3>Phím tắt</h3>
+                <p>Di chuyển nhanh, tiếp tục mạch trò chuyện.</p>
+              </div>
+              <div class="shortcut-list settings-group">
+                <p><span>Chuyển nhanh tài khoản</span><kbd>⌘ K</kbd></p>
+                <p><span>Mở cài đặt</span><kbd>⌘ ,</kbd></p>
+                <p><span>Ẩn cửa sổ</span><kbd>⌘ W</kbd></p>
+                <p><span>Thoát Gom</span><kbd>⌘ Q</kbd></p>
+                <p>
+                  <span>Zalo · Telegram · Messenger</span><kbd>⌘ 1 / 2 / 3</kbd>
+                </p>
+              </div>
+            </div>
+            <div
+              id="tab-updates"
+              class="settings-pane preference-panel"
+              role="tabpanel"
+              aria-labelledby="settings-tab-updates"
+              tabindex="0"
+              hidden
+            >
+              <div class="update-card">
+                <div class="update-product">
+                  <img src="app.png" alt="" draggable="false" />
+                  <div>
+                    <strong>Gom cho macOS</strong
+                    ><span>Trò chuyện, gọn một nơi.</span>
+                  </div>
+                </div>
+                <dl class="update-versions">
+                  <div>
+                    <dt>Phiên bản đang dùng</dt>
+                    <dd id="update-current"></dd>
+                  </div>
+                  <div id="update-latest-row" hidden>
+                    <dt>Bản phát hành mới nhất</dt>
+                    <dd id="update-latest"></dd>
+                  </div>
+                </dl>
+                <div class="update-status">
+                  <p id="update-message" role="status" aria-live="polite"></p>
+                  <p id="update-checked" class="hint"></p>
+                </div>
+                <div class="update-actions">
+                  <button id="check-updates" class="secondary">
+                    Kiểm tra cập nhật</button
+                  ><button id="download-update" class="primary" hidden>
+                    Tải bản mới <svg><use href="#i-external" /></svg>
+                  </button>
+                </div>
+              </div>
+              <details id="update-notes-container" class="update-notes" hidden>
+                <summary>Nội dung bản phát hành</summary>
+                <pre id="update-notes"></pre>
+              </details>
+              <div class="settings-group">
+                <label class="setting-row"
+                  ><span
+                    >Tự kiểm tra bản mới<small
+                      >Kiểm tra khi mở Gom và mỗi 12 giờ. Chỉ báo khi có bản
+                      mới.</small
+                    ></span
+                  ><input id="auto-check-updates" type="checkbox" role="switch"
+                /></label>
+              </div>
+              <div class="inline-note update-install-hint">
+                <svg><use href="#i-info" /></svg>
+                <p>
+                  “Tải bản mới” mở trang tải trong trình duyệt. Kéo Gom vào
+                  Applications và chọn thay thế để cài. Lưu nội dung đang soạn
+                  trước khi thoát; khả năng khôi phục bản nháp tùy nền tảng. Nếu
+                  đang dùng Tin Nhan, thoát app cũ trước khi mở Gom.
+                </p>
+              </div>
+            </div>
+            <p id="notice" class="feedback" role="status"></p>
+          </div>
         </div>
       </section>
       <section id="connection-panel" hidden role="status">
         <div class="connection-card">
-          <svg><use href="#i-chat" /></svg><span class="eyebrow">KẾT NỐI</span>
+          <img class="hero-brand-icon" src="app.png" alt="" draggable="false" />
+          <strong class="connection-brand">Gom</strong>
+          <span class="eyebrow">KẾT NỐI</span>
           <h2 id="connection-title"></h2>
           <p id="connection-detail"></p>
           <button id="retry-connection" class="primary">
@@ -427,7 +612,14 @@
           <p class="hint">Phiên đăng nhập vẫn được giữ trên máy.</p>
         </div>
       </section>
-      <div id="service-loading">Đang kết nối…</div>
+      <div id="service-loading">
+        <div class="loading-card">
+          <img class="hero-brand-icon" src="app.png" alt="" draggable="false" />
+          <strong>Gom</strong>
+          <p>Trò chuyện, gọn một nơi.</p>
+          <span class="loading-caption">Đang kết nối tài khoản…</span>
+        </div>
+      </div>
     </main>
     <dialog id="command-dialog" aria-labelledby="command-label">
       <div class="command-input">
@@ -440,7 +632,7 @@
           aria-autocomplete="list"
           aria-controls="command-results"
           aria-expanded="false"
-          placeholder="Anh muốn mở gì?"
+          placeholder="Tìm tài khoản hoặc thao tác…"
           autocomplete="off"
         /><button
           id="close-command"
@@ -457,12 +649,16 @@
       ></div>
       <div class="command-footer">
         <span><kbd>↑</kbd><kbd>↓</kbd> để chọn <kbd>↵</kbd> để mở</span
-        ><span>Tiếp tục mạch trò chuyện.</span>
+        ><span class="command-brand"><img src="app.png" alt="" />Gom</span>
       </div>
     </dialog>
-    <dialog id="account-editor">
+    <dialog id="account-editor" aria-labelledby="account-editor-title">
       <form id="account-form">
-        <span class="eyebrow">TÀI KHOẢN RIÊNG</span>
+        <div class="dialog-brand">
+          <img src="app.png" alt="" /><span
+            >Gom <span>· Tài khoản riêng</span></span
+          >
+        </div>
         <h2 id="account-editor-title">Thêm tài khoản</h2>
         <label class="field-label" for="account-provider">Nền tảng</label>
         <select id="account-provider">

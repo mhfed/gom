@@ -107,6 +107,7 @@ const lastNotificationClicks = new Map<AccountId, number>();
 const permissionPrompts = new Set<AccountId>();
 const testAlerts = new Map<AccountId, Notification>();
 const SHORTCUT = "CommandOrControl+Shift+Space";
+const appIconPath = join(__dirname, "app.png");
 const updateChecker = new ManualUpdateChecker({
   currentVersion: app.getVersion(),
   arch: process.arch,
@@ -1160,6 +1161,8 @@ else {
     }
   });
   app.whenReady().then(async () => {
+    // Also supplies the native macOS About icon when running in development.
+    app.dock?.setIcon(appIconPath);
     let stored: Record<string, unknown> = {};
     try {
       const value = JSON.parse(await readFile(settingsPath, "utf8"));
@@ -1426,6 +1429,7 @@ else {
       applicationName: "Gom",
       applicationVersion: app.getVersion(),
       copyright: "Trò chuyện, gọn một nơi.",
+      iconPath: appIconPath,
     });
     Menu.setApplicationMenu(
       Menu.buildFromTemplate([

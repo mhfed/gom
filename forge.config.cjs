@@ -12,6 +12,7 @@ const runtimePaths = new Set([
   "/dist/shell.js",
   "/dist/index.html",
   "/dist/shell.css",
+  "/dist/app.png",
   "/dist/trayTemplate.png",
   "/dist/gom-mark.svg",
   "/dist/logos",
