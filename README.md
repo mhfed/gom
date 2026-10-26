@@ -4,11 +4,11 @@
 
 ## Tải app
 
-[Tải Tin Nhan 0.2.0 cho macOS Apple Silicon (arm64)](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.2.0/TinNhan-macOS-arm64-0.2.0.zip)
+[Tải Tin Nhan 0.5.0 cho macOS Apple Silicon (arm64)](https://github.com/mhfed/tin-nhan-desktop/releases/download/v0.5.0/TinNhan-macOS-arm64-0.5.0.zip)
 
 Giải nén ZIP, kéo `Tin Nhan.app` vào Applications rồi mở app. Bản cá nhân ký ad-hoc, chưa có Developer ID / notarization. Repository public, có thể tải trực tiếp.
 
-Chi tiết và SHA-256 nằm trong [Release 0.2.0](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.2.0).
+Chi tiết và SHA-256 nằm trong [Release 0.5.0](https://github.com/mhfed/tin-nhan-desktop/releases/tag/v0.5.0). Khi nâng cấp, thoát bản đang chạy bằng ⌘Q rồi thay app; giữ nguyên thư mục dữ liệu để tiếp tục dùng các tài khoản hiện có.
 
 ## Chạy và đóng gói
 
@@ -121,4 +121,4 @@ Nâng cấp không đổi `TinNhanDesktop`, `accounts.json` hay ID/partition c�
 npm run test:shell
 ```
 
-Kiểm tra cách ly gồm12 tổ hợp màn hình/sáng-tối/sidebar, bàn phím và focus native, không chồng hộp thoại, giữ view/bản nháp, tên an toàn, kéo kích thước, lưu giao diện và ID tài khoản qua thoát/mở lại. Các fixture không dùng phiên cá nhân. Bản ZIP public ở đầu README vẫn là **0.2.0**; mã nguồn hiện tại là **0.5.0**.
+Kiểm tra cách ly gồm12 tổ hợp màn hình/sáng-tối/sidebar, bàn phím và focus native, không chồng hộp thoại, giữ view/bản nháp, tên an toàn, kéo kích thước, lưu giao diện và ID tài khoản qua thoát/mở lại. Các fixture không dùng phiên cá nhân. Bản ZIP public ở đầu README và mã nguồn hiện tại đều là **0.5.0**.
