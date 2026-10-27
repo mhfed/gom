@@ -62,5 +62,5 @@ Các kiểm tra GUI chạy tuần tự, không dùng dữ liệu tài khoản th
 và ảnh nằm trong `outputs/provider-tabs/`, `outputs/native-tabs/` và
 `outputs/settings-ui/` (không đưa vào Git).
 
-Phạm vi đợt này là triển khai và kiểm chứng cục bộ; chưa tạo hoặc phát hành bộ
-cài mới. Bản công khai gần nhất vẫn là 0.6.3.
+Phần triển khai này được đưa vào bản 0.7.0 theo yêu cầu đóng gói và phát hành
+tiếp theo; xem [kiểm chứng bộ cài](release-0.7.0.md).
