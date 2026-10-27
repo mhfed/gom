@@ -56,6 +56,7 @@ import {
   nativeImage,
   globalShortcut,
   Notification,
+  clipboard,
   screen,
   net,
   autoUpdater,
@@ -97,6 +98,13 @@ import {
 } from "./cookie-transaction.ts";
 import { OperationGate } from "./operation-gate.ts";
 import { ViewRegistry, flushBeforeClose } from "./view-registry.ts";
+import {
+  createTinderChromeBridge,
+  tinderInstallScript,
+  tinderRollbackScript,
+  tinderSessionPresentScript,
+  type TinderChromeSession,
+} from "./tinder-chrome-bridge.ts";
 configureMacOSInput(app.commandLine, process.platform, process.versions);
 // Electron 45 derives macOS cookie/safeStorage Keychain names from app.getName().
 // Retain the original encryption identity even though the visible app is Gom.
@@ -128,6 +136,7 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let wakeTimer: ReturnType<typeof setTimeout> | undefined;
 const lastNotificationClicks = new Map<AccountId, number>();
 const permissionPrompts = new Set<AccountId>();
+const locationPermissionGrants = new Set<AccountId>();
 const closingProviders = new Set<ProviderId>();
 const testAlerts = new Map<AccountId, Notification>();
 const SHORTCUT = "CommandOrControl+Shift+Space";
@@ -141,6 +150,13 @@ const BUILTIN_PROVIDER_TABS_BY_VERSION: Record<number, ProviderId[]> = {
 const appIconPath = join(__dirname, "app.png");
 let savedProviderTabDefaultsVersion = PROVIDER_TAB_DEFAULTS_VERSION;
 const MESSENGER_CHROME_CSS = `
+  :root,
+  .__fb-light-mode,
+  .__fb-dark-mode {
+    --header-height: 0px !important;
+    --messenger-card-spacing: 0px !important;
+  }
+
   [role="banner"] {
     display: none !important;
   }
@@ -341,8 +357,17 @@ function setupSession(ses: Session, id: AccountId) {
         owned(contents),
         state.providers,
       );
-    if (!valid || closing || !["notifications", "media"].includes(permission)) {
+    if (
+      !valid ||
+      closing ||
+      !["notifications", "media", "geolocation"].includes(permission) ||
+      (permission === "geolocation" && providerFor(id) !== "tinder")
+    ) {
       callback(false);
+      return;
+    }
+    if (permission === "geolocation" && locationPermissionGrants.has(id)) {
+      callback(true);
       return;
     }
     if (permission === "notifications") {
@@ -357,16 +382,25 @@ function setupSession(ses: Session, id: AccountId) {
         callback(true);
         return;
       }
+    }
+    const lockPrompt = permission !== "media";
+    if (lockPrompt) {
       if (permissionPrompts.has(id)) {
         callback(false);
         return;
       }
       permissionPrompts.add(id);
     }
+    const requestedAccess =
+      permission === "media"
+        ? "dùng camera / mic"
+        : permission === "geolocation"
+          ? "truy cập vị trí của bạn"
+          : "gửi thông báo";
     void dialog
       .showMessageBox(win, {
         type: "question",
-        message: `Cho phép ${accountLabel(id)} ${permission === "media" ? "dùng camera / mic" : "gửi thông báo"}?`,
+        message: `Cho phép ${accountLabel(id)} ${requestedAccess}?`,
         buttons: ["Không cho phép", "Cho phép"],
         defaultId: 0,
         cancelId: 0,
@@ -382,6 +416,14 @@ function setupSession(ses: Session, id: AccountId) {
             r.response === 1 ? "allow" : "mute";
           await persist();
         }
+        if (
+          permission === "geolocation" &&
+          r.response === 1 &&
+          !closing &&
+          findAccount(id) &&
+          owned(contents)
+        )
+          locationPermissionGrants.add(id);
         callback(
           !closing &&
             !!findAccount(id) &&
@@ -392,21 +434,31 @@ function setupSession(ses: Session, id: AccountId) {
         );
       })
       .catch(() => callback(false))
-      .finally(() => permissionPrompts.delete(id));
+      .finally(() => {
+        if (lockPrompt) permissionPrompts.delete(id);
+      });
   });
   ses.setPermissionCheckHandler(
-    (contents, permission, origin, details) =>
-      permission === "notifications" &&
-      !closing &&
-      !!findAccount(id) &&
-      validNotificationFrame(
-        providerFor(id),
-        details.requestingUrl || origin,
-        details.isMainFrame,
-        owned(contents),
-        state.providers,
-      ) &&
-      notificationAllowed(state.preferences, id),
+    (contents, permission, origin, details) => {
+      const valid =
+        !closing &&
+        !!findAccount(id) &&
+        validNotificationFrame(
+          providerFor(id),
+          details.requestingUrl || origin,
+          details.isMainFrame,
+          owned(contents),
+          state.providers,
+        );
+      if (!valid) return false;
+      if (permission === "notifications")
+        return notificationAllowed(state.preferences, id);
+      return (
+        permission === "geolocation" &&
+        providerFor(id) === "tinder" &&
+        locationPermissionGrants.has(id)
+      );
+    },
   );
   ses.on("will-download", (_event, item) => {
     item.setSaveDialogOptions({
@@ -775,6 +827,14 @@ function showProviderLibrary() {
   publish();
   showWindow();
 }
+function showWelcome() {
+  if (closing || accountEditorOpen) return;
+  state.commandOpen = false;
+  state.panel = "welcome";
+  layout();
+  publish();
+  showWindow();
+}
 function showUpdates() {
   if (closing) return;
   // Keep an unfinished account form visible; the result can wait in Settings.
@@ -923,7 +983,27 @@ async function verifyMessenger(contents: WebContents) {
   }
   return false;
 }
+async function verifyTinder(contents: WebContents) {
+  await contents.loadURL("https://tinder.com/app/recs");
+  const until = Date.now() + 35000;
+  let authenticatedAt = 0;
+  while (Date.now() < until && !contents.isDestroyed()) {
+    const value = await contents
+      .executeJavaScript(authScript)
+      .catch(() => "ready");
+    if (value === "needs-login") return false;
+    if (value === "authenticated") {
+      if (!authenticatedAt) authenticatedAt = Date.now();
+      if (Date.now() - authenticatedAt >= 8000) return true;
+    } else {
+      authenticatedAt = 0;
+    }
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  return false;
+}
 async function verifyProvider(contents: WebContents, provider: ProviderId) {
+  if (provider === "tinder") return verifyTinder(contents);
   await contents.loadURL(providerDefinition(provider).entry);
   const until = Date.now() + 35000;
   while (Date.now() < until && !contents.isDestroyed()) {
@@ -1090,6 +1170,13 @@ async function providerDestination(targetId: AccountId, provider: ProviderId) {
     epoch === (epochs.get(targetId) ?? 0) &&
     navigationPolicy(provider, contents.getURL()) === "internal";
   if (!valid() || !contents) return "target-not-ready";
+  if (provider === "tinder") {
+    const occupied = await contents
+      .executeJavaScript(tinderSessionPresentScript)
+      .catch(() => true);
+    if (!valid()) return "target-not-ready";
+    if (occupied) return "already-connected";
+  }
   const auth = await contents
     .executeJavaScript(authScript)
     .catch(() => "ready");
@@ -1097,12 +1184,110 @@ async function providerDestination(targetId: AccountId, provider: ProviderId) {
   if (auth === "authenticated") return "already-connected";
   return auth === "needs-login" ? undefined : "target-not-ready";
 }
+async function importTinderChromeSession(sourceId: string, targetId: AccountId) {
+  if (!findAccount(targetId) || providerFor(targetId) !== "tinder")
+    return { status: "invalid-account" };
+  if (state.importing) return { status: "busy" };
+  state.importing = true;
+  state.notice = "Đang kiểm tra tài khoản Tinder đích…";
+  publish();
+  let bridge: Awaited<ReturnType<typeof createTinderChromeBridge>> | undefined;
+  let imported: TinderChromeSession | undefined;
+  let oldDeviceId: string | null = null;
+  let installed = false;
+  let verified = false;
+  try {
+    if (!(await sources.list()).some((profile) => profile.id === sourceId))
+      throw new ImportFailure("source-unavailable");
+    const destination = await providerDestination(targetId, "tinder");
+    if (destination) {
+      state.notice =
+        destination === "already-connected"
+          ? "Tinder đích đã có dữ liệu phiên. Gom giữ nguyên để tránh ghi đè."
+          : "Tinder đích chưa tải xong. Đợi trang đăng nhập hiện ra rồi thử lại.";
+      return { status: destination };
+    }
+
+    bridge = await createTinderChromeBridge();
+    clipboard.writeText(bridge.script);
+    state.notice =
+      "Gom đã chép lệnh một lần. Trong profile Chrome đã chọn, mở Tinder đang đăng nhập, mở Console (⌥⌘J), dán lệnh và nhấn Enter. Nếu Chrome chặn, gõ allow pasting rồi thử lại; nếu Chrome hỏi quyền mạng cục bộ, chọn cho phép. Chỉ dữ liệu phiên Tinder được gửi về Gom qua kết nối nội bộ.";
+    publish();
+    imported = await bridge.session;
+
+    const finalDestination = await providerDestination(targetId, "tinder");
+    if (finalDestination) {
+      state.notice =
+        "Tinder đích hiện đã có dữ liệu phiên. Gom giữ nguyên và không ghi đè.";
+      return { status: finalDestination };
+    }
+    const target = views.peek(targetId)?.webContents;
+    if (!target || target.isDestroyed() || !isCurrent(targetId, target))
+      throw new ImportFailure("target-not-ready");
+    const result = (await target.executeJavaScript(
+      tinderInstallScript(imported),
+    )) as { ok?: boolean; reason?: string; oldDeviceId?: string | null };
+    if (!result?.ok)
+      throw new ImportFailure(
+        result?.reason === "occupied" ? "already-connected" : "import-failed",
+      );
+    oldDeviceId = result.oldDeviceId ?? null;
+    installed = true;
+    verified = await verifyProvider(target, "tinder");
+    if (!verified) throw new ImportFailure("verification-failed");
+    activate(targetId);
+    status(targetId, "authenticated");
+    state.notice = "Đã dùng phiên Tinder có sẵn trên Chrome.";
+    return { status: "imported" };
+  } catch (error) {
+    const code =
+      error instanceof ImportFailure
+        ? error.code
+        : error instanceof Error && error.message === "tinder-bridge-timeout"
+          ? "tinder-bridge-timeout"
+          : "import-failed";
+    const messages: Record<string, string> = {
+      "source-unavailable": "Không tìm thấy profile Chrome đã chọn.",
+      "target-not-ready":
+        "Tinder đích chưa tải xong. Đợi trang đăng nhập hiện ra rồi thử lại.",
+      "already-connected":
+        "Tinder đích đã có dữ liệu phiên. Gom giữ nguyên để tránh ghi đè.",
+      "tinder-bridge-timeout":
+        "Hết thời gian chờ. Hãy mở Tinder đã đăng nhập trong profile Chrome đã chọn rồi thử lại.",
+      "verification-failed":
+        "Tinder chưa xác nhận phiên này. Gom đã khôi phục dữ liệu cũ của tài khoản đích.",
+    };
+    state.notice =
+      messages[code] ??
+      "Chưa nhập được phiên Tinder. Gom giữ nguyên dữ liệu đang có.";
+    return { status: code };
+  } finally {
+    bridge?.close();
+    if (installed && !verified && imported) {
+      const target = views.peek(targetId)?.webContents;
+      if (target && !target.isDestroyed())
+        await target
+          .executeJavaScript(tinderRollbackScript(imported, oldDeviceId))
+          .catch(() => {});
+    }
+    if (imported) {
+      imported.apiToken = "";
+      imported.deviceId = "";
+      if (typeof imported.mfaRecord === "string") imported.mfaRecord = "";
+      else if (imported.mfaRecord) imported.mfaRecord = null;
+    }
+    state.importing = false;
+    publish();
+  }
+}
 async function importProviderSession(
   sourceId: string,
   targetId: AccountId,
   provider: BuiltinProviderId,
 ) {
   if (provider === "messenger") return importMessenger(sourceId, targetId);
+  if (provider === "tinder")
+    return importTinderChromeSession(sourceId, targetId);
   if (!findAccount(targetId) || providerFor(targetId) !== provider)
     return { status: "invalid-account" };
   if (state.importing) return { status: "busy" };
@@ -2030,6 +2215,9 @@ else {
             else showProviderLibrary();
           }
           return;
+        case "welcome":
+          showWelcome();
+          return;
         case "provider-menu":
           return showProviderMenu(arg);
         case "provider-pin":
@@ -2305,7 +2493,9 @@ else {
       activate(state.active);
     else if (state.providerTabs.open.length)
       activateProvider(state.providerTabs.open[0]);
-    else showProviderLibrary();
+    state.panel = "welcome";
+    layout();
+    publish(true);
     if (migrateProviderTabs) scheduleSave();
     // Keep built-in messaging sessions warm for notifications. Custom websites
     // are created only when selected, regardless of library/catalog size.

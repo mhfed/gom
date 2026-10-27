@@ -285,6 +285,14 @@ export function createProviderNavigation(options: {
       prop(row, "hidden", !show);
       if (show) count++;
     }
+    for (const group of list.querySelectorAll<HTMLElement>(
+      ".provider-library-group",
+    )) {
+      const hasVisibleProviders = Array.from(
+        group.querySelectorAll<HTMLElement>(".provider-library-row"),
+      ).some((row) => !row.hidden);
+      prop(group, "hidden", !hasVisibleProviders);
+    }
     prop($("provider-empty"), "hidden", count > 0);
     prop($("provider-result-count"), "textContent", `${count} nền tảng`);
   }
@@ -295,37 +303,66 @@ export function createProviderNavigation(options: {
       const focused = list.contains(document.activeElement)
         ? (document.activeElement as HTMLElement).id
         : "";
-      list.replaceChildren(
-        ...state.providers.map((provider) => {
-          const row = create("div", "provider-library-row");
-          row.dataset.provider = provider.id;
-          const host = new URL(provider.entry).host;
-          row.dataset.search = fold(provider.label + " " + host);
-          const open = create("button", "provider-library-open");
-          open.type = "button";
-          open.id = "open-provider-" + provider.id;
-          open.dataset.providerOpen = provider.id;
-          open.setAttribute("aria-label", "Mở " + provider.label);
-          open.title = provider.label + " · " + provider.entry;
-          open.append(options.logo(provider));
-          const copy = create("span", "provider-library-copy");
-          copy.append(
-            create("strong", "", provider.label),
-            create("small", "", provider.custom ? host : "Có sẵn trong Gom"),
+      const groups = [
+        { id: "communication", label: "Giao tiếp", rows: [] as HTMLElement[] },
+        { id: "dating", label: "Hẹn hò", rows: [] as HTMLElement[] },
+        { id: "custom", label: "Website riêng", rows: [] as HTMLElement[] },
+      ];
+      for (const provider of state.providers) {
+        const groupId = provider.custom
+          ? "custom"
+          : provider.id === "tinder"
+            ? "dating"
+            : "communication";
+        const group = groups.find((candidate) => candidate.id === groupId)!;
+        const row = create("div", "provider-library-row");
+        row.dataset.provider = provider.id;
+        const host = new URL(provider.entry).host;
+        row.dataset.search = fold(
+          provider.label + " " + host + " " + group.label,
+        );
+        const open = create("button", "provider-library-open");
+        open.type = "button";
+        open.id = "open-provider-" + provider.id;
+        open.dataset.providerOpen = provider.id;
+        open.setAttribute("aria-label", "Mở " + provider.label);
+        open.title = provider.label + " · " + provider.entry;
+        open.append(options.logo(provider));
+        const copy = create("span", "provider-library-copy");
+        copy.append(
+          create("strong", "", provider.label),
+          create("small", "", provider.custom ? host : "Có sẵn trong Gom"),
+        );
+        open.append(copy);
+        open.onclick = () => void options.select(provider.id);
+        const status = create("span", "provider-library-status");
+        const pin = create("button", "icon-button provider-library-pin");
+        pin.type = "button";
+        pin.id = "pin-provider-" + provider.id;
+        pin.dataset.providerPin = provider.id;
+        pin.append(options.icon("pin"));
+        pin.onclick = () => void window.desktop.pinProvider(provider.id);
+        row.append(open, status, pin);
+        group.rows.push(row);
+      }
+      const sections = groups
+        .filter((group) => group.rows.length > 0)
+        .map((group) => {
+          const section = create("section", "provider-library-group");
+          section.dataset.group = group.id;
+          const heading = create(
+            "h3",
+            "provider-library-group-title",
+            group.label,
           );
-          open.append(copy);
-          open.onclick = () => void options.select(provider.id);
-          const status = create("span", "provider-library-status");
-          const pin = create("button", "icon-button provider-library-pin");
-          pin.type = "button";
-          pin.id = "pin-provider-" + provider.id;
-          pin.dataset.providerPin = provider.id;
-          pin.append(options.icon("pin"));
-          pin.onclick = () => void window.desktop.pinProvider(provider.id);
-          row.append(open, status, pin);
-          return row;
-        }),
-      );
+          heading.id = "provider-group-" + group.id;
+          section.setAttribute("aria-labelledby", heading.id);
+          const grid = create("div", "provider-library-grid");
+          grid.append(...group.rows);
+          section.append(heading, grid);
+          return section;
+        });
+      list.replaceChildren(...sections);
       if (focused) $(focused)?.focus({ preventScroll: true });
       filterLibrary();
     }
@@ -346,11 +383,13 @@ export function createProviderNavigation(options: {
       const status = row.querySelector<HTMLElement>(
         ".provider-library-status",
       )!;
+      const isOpen = state.providerTabs.open.includes(id);
       prop(
         status,
         "textContent",
-        state.providerTabs.open.includes(id) ? "Đang mở" : "",
+        isOpen ? "Đang mở" : "",
       );
+      prop(status, "hidden", !isOpen);
     }
     const busy =
       adding || state.accountBusy || state.importing || !!state.catalogWarning;

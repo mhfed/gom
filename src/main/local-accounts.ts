@@ -32,6 +32,7 @@ export const COOKIE_SCOPES: Record<BuiltinProviderId, readonly string[]> = {
   instagram: ["instagram.com"],
   discord: ["discord.com", "discordapp.com"],
   slack: ["slack.com"],
+  tinder: [],
 };
 export const AUTH_COOKIE_NAMES: Record<BuiltinProviderId, readonly string[]> = {
   zalo: ["zpw_sek", "zpw_token"],
@@ -41,6 +42,7 @@ export const AUTH_COOKIE_NAMES: Record<BuiltinProviderId, readonly string[]> = {
   instagram: ["sessionid", "ds_user_id"],
   discord: [],
   slack: ["d"],
+  tinder: [],
 };
 function cookieHostInScope(host: string, scopes: readonly string[]) {
   const normalized = host.replace(/^\./, "").toLowerCase();

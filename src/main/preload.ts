@@ -10,6 +10,7 @@ const bridge: DesktopBridge = {
     ipcRenderer.invoke("desktop", "account-menu", anchor),
   providerLibrary: (open) =>
     ipcRenderer.invoke("desktop", "provider-library", open),
+  welcome: () => ipcRenderer.invoke("desktop", "welcome"),
   providerMenu: (request) =>
     ipcRenderer.invoke("desktop", "provider-menu", request),
   pinProvider: (id) => ipcRenderer.invoke("desktop", "provider-pin", id),

@@ -24,6 +24,10 @@ export const authScript = `(()=>{
     const signedIn=[...document.querySelectorAll('#app-mount [data-list-item-id^="guildsnav"],#app-mount [aria-label="Direct Messages"],#app-mount [aria-label="Servers"]')].some(visible);
     return signedIn?'authenticated':'ready';
   }
+  if(location.hostname==='tinder.com'||location.hostname==='www.tinder.com'){
+    if(/^\/app\/login(?:\/|$)/.test(location.pathname))return 'needs-login';
+    return localStorage.getItem('TinderWeb/APIToken')?'authenticated':'ready';
+  }
   if(location.hostname==='web.telegram.org'){
     if(document.querySelector('.auth-pages,.auth-qr-form,.page-auth'))return 'needs-login';
     if(document.querySelector('.chatlist .chatlist-chat,.chatlist a[data-peer-id],.chatlist-chat'))return 'authenticated';
