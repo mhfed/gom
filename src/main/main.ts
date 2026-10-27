@@ -850,7 +850,7 @@ function configureShortcut(enabled: boolean) {
   ) {
     state.preferences.shortcut = false;
     state.notice =
-      "Phím tắt Cmd+Shift+Space đang được app khác dùng. Anh có thể bật lại sau.";
+      "Phím tắt Cmd+Shift+Space đang được app khác dùng. Bạn có thể bật lại sau.";
   } else state.preferences.shortcut = true;
 }
 async function persist(forcePublish = false) {
@@ -859,7 +859,7 @@ async function persist(forcePublish = false) {
     await save();
   } catch {
     state.notice =
-      "Chưa lưu được cài đặt. Anh kiểm tra dung lượng/quyền ghi rồi thử lại.";
+      "Chưa lưu được cài đặt. Bạn kiểm tra dung lượng/quyền ghi rồi thử lại.";
     publish();
   }
 }
@@ -871,7 +871,7 @@ function scheduleSave() {
 function testNotification(id: AccountId) {
   if (!findAccount(id) || !notificationAllowed(state.preferences, id)) {
     state.notificationStatus =
-      "Anh chọn Cho phép và bỏ tạm dừng trước khi thử thông báo.";
+      "Bạn chọn Cho phép và bỏ tạm dừng trước khi thử thông báo.";
     publish();
     return;
   }
@@ -1042,7 +1042,7 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
     activate(targetId);
     status(targetId, "authenticated");
     state.notice =
-      "Đã dùng phiên Messenger có sẵn. Anh có thể đọc và trả lời ngay.";
+      "Đã dùng phiên Messenger có sẵn. Bạn có thể đọc và trả lời ngay.";
     return { status: "imported" };
   } catch (error) {
     const code =
@@ -1055,15 +1055,15 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
             : "import-failed";
     const messages: Record<string, string> = {
       "needs-login":
-        "Hồ sơ này chưa có phiên Facebook còn hiệu lực. Anh đăng nhập Facebook trên Chrome rồi thử lại.",
+        "Hồ sơ này chưa có phiên Facebook còn hiệu lực. Bạn đăng nhập Facebook trên Chrome rồi thử lại.",
       "needs-os-authorization":
-        "Chưa được macOS cho phép đọc Chrome Safe Storage. Anh có thể đăng nhập trực tiếp trong app.",
-      "source-busy": "Chrome đang bận. Anh đợi một chút rồi thử lại.",
+        "Chưa được macOS cho phép đọc Chrome Safe Storage. Bạn có thể đăng nhập trực tiếp trong app.",
+      "source-busy": "Chrome đang bận. Bạn đợi một chút rồi thử lại.",
       "verification-failed":
-        "Phiên có sẵn cần xác thực thêm. Anh đăng nhập Messenger trực tiếp trong app.",
+        "Phiên có sẵn cần xác thực thêm. Bạn đăng nhập Messenger trực tiếp trong app.",
       "source-unavailable": "Không đọc được hồ sơ Chrome đã chọn.",
       "rollback-failed":
-        "Chưa khôi phục được phiên cũ. Anh đăng nhập Messenger trực tiếp trong app.",
+        "Chưa khôi phục được phiên cũ. Bạn đăng nhập Messenger trực tiếp trong app.",
       unsupported: "Định dạng phiên Chrome này chưa được hỗ trợ.",
     };
     state.notice =
@@ -1209,8 +1209,8 @@ async function importProviderSession(
     const messages: Record<string, string> = {
       "needs-login": `Profile Chrome chưa có phiên ${label} còn hiệu lực. Đăng nhập trên Chrome rồi thử lại.`,
       "needs-os-authorization":
-        "macOS chưa cho phép Gom đọc Chrome Safe Storage. Anh có thể đăng nhập trực tiếp trong app.",
-      "source-busy": "Chrome đang bận. Anh đợi một chút rồi thử lại.",
+        "macOS chưa cho phép Gom đọc Chrome Safe Storage. Bạn có thể đăng nhập trực tiếp trong app.",
+      "source-busy": "Chrome đang bận. Bạn đợi một chút rồi thử lại.",
       "verification-failed":
         `Không xác minh được phiên ${label}. Phiên đích vẫn được giữ; hãy đăng nhập trực tiếp trong Gom.`,
       "source-unavailable": "Không đọc được profile Chrome đã chọn.",
@@ -1250,7 +1250,7 @@ async function addProvider(arg: unknown): Promise<ProviderResult> {
   if (state.importing || state.accountBusy || closing)
     return {
       ok: false,
-      message: "App đang xử lý tài khoản. Anh thử lại sau một chút.",
+      message: "App đang xử lý tài khoản. Bạn thử lại sau một chút.",
     };
   if (state.catalogWarning) return { ok: false, message: state.catalogWarning };
   if (
@@ -1286,7 +1286,7 @@ async function addProvider(arg: unknown): Promise<ProviderResult> {
           /invalid|url|name|limit|provider/i.test(error.message);
         const message = invalid
           ? "Nhập tên website và URL http:// hoặc https:// hợp lệ, không kèm mật khẩu."
-          : "Chưa lưu được website. Anh kiểm tra quyền ghi hoặc dung lượng rồi thử lại.";
+          : "Chưa lưu được website. Bạn kiểm tra quyền ghi hoặc dung lượng rồi thử lại.";
         return { ok: false, message };
       } finally {
         state.accountBusy = false;
@@ -1322,7 +1322,7 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
     )
       return {
         ok: false,
-        message: "Chưa lưu xong phiên website. Anh thử đóng tab lại sau.",
+        message: "Chưa lưu xong phiên website. Bạn thử đóng tab lại sau.",
       };
     if (closing) return { ok: false, message: "App đang thoát." };
     const active = providerFor(state.active);
@@ -1597,7 +1597,7 @@ async function changeAccount(
   if (state.importing || state.accountBusy || closing)
     return {
       ok: false,
-      message: "App đang xử lý tài khoản. Anh thử lại sau một chút.",
+      message: "App đang xử lý tài khoản. Bạn thử lại sau một chút.",
     };
   if (state.catalogWarning) return { ok: false, message: state.catalogWarning };
   const data = arg as Record<string, unknown> | undefined;
@@ -1634,7 +1634,7 @@ async function changeAccount(
             type: "question",
             message: `Gỡ ${accountLabel(id)} khỏi danh sách?`,
             detail:
-              "Dữ liệu đăng nhập vẫn được giữ trên máy. Anh có thể khôi phục tài khoản trong Cài đặt; thao tác này không đăng xuất hoặc xóa tin nhắn.",
+              "Dữ liệu đăng nhập vẫn được giữ trên máy. Bạn có thể khôi phục tài khoản trong Cài đặt; thao tác này không đăng xuất hoặc xóa tin nhắn.",
             buttons: ["Hủy", "Gỡ khỏi danh sách"],
             defaultId: 0,
             cancelId: 0,
@@ -1710,7 +1710,7 @@ async function changeAccount(
         return { ok: true, accountId: added?.id ?? id };
       } catch {
         const message =
-          "Chưa cập nhật được tài khoản. Anh kiểm tra tên, bảo đảm còn ít nhất một tài khoản đang dùng và thử lại. Các phiên đăng nhập vẫn được giữ.";
+          "Chưa cập nhật được tài khoản. Bạn kiểm tra tên, bảo đảm còn ít nhất một tài khoản đang dùng và thử lại. Các phiên đăng nhập vẫn được giữ.";
         state.notice = message;
         publish();
         return { ok: false, message };
@@ -1742,7 +1742,7 @@ function showAutomaticUpdateError() {
     phase: "error",
     downloadProgress: null,
     message:
-      "Chưa thể tự cập nhật bản cài này. Anh vẫn có thể tải bản mới thủ công.",
+      "Chưa thể tự cập nhật bản cài này. Bạn vẫn có thể tải bản mới thủ công.",
   };
   if (!closing) publish();
 }
@@ -1792,7 +1792,7 @@ async function quit(installUpdate = false) {
       type: "warning",
       message: "Chưa ghi xong dữ liệu phiên.",
       detail:
-        "Anh có thể mở lại app để kiểm tra. Phiên đăng nhập không bị xóa.",
+        "Bạn có thể mở lại app để kiểm tra. Phiên đăng nhập không bị xóa.",
       buttons: ["Đóng app"],
     });
   }
@@ -1856,7 +1856,7 @@ else {
           ...state.updates,
           phase: "current",
           downloadProgress: null,
-          message: "Anh đang dùng phiên bản mới nhất.",
+          message: "Bạn đang dùng phiên bản mới nhất.",
         };
         publish();
       });
@@ -2128,7 +2128,7 @@ else {
           // Only the checker can supply this fixed-repository HTTPS release URL.
           await shell.openExternal(update.releaseUrl).catch(() => {
             state.notice =
-              "Chưa mở được trình duyệt. Anh thử lại nút tải cập nhật.";
+              "Chưa mở được trình duyệt. Bạn thử lại nút tải cập nhật.";
             publish();
           });
           return;
@@ -2157,7 +2157,7 @@ else {
               state.openAtLogin = app.getLoginItemSettings().openAtLogin;
             } catch {
               state.notice =
-                "Chưa đổi được chạy cùng macOS. Anh kiểm tra mục Đăng nhập trong Cài đặt hệ thống.";
+                "Chưa đổi được chạy cùng macOS. Bạn kiểm tra mục Đăng nhập trong Cài đặt hệ thống.";
             }
           } else return;
           // A rejected OS preference can leave state unchanged while the native
