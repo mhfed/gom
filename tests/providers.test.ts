@@ -163,8 +163,9 @@ test("restored custom websites derive trusted hosts from entry URLs, never saved
   const restored = restoreProviders([
     { ...providers[0], hosts: ["evil.test"], custom: false },
   ]);
-  assert.deepEqual(restored[3].hosts, ["localhost"]);
-  assert.equal(restored[3].custom, true);
+  const restoredLocalProvider = restored.find((provider) => provider.id === id)!;
+  assert.deepEqual(restoredLocalProvider.hosts, ["localhost"]);
+  assert.equal(restoredLocalProvider.custom, true);
   assert.equal(
     navigationPolicy(id, "http://evil.test:4321/", restored),
     "external",

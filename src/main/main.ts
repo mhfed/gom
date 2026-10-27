@@ -54,6 +54,7 @@ import {
   Notification,
   screen,
   net,
+  autoUpdater,
   powerMonitor,
   type Session,
   type WebContents,
@@ -116,16 +117,35 @@ const permissionPrompts = new Set<AccountId>();
 const closingProviders = new Set<ProviderId>();
 const testAlerts = new Map<AccountId, Notification>();
 const SHORTCUT = "CommandOrControl+Shift+Space";
+const AUTOMATIC_UPDATES_SUPPORTED =
+  process.env.GOM_AUTOMATIC_UPDATES_ENABLED === "true";
+const PROVIDER_TAB_DEFAULTS_VERSION = 2;
+const BUILTIN_PROVIDER_TABS_BY_VERSION: Record<number, ProviderId[]> = {
+  1: ["gmail", "instagram"],
+  2: ["discord", "slack"],
+};
 const appIconPath = join(__dirname, "app.png");
+let savedProviderTabDefaultsVersion = PROVIDER_TAB_DEFAULTS_VERSION;
+const MESSENGER_CHROME_CSS = `
+  [role="banner"] {
+    display: none !important;
+  }
+`;
 const updateChecker = new ManualUpdateChecker({
   currentVersion: app.getVersion(),
   arch: process.arch,
   onChange: (updates) => {
-    state.updates = updates;
+    state.updates = {
+      ...updates,
+      automaticInstallAvailable: AUTOMATIC_UPDATES_SUPPORTED,
+    };
     if (!closing) publish();
   },
 });
-const updateSchedule = new UpdateSchedule(() => updateChecker.check());
+let automaticUpdateActive = false;
+const updateSchedule = new UpdateSchedule(() =>
+  automaticUpdateActive ? Promise.resolve() : updateChecker.check(),
+);
 const state: AppState = {
   providers: defaultProviders(),
   providerTabs: normalizeProviderTabs(undefined, [...PROVIDER_ORDER]),
@@ -135,39 +155,40 @@ const state: AppState = {
   accountBusy: false,
   catalogWarning: "",
   preferences: defaultPreferences(),
-  connections: {
-    zalo: { phase: "connecting", reason: null, retryAt: null },
-    messenger: { phase: "connecting", reason: null, retryAt: null },
-    telegram: { phase: "connecting", reason: null, retryAt: null },
-  },
+  connections: Object.fromEntries(
+    PROVIDER_ORDER.map((id) => [
+      id,
+      { phase: "connecting", reason: null, retryAt: null },
+    ]),
+  ),
   canGoBack: false,
   openAtLogin: false,
   startupAvailable: app.isPackaged,
   notificationStatus:
     "Thông báo gốc do từng nền tảng gửi; macOS quyết định hiển thị.",
-  themes: { zalo: null, messenger: null, telegram: null },
+  themes: Object.fromEntries(PROVIDER_ORDER.map((id) => [id, null])),
   collapsed: false,
-  unread: {
-    zalo: normalizeUnread({ global: null, loaded: null, kind: "messages" }),
-    messenger: normalizeUnread({
-      global: null,
-      loaded: null,
-      kind: "conversations",
-    }),
-    telegram: normalizeUnread({
-      global: null,
-      loaded: null,
-      kind: "conversations",
-    }),
-  },
+  unread: Object.fromEntries(
+    PROVIDER_ORDER.map((id) => [
+      id,
+      normalizeUnread({
+        global: null,
+        loaded: null,
+        kind: id === "zalo" || id === "gmail" ? "messages" : "conversations",
+      }),
+    ]),
+  ),
   active: "zalo",
   panel: "service",
-  statuses: { zalo: "idle", messenger: "idle", telegram: "idle" },
+  statuses: Object.fromEntries(PROVIDER_ORDER.map((id) => [id, "idle"])),
   profiles: [],
   importing: false,
   notice: "",
   version: app.getVersion(),
-  updates: updateChecker.snapshot(),
+  updates: {
+    ...updateChecker.snapshot(),
+    automaticInstallAvailable: AUTOMATIC_UPDATES_SUPPORTED,
+  },
 };
 const settingsPath = join(app.getPath("userData"), "window.json");
 const settingsWriter = new SettingsWriter(settingsPath);
@@ -189,6 +210,11 @@ function providerFor(id: AccountId): ProviderId {
   const account = findAccount(id, true);
   if (!account) throw new Error("unknown-account");
   return account.provider;
+}
+function unreadKind(provider: ProviderId): "messages" | "conversations" {
+  return provider === "zalo" || provider === "gmail"
+    ? "messages"
+    : "conversations";
 }
 function providerDefinition(id: ProviderId) {
   const provider = state.providers.find((p) => p.id === id);
@@ -218,7 +244,7 @@ function initializeAccount(a: Account) {
   state.unread[a.id] ??= normalizeUnread({
     global: null,
     loaded: null,
-    kind: a.provider === "zalo" ? "messages" : "conversations",
+    kind: unreadKind(a.provider),
   });
   state.preferences.notifications[a.id] ??= "ask";
 }
@@ -256,7 +282,7 @@ function status(id: AccountId, value: ProviderStatus) {
     state.unread[id] = normalizeUnread({
       global: null,
       loaded: null,
-      kind: providerFor(id) === "zalo" ? "messages" : "conversations",
+      kind: unreadKind(providerFor(id)),
     });
   publish();
 }
@@ -375,6 +401,18 @@ function setupSession(ses: Session, id: AccountId) {
   });
 }
 function guard(contents: WebContents, id: AccountId) {
+  contents.on("dom-ready", () => {
+    if (providerFor(id) !== "messenger") return;
+    let url: URL;
+    try {
+      url = new URL(contents.getURL());
+    } catch {
+      return;
+    }
+    if (url.hostname !== "facebook.com" && url.hostname !== "www.facebook.com")
+      return;
+    void contents.insertCSS(MESSENGER_CHROME_CSS).catch(() => {});
+  });
   contents.on("will-navigate", (event, url) => {
     const policy = navigationPolicy(providerFor(id), url, state.providers);
     if (policy !== "internal") {
@@ -582,7 +620,7 @@ async function detectOnce(id: AccountId, contents: WebContents) {
         : {
             global: null,
             loaded: null,
-            kind: providerFor(id) === "zalo" ? "messages" : "conversations",
+            kind: unreadKind(providerFor(id)),
           },
     );
     if (!valid()) return;
@@ -1450,7 +1488,7 @@ async function changeAccount(
           state.unread[id] = normalizeUnread({
             global: null,
             loaded: null,
-            kind: providerFor(id) === "zalo" ? "messages" : "conversations",
+            kind: unreadKind(providerFor(id)),
           });
           if (state.active === id) {
             state.active = (next.find(
@@ -1509,9 +1547,46 @@ async function save() {
     preferences: state.preferences,
     presentation: state.presentation,
     providerTabs: state.providerTabs,
+    providerTabDefaultsVersion: savedProviderTabDefaultsVersion,
   });
 }
-async function quit() {
+function showAutomaticUpdateError() {
+  automaticUpdateActive = false;
+  state.updates = {
+    ...state.updates,
+    phase: "error",
+    downloadProgress: null,
+    message:
+      "Chưa thể tự cập nhật bản cài này. Anh vẫn có thể tải bản mới thủ công.",
+  };
+  if (!closing) publish();
+}
+function beginAutomaticUpdate() {
+  if (
+    automaticUpdateActive ||
+    !AUTOMATIC_UPDATES_SUPPORTED ||
+    !app.isPackaged ||
+    process.platform !== "darwin" ||
+    !state.updates.latestVersion
+  )
+    return;
+  automaticUpdateActive = true;
+  state.updates = {
+    ...state.updates,
+    phase: "downloading",
+    downloadProgress: null,
+    message: `Đang kết nối để tải Gom ${state.updates.latestVersion}…`,
+  };
+  publish();
+  try {
+    const feed = `https://update.electronjs.org/mhfed/gom/darwin-${process.arch}/${app.getVersion()}`;
+    autoUpdater.setFeedURL({ url: feed, serverType: "json" });
+    autoUpdater.checkForUpdates();
+  } catch {
+    showAutomaticUpdateError();
+  }
+}
+async function quit(installUpdate = false) {
   if (closing) return;
   closing = true;
   clearInterval(poll);
@@ -1541,7 +1616,8 @@ async function quit() {
     if (!view.webContents.isDestroyed()) view.webContents.close();
   closed = true;
   win.destroy();
-  app.quit();
+  if (installUpdate) autoUpdater.quitAndInstall();
+  else app.quit();
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
@@ -1554,6 +1630,53 @@ else {
     }
   });
   app.whenReady().then(async () => {
+    if (
+      app.isPackaged &&
+      process.platform === "darwin" &&
+      AUTOMATIC_UPDATES_SUPPORTED
+    ) {
+      autoUpdater.on("checking-for-update", () => {
+        if (!automaticUpdateActive) return;
+        state.updates = {
+          ...state.updates,
+          phase: "downloading",
+          message: "Đang kiểm tra gói cập nhật…",
+        };
+        publish();
+      });
+      autoUpdater.on("update-available", () => {
+        if (!automaticUpdateActive) return;
+        state.updates = {
+          ...state.updates,
+          phase: "downloading",
+          downloadProgress: null,
+          message: "Đã tìm thấy bản mới. Đang tải về…",
+        };
+        publish();
+      });
+      autoUpdater.on("update-downloaded", () => {
+        if (!automaticUpdateActive) return;
+        state.updates = {
+          ...state.updates,
+          phase: "downloaded",
+          downloadProgress: 100,
+          message: `Đã tải Gom ${state.updates.latestVersion ?? "mới"}. Khởi động lại để cài đặt.`,
+        };
+        publish();
+      });
+      autoUpdater.on("update-not-available", () => {
+        if (!automaticUpdateActive) return;
+        automaticUpdateActive = false;
+        state.updates = {
+          ...state.updates,
+          phase: "current",
+          downloadProgress: null,
+          message: "Anh đang dùng phiên bản mới nhất.",
+        };
+        publish();
+      });
+      autoUpdater.on("error", showAutomaticUpdateError);
+    }
     // Also supplies the native macOS About icon when running in development.
     app.dock?.setIcon(appIconPath);
     let stored: Record<string, unknown> = {};
@@ -1562,6 +1685,17 @@ else {
       if (value && typeof value === "object" && !Array.isArray(value))
         stored = value;
     } catch {}
+    const storedProviderTabDefaultsVersion =
+      typeof stored.providerTabDefaultsVersion === "number" &&
+      Number.isInteger(stored.providerTabDefaultsVersion)
+        ? stored.providerTabDefaultsVersion
+        : 0;
+    const migrateProviderTabs =
+      storedProviderTabDefaultsVersion < PROVIDER_TAB_DEFAULTS_VERSION;
+    savedProviderTabDefaultsVersion = Math.max(
+      storedProviderTabDefaultsVersion,
+      PROVIDER_TAB_DEFAULTS_VERSION,
+    );
     if (typeof stored.collapsed === "boolean")
       state.collapsed = stored.collapsed;
     const catalog = await catalogStore.load();
@@ -1571,6 +1705,21 @@ else {
       stored.providerTabs,
       state.providers.map((p) => p.id),
     );
+    if (migrateProviderTabs) {
+      const open = [...state.providerTabs.open];
+      for (
+        let version = Math.max(1, storedProviderTabDefaultsVersion + 1);
+        version <= PROVIDER_TAB_DEFAULTS_VERSION;
+        version++
+      ) {
+        for (const id of BUILTIN_PROVIDER_TABS_BY_VERSION[version] ?? [])
+          if (!open.includes(id)) open.push(id);
+      }
+      state.providerTabs = {
+        ...state.providerTabs,
+        open,
+      };
+    }
     state.presentation = normalizePresentation(
       stored.presentation,
       state.accounts.map((a) => a.id),
@@ -1636,11 +1785,13 @@ else {
         )?.[0] ?? popupProviders.get(event.sender);
       if (
         !provider ||
-        navigationPolicy(
+        !validNotificationFrame(
           providerFor(provider),
           event.sender.getURL(),
+          true,
+          true,
           state.providers,
-        ) !== "internal" ||
+        ) ||
         !notificationAllowed(state.preferences, provider) ||
         Date.now() - (lastNotificationClicks.get(provider) ?? 0) < 1000
       )
@@ -1764,15 +1915,35 @@ else {
           showSettings();
           return;
         case "updates-check":
-          await updateChecker.check();
+          if (!automaticUpdateActive) await updateChecker.check();
           return;
         case "updates-download": {
-          const update = updateChecker.snapshot();
-          if (update.phase !== "available" || !update.releaseUrl) return;
+          const update = state.updates;
+          if (update.phase === "downloaded" && automaticUpdateActive) {
+            state.updates = {
+              ...update,
+              phase: "installing",
+              message: "Đang khởi động lại để cài bản mới…",
+            };
+            publish();
+            void quit(true);
+            return;
+          }
+          if (!update.releaseUrl) return;
+          if (
+            update.phase === "available" &&
+            AUTOMATIC_UPDATES_SUPPORTED &&
+            app.isPackaged &&
+            process.platform === "darwin"
+          ) {
+            beginAutomaticUpdate();
+            return;
+          }
+          if (update.phase !== "available" && update.phase !== "error") return;
           // Only the checker can supply this fixed-repository HTTPS release URL.
           await shell.openExternal(update.releaseUrl).catch(() => {
             state.notice =
-              "Chưa mở được trình duyệt. Anh thử lại nút Tải bản mới.";
+              "Chưa mở được trình duyệt. Anh thử lại nút tải cập nhật.";
             publish();
           });
           return;
@@ -1945,6 +2116,7 @@ else {
     else if (state.providerTabs.open.length)
       activateProvider(state.providerTabs.open[0]);
     else showProviderLibrary();
+    if (migrateProviderTabs) scheduleSave();
     // Keep built-in messaging sessions warm for notifications. Custom websites
     // are created only when selected, regardless of library/catalog size.
     for (const { id } of state.accounts.filter(

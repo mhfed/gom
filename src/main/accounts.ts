@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import type { Account, ProviderDefinition, ProviderId } from "../shared.ts";
+import {
+  PROVIDER_ORDER,
+  type Account,
+  type ProviderDefinition,
+  type ProviderId,
+} from "../shared.ts";
 import { validProviderId } from "./security.ts";
 import { SettingsWriter } from "./preferences.ts";
 import {
@@ -29,15 +34,18 @@ export function initials(name: string) {
     .toUpperCase();
 }
 export function defaultAccounts(): Account[] {
-  return (["zalo", "messenger", "telegram"] as ProviderId[]).map(
-    (provider) => ({
-      id: provider,
-      provider,
-      name: "Cá nhân",
-      avatar: "CN",
-      archived: false,
-    }),
-  );
+  const legacyOrder: ProviderId[] = ["zalo", "messenger", "telegram"];
+  const order = [
+    ...legacyOrder,
+    ...PROVIDER_ORDER.filter((id) => !legacyOrder.includes(id)),
+  ];
+  return order.map((provider) => ({
+    id: provider,
+    provider,
+    name: "Cá nhân",
+    avatar: "CN",
+    archived: false,
+  }));
 }
 export function accountPartition(account: Account) {
   if (isBuiltinProviderId(account.id)) {
@@ -64,7 +72,7 @@ function readCatalog(raw: unknown): {
     !data ||
     ![1, 2].includes(data.version as number) ||
     !Array.isArray(data.accounts) ||
-    data.accounts.length > 100
+    data.accounts.length > 104
   )
     throw Error("invalid-catalog");
   const providers =
@@ -95,10 +103,15 @@ function readCatalog(raw: unknown): {
       archived: a.archived,
     };
   });
-  if (
-    !["zalo", "messenger", "telegram"].every((id) => ids.has(id)) ||
-    !accounts.some((a) => !a.archived)
-  )
+  // Add newly introduced built-ins to existing catalogs without changing the
+  // IDs or partitions of accounts that were already saved.
+  for (const account of defaultAccounts()) {
+    if (!ids.has(account.id)) {
+      accounts.push(account);
+      ids.add(account.id);
+    }
+  }
+  if (!accounts.some((a) => !a.archived))
     throw Error("invalid-catalog");
   return { accounts, providers };
 }

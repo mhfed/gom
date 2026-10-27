@@ -1,4 +1,9 @@
 const { version } = require("./package.json");
+const signingIdentity = process.env.GOM_MACOS_SIGNING_IDENTITY?.trim();
+const appleId = process.env.GOM_APPLE_ID?.trim();
+const appleIdPassword = process.env.GOM_APPLE_APP_SPECIFIC_PASSWORD;
+const appleTeamId = process.env.GOM_APPLE_TEAM_ID?.trim();
+const canNotarize = Boolean(appleId && appleIdPassword && appleTeamId);
 
 // Everything used at runtime is bundled by scripts/build.mjs. Keep an explicit
 // list so a local profile, prototype, or unrelated file cannot enter the app.
@@ -18,6 +23,10 @@ const runtimePaths = new Set([
   "/dist/logos",
   "/dist/logos/messenger.svg",
   "/dist/logos/telegram.svg",
+  "/dist/logos/gmail.svg",
+  "/dist/logos/instagram.svg",
+  "/dist/logos/discord.svg",
+  "/dist/logos/slack.svg",
   "/dist/logos/zalo.png",
   "/dist/logos/SOURCES.md",
 ]);
@@ -26,12 +35,26 @@ module.exports = {
   outDir: "out-release",
   packagerConfig: {
     asar: true,
-    osxSign: {
-      identity: "-",
-      identityValidation: false,
-      preAutoEntitlements: false,
-      optionsForFile: () => ({ hardenedRuntime: false }),
-    },
+    osxSign: signingIdentity
+      ? {
+          identity: signingIdentity,
+          optionsForFile: () => ({ hardenedRuntime: true }),
+        }
+      : {
+          identity: "-",
+          identityValidation: false,
+          preAutoEntitlements: false,
+          optionsForFile: () => ({ hardenedRuntime: false }),
+        },
+    ...(signingIdentity && canNotarize
+      ? {
+          osxNotarize: {
+            appleId,
+            appleIdPassword,
+            teamId: appleTeamId,
+          },
+        }
+      : {}),
     appBundleId: "local.mhfed.tinnhan.desktop",
     executableName: "Gom",
     icon: "assets/app.icns",

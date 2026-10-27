@@ -63,8 +63,8 @@ test("preferences reject malformed values without enabling startup or broadening
   assert.equal(p.shortcut, false);
   assert.equal(p.paused, true);
   assert.deepEqual(p.notifications, {
+    ...defaultPreferences().notifications,
     zalo: "allow",
-    messenger: "ask",
     telegram: "mute",
   });
   assert.equal(

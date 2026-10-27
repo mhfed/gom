@@ -679,9 +679,19 @@
                   <button id="check-updates" class="secondary">
                     Kiểm tra cập nhật</button
                   ><button id="download-update" class="primary" hidden>
-                    Tải bản mới
-                    <svg aria-hidden="true"><use href="#i-external" /></svg>
+                    Tải và cài đặt
                   </button>
+                </div>
+                <div
+                  id="update-progress"
+                  class="update-progress"
+                  role="progressbar"
+                  aria-label="Tiến độ tải bản cập nhật"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  hidden
+                >
+                  <div id="update-progress-bar"></div>
                 </div>
               </div>
               <details id="update-notes-container" class="update-notes" hidden>
@@ -701,10 +711,11 @@
               <div class="inline-note update-install-hint">
                 <svg aria-hidden="true"><use href="#i-info" /></svg>
                 <p>
-                  “Tải bản mới” mở trang tải trong trình duyệt. Kéo Gom vào
-                  Applications và chọn thay thế để cài. Lưu nội dung đang soạn
-                  trước khi thoát; khả năng khôi phục bản nháp tùy nền tảng. Nếu
-                  đang dùng Tin Nhan, thoát app cũ trước khi mở Gom.
+                  Chọn “Tải và cài đặt” để Gom tải bản mới trong app, rồi khởi
+                  động lại để áp dụng. Nếu tự cập nhật không dùng được, nút sẽ
+                  mở trang tải thủ công; kéo Gom vào Applications và chọn thay
+                  thế để cài. Hãy lưu nội dung đang soạn trước khi khởi động lại.
+                  Nếu đang dùng Tin Nhan, thoát app cũ trước khi mở Gom.
                 </p>
               </div>
             </div>

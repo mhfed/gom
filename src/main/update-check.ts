@@ -170,6 +170,7 @@ export class ManualUpdateChecker {
       latestVersion: null,
       releaseUrl: null,
       releaseNotes: "",
+      downloadProgress: null,
       checkedAt: null,
       message: "Chưa kiểm tra cập nhật.",
     };
@@ -277,6 +278,7 @@ export class ManualUpdateChecker {
       latestVersion: null,
       releaseUrl: null,
       releaseNotes: "",
+      downloadProgress: null,
       checkedAt: (this.options.now ?? Date.now)(),
       message,
     });

@@ -15,8 +15,17 @@ export function validNotificationFrame(
   owned: boolean,
   providers?: readonly ProviderDefinition[],
 ) {
+  let host: string;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return false;
+  }
   return (
-    owned && isMainFrame && navigationPolicy(id, url, providers) === "internal"
+    owned &&
+    isMainFrame &&
+    host !== "accounts.google.com" &&
+    navigationPolicy(id, url, providers) === "internal"
   );
 }
 export function hasUnread(values: { count: number | null }[]) {
