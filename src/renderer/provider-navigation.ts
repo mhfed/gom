@@ -1,4 +1,10 @@
-import type { AppState, ProviderDefinition, ProviderId } from "../shared.ts";
+import type {
+  AppState,
+  ProviderDefinition,
+  ProviderId,
+  UnreadInfo,
+} from "../shared.ts";
+import { badgeText } from "../main/unread.ts";
 import { fitProviderTabs } from "./provider-tab-layout.ts";
 
 const $ = <T extends HTMLElement>(id: string) =>
@@ -140,15 +146,16 @@ export function createProviderNavigation(options: {
         );
         wrapper.dataset.provider = id;
         wrapper.setAttribute("role", "presentation");
+        const unreadSpace = provider.custom ? 0 : 30;
         const width = pin
           ? 34
           : Math.ceil(
               Math.min(
-                156,
+                156 + unreadSpace,
                 Math.max(
-                  96,
+                  96 + unreadSpace,
                   (canvas?.measureText(provider.label).width ||
-                    provider.label.length * 7) + 62,
+                    provider.label.length * 7) + 62 + unreadSpace,
                 ),
               ),
             );
@@ -162,7 +169,7 @@ export function createProviderNavigation(options: {
           options.logo(provider),
           create("span", "provider-tab-label", provider.label),
         );
-        const unread = create("i", "platform-unread");
+        const unread = create("span", "platform-unread");
         unread.setAttribute("aria-hidden", "true");
         button.append(unread);
         button.onclick = () => void options.select(id);
@@ -223,26 +230,40 @@ export function createProviderNavigation(options: {
       const button = $("platform-" + id);
       if (!button) continue;
       const provider = state.providers.find((p) => p.id === id)!;
-      const unread =
-        !provider.custom &&
-        state.accounts.some(
-          (a) =>
-            a.provider === id &&
-            !a.archived &&
-            (state.unread[a.id]?.count || 0) > 0,
-        );
+      const unreadInfo = state.accounts
+        .filter((a) => a.provider === id && !a.archived && !provider.custom)
+        .map((a) => state.unread[a.id] ?? null);
+      const knownUnread = unreadInfo.filter(
+        (info): info is UnreadInfo & { count: number } =>
+          info !== null && info.count !== null,
+      );
+      const unreadCount = knownUnread.reduce(
+        (total, info) => total + info.count,
+        0,
+      );
+      const unreadApproximate = unreadInfo.some(
+        (info) => !info || info.count === null || info.approximate,
+      );
+      const firstKnownUnread = knownUnread[0];
+      const unreadText =
+        unreadCount > 0 && firstKnownUnread
+          ? badgeText({
+              ...firstKnownUnread,
+              count: unreadCount,
+              approximate: unreadApproximate,
+            })
+          : "";
       const selected = active === id;
       attr(button, "aria-selected", String(selected));
       prop(button, "tabIndex", selected ? 0 : -1);
-      prop(
-        button.querySelector<HTMLElement>(".platform-unread")!,
-        "hidden",
-        !unread,
-      );
+      const unreadBadge =
+        button.querySelector<HTMLElement>(".platform-unread")!;
+      prop(unreadBadge, "textContent", unreadText);
+      prop(unreadBadge, "hidden", !unreadText);
       const label =
         provider.label +
         (pinned.includes(id) ? " · Đã ghim" : "") +
-        (unread ? " · Có tin chưa đọc" : "");
+        (unreadText ? ` · ${unreadText} chưa đọc` : "");
       attr(button, "aria-label", label);
       prop(button, "title", label + " · Nhấp chuột phải để quản lý tab");
       button.parentElement?.classList.toggle("is-active", selected);
