@@ -3,7 +3,7 @@ import { join, sep } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { pbkdf2Sync } from "node:crypto";
-import type { ProfileSource } from "../shared.ts";
+import type { BuiltinProviderId, ProfileSource } from "../shared.ts";
 import { decodeChromeCookie, chromiumExpiry } from "./import-crypto.ts";
 import type { LoginCookie } from "./cookie-transaction.ts";
 const execute = promisify(execFile);
@@ -23,6 +23,30 @@ interface EncryptedCookie {
   expiry: number;
   encrypted: string;
   plain: string;
+}
+export const COOKIE_SCOPES: Record<BuiltinProviderId, readonly string[]> = {
+  zalo: ["zalo.me", "zaloapp.com"],
+  messenger: ["facebook.com"],
+  telegram: ["telegram.org"],
+  gmail: ["google.com"],
+  instagram: ["instagram.com"],
+  discord: ["discord.com", "discordapp.com"],
+  slack: ["slack.com"],
+};
+export const AUTH_COOKIE_NAMES: Record<BuiltinProviderId, readonly string[]> = {
+  zalo: ["zpw_sek", "zpw_token"],
+  messenger: ["c_user", "xs"],
+  telegram: [],
+  gmail: [],
+  instagram: ["sessionid", "ds_user_id"],
+  discord: [],
+  slack: ["d"],
+};
+function cookieHostInScope(host: string, scopes: readonly string[]) {
+  const normalized = host.replace(/^\./, "").toLowerCase();
+  return scopes.some(
+    (scope) => normalized === scope || normalized.endsWith("." + scope),
+  );
 }
 export class ChromeSources {
   private readonly root: string;
@@ -58,7 +82,10 @@ export class ChromeSources {
   }
   async read(
     id: string,
+    provider: BuiltinProviderId = "messenger",
   ): Promise<{ version: number; cookies: EncryptedCookie[] }> {
+    const names = AUTH_COOKIE_NAMES[provider];
+    if (!names.length) throw new ImportFailure("unsupported-session");
     if (!(await this.list()).some((source) => source.id === id))
       throw new ImportFailure("source-unavailable");
     const profile = await realpath(join(this.root, id)).catch(() => {
@@ -95,8 +122,21 @@ export class ChromeSources {
       }
     };
     const meta = await query("SELECT value FROM meta WHERE key='version'");
+    const scopes = COOKIE_SCOPES[provider];
+    const hosts = scopes
+      .flatMap((host) =>
+        provider === "messenger"
+          ? [`LOWER(host_key)='${host}'`, `LOWER(host_key)='.${host}'`]
+          : [
+              `LOWER(host_key)='${host}'`,
+              `LOWER(host_key)='.${host}'`,
+              `LOWER(host_key) LIKE '%.' || '${host}'`,
+            ],
+      )
+      .join(" OR ");
+    const allowedNames = names.map((name) => `'${name}'`).join(",");
     const rows: EncryptedCookie[] = await query(
-      "SELECT host_key AS host,name,path,is_secure AS secure,is_httponly AS httpOnly,expires_utc AS expiry,hex(encrypted_value) AS encrypted,value AS plain FROM cookies WHERE host_key IN ('.facebook.com','facebook.com') AND name IN ('c_user','xs')",
+      `SELECT host_key AS host,name,path,is_secure AS secure,is_httponly AS httpOnly,expires_utc AS expiry,hex(encrypted_value) AS encrypted,value AS plain FROM cookies WHERE (${hosts}) AND LOWER(name) IN (${allowedNames})`,
     );
     const version = Number(meta[0]?.value);
     if (!Number.isInteger(version) || version < 1 || version > 1000)
@@ -104,28 +144,27 @@ export class ChromeSources {
     if (
       rows.some(
         (row) =>
-          ![".facebook.com", "facebook.com"].includes(row.host) ||
-          !["c_user", "xs"].includes(row.name) ||
-          row.path !== "/",
+          !cookieHostInScope(row.host, scopes) ||
+          !names.includes(row.name) ||
+          typeof row.path !== "string" ||
+          !row.path.startsWith("/") ||
+          (provider === "messenger" &&
+            (![".facebook.com", "facebook.com"].includes(row.host) ||
+              row.path !== "/")),
       )
     )
       throw new ImportFailure("unsupported");
     return { version, cookies: rows };
   }
-  async loginCookies(id: string): Promise<LoginCookie[]> {
-    const source = await this.read(id);
-    if (
-      source.cookies.length !== 2 ||
-      new Set(source.cookies.map((x) => x.name)).size !== 2
-    )
-      throw new ImportFailure("needs-login");
-    if (
-      source.cookies.some(
-        (row) => row.expiry && chromiumExpiry(row.expiry)! <= Date.now() / 1000,
-      )
-    )
-      throw new ImportFailure("needs-login");
+  async loginCookies(
+    id: string,
+    provider: BuiltinProviderId = "messenger",
+  ): Promise<LoginCookie[]> {
+    const source = await this.read(id, provider);
+    const cookies: LoginCookie[] = [];
     let key: Buffer | undefined;
+    let succeeded = false;
+    let unsupportedFormat = false;
     try {
       const response = await execute(
         "/usr/bin/security",
@@ -140,24 +179,55 @@ export class ChromeSources {
         "sha1",
       );
       response.stdout = "";
-      return source.cookies.map((cookie) => ({
-        url: "https://www.facebook.com/",
-        domain: cookie.host,
-        name: cookie.name,
-        value: decodeChromeCookie(cookie, key!, source.version),
-        path: "/",
-        secure: !!cookie.secure,
-        httpOnly: !!cookie.httpOnly,
-        ...(chromiumExpiry(cookie.expiry) !== undefined
-          ? { expirationDate: chromiumExpiry(cookie.expiry) }
-          : {}),
-      }));
+      for (const cookie of source.cookies) {
+        const expirationDate = chromiumExpiry(cookie.expiry);
+        if (expirationDate !== undefined && expirationDate <= Date.now() / 1000)
+          continue;
+        const format = Buffer.from(cookie.encrypted || "", "hex")
+          .subarray(0, 3)
+          .toString("ascii");
+        if (!cookie.plain && !["v10", "v11"].includes(format)) {
+          unsupportedFormat = true;
+          continue;
+        }
+        try {
+          const value = decodeChromeCookie(cookie, key, source.version);
+          if (!value) continue;
+          cookies.push({
+            url:
+              provider === "messenger"
+                ? "https://www.facebook.com/"
+                : `https://${cookie.host.replace(/^\./, "")}/`,
+            domain: cookie.host,
+            name: cookie.name,
+            value,
+            path: cookie.path,
+            secure: !!cookie.secure,
+            httpOnly: !!cookie.httpOnly,
+            ...(expirationDate !== undefined ? { expirationDate } : {}),
+          });
+        } catch {
+          // Ignore only this cookie when Chrome uses an unsupported format.
+          unsupportedFormat = true;
+        }
+      }
+      const required =
+        provider === "messenger" ? ["c_user", "xs"] : AUTH_COOKIE_NAMES[provider];
+      if (
+        !cookies.length ||
+        required.some((name) => !cookies.some((cookie) => cookie.name === name))
+      )
+        throw new ImportFailure(unsupportedFormat ? "unsupported" : "needs-login");
+      succeeded = true;
+      return cookies;
     } catch (error) {
       if (error instanceof ImportFailure) throw error;
       throw new ImportFailure(key ? "unsupported" : "needs-os-authorization");
     } finally {
       key?.fill(0);
+      for (const cookie of source.cookies) cookie.plain = "";
       source.cookies = [];
+      if (!succeeded) cookies.forEach((cookie) => (cookie.value = ""));
     }
   }
 }

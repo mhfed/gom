@@ -22,7 +22,11 @@ import {
 } from "./notification-policy.ts";
 import { normalizeTheme } from "./theme.ts";
 import { normalizePresentation, sidebarWidth } from "./presentation.ts";
-import { createCustomProvider, defaultProviders } from "./providers.ts";
+import {
+  createCustomProvider,
+  defaultProviders,
+  isBuiltinProviderId,
+} from "./providers.ts";
 import {
   normalizeProviderTabs,
   openProviderTab,
@@ -66,6 +70,7 @@ import { constants } from "node:fs";
 import {
   PROVIDERS,
   PROVIDER_ORDER,
+  type BuiltinProviderId,
   type ProviderId,
   type AccountId,
   type Account,
@@ -79,8 +84,17 @@ import {
   validProviderId,
   trustedShellRequest,
 } from "./security.ts";
-import { ChromeSources, ImportFailure } from "./local-accounts.ts";
-import { replaceLoginCookies } from "./cookie-transaction.ts";
+import {
+  AUTH_COOKIE_NAMES,
+  COOKIE_SCOPES,
+  ChromeSources,
+  ImportFailure,
+} from "./local-accounts.ts";
+import {
+  replaceLoginCookies,
+  replaceProviderCookies,
+  type LoginCookie,
+} from "./cookie-transaction.ts";
 import { OperationGate } from "./operation-gate.ts";
 import { ViewRegistry, flushBeforeClose } from "./view-registry.ts";
 configureMacOSInput(app.commandLine, process.platform, process.versions);
@@ -909,6 +923,19 @@ async function verifyMessenger(contents: WebContents) {
   }
   return false;
 }
+async function verifyProvider(contents: WebContents, provider: ProviderId) {
+  await contents.loadURL(providerDefinition(provider).entry);
+  const until = Date.now() + 35000;
+  while (Date.now() < until && !contents.isDestroyed()) {
+    const value = await contents
+      .executeJavaScript(authScript)
+      .catch(() => "ready");
+    if (value === "authenticated") return true;
+    if (value === "needs-login") return false;
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  return false;
+}
 async function messengerDestination(targetId: AccountId) {
   const contents = views.peek(targetId)?.webContents;
   const epoch = epochs.get(targetId) ?? 0;
@@ -925,10 +952,12 @@ async function messengerDestination(targetId: AccountId) {
     .catch(() => "ready");
   if (!valid()) return "target-not-ready";
   if (auth === "authenticated") return "already-connected";
-  const cookies = await partition(targetId).cookies.get({
-    domain: "facebook.com",
-  });
-  if (cookies.some((c) => ["c_user", "xs"].includes(c.name)))
+  const cookies = await Promise.all(
+    ["c_user", "xs"].map((name) =>
+      partition(targetId).cookies.get({ domain: "facebook.com", name }),
+    ),
+  );
+  if (cookies.flat().some((c) => ["c_user", "xs"].includes(c.name)))
     return "already-connected";
   return valid() && auth === "needs-login" ? undefined : "target-not-ready";
 }
@@ -941,6 +970,8 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
   publish();
   let stage: BrowserWindow | undefined;
   let stageSession: Session | undefined;
+  let cookies: LoginCookie[] = [];
+  let verified: LoginCookie[] = [];
   try {
     const destination = await messengerDestination(targetId);
     if (destination) {
@@ -950,7 +981,7 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
           : "Tài khoản Messenger chưa tải xong. Đợi trang đăng nhập hiện ra rồi thử lại.";
       return { status: destination };
     }
-    const cookies = await sources.loginCookies(sourceId);
+    cookies = await sources.loginCookies(sourceId);
     stageSession = session.fromPartition("import-" + crypto.randomUUID());
     stage = new BrowserWindow({
       show: false,
@@ -969,7 +1000,7 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
     for (const cookie of cookies) await stageSession.cookies.set(cookie);
     if (!(await verifyMessenger(stage.webContents)))
       throw new ImportFailure("verification-failed");
-    const verified = (
+    verified = (
       await stageSession.cookies.get({ domain: "facebook.com" })
     )
       .filter(
@@ -1008,8 +1039,6 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
       () => verifyMessenger(target.webContents),
       true,
     );
-    cookies.forEach((c) => (c.value = ""));
-    verified.forEach((c) => (c.value = ""));
     activate(targetId);
     status(targetId, "authenticated");
     state.notice =
@@ -1042,6 +1071,162 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
       "Chưa nhập được phiên Messenger. Phiên hiện tại vẫn được giữ.";
     return { status: code };
   } finally {
+    cookies.forEach((cookie) => (cookie.value = ""));
+    verified.forEach((cookie) => (cookie.value = ""));
+    if (stage && !stage.isDestroyed()) stage.destroy();
+    await stageSession?.clearStorageData().catch(() => {});
+    state.importing = false;
+    publish();
+  }
+}
+async function providerDestination(targetId: AccountId, provider: ProviderId) {
+  const contents = views.peek(targetId)?.webContents;
+  const epoch = epochs.get(targetId) ?? 0;
+  const valid = () =>
+    contents &&
+    !contents.isDestroyed() &&
+    isCurrent(targetId, contents) &&
+    !contents.isLoadingMainFrame() &&
+    epoch === (epochs.get(targetId) ?? 0) &&
+    navigationPolicy(provider, contents.getURL()) === "internal";
+  if (!valid() || !contents) return "target-not-ready";
+  const auth = await contents
+    .executeJavaScript(authScript)
+    .catch(() => "ready");
+  if (!valid()) return "target-not-ready";
+  if (auth === "authenticated") return "already-connected";
+  return auth === "needs-login" ? undefined : "target-not-ready";
+}
+async function importProviderSession(
+  sourceId: string,
+  targetId: AccountId,
+  provider: BuiltinProviderId,
+) {
+  if (provider === "messenger") return importMessenger(sourceId, targetId);
+  if (!findAccount(targetId) || providerFor(targetId) !== provider)
+    return { status: "invalid-account" };
+  if (state.importing) return { status: "busy" };
+  state.importing = true;
+  const label = providerDefinition(provider).label;
+  state.notice = `Đang kiểm tra phiên ${label} từ hồ sơ Chrome đã chọn…`;
+  publish();
+  let stage: BrowserWindow | undefined;
+  let stageSession: Session | undefined;
+  let cookies: LoginCookie[] = [];
+  let verified: LoginCookie[] = [];
+  try {
+    const destination = await providerDestination(targetId, provider);
+    if (destination) {
+      state.notice =
+        destination === "already-connected"
+          ? `${label} đã có phiên. Phiên hiện tại được giữ nguyên.`
+          : `Tài khoản ${label} chưa tải xong. Đợi trang đăng nhập hiện ra rồi thử lại.`;
+      return { status: destination };
+    }
+    cookies = await sources.loginCookies(sourceId, provider);
+    stageSession = session.fromPartition("import-" + crypto.randomUUID());
+    stage = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        session: stageSession,
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+      },
+    });
+    stage.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    stage.webContents.on("will-navigate", (event, url) => {
+      if (navigationPolicy(provider, url) !== "internal")
+        event.preventDefault();
+    });
+    stage.webContents.on("will-redirect", (event, url) => {
+      if (navigationPolicy(provider, url) !== "internal")
+        event.preventDefault();
+    });
+    for (const cookie of cookies) await stageSession.cookies.set(cookie);
+    if (!(await verifyProvider(stage.webContents, provider)))
+      throw new ImportFailure("verification-failed");
+    for (const domain of COOKIE_SCOPES[provider]) {
+      for (const name of AUTH_COOKIE_NAMES[provider]) {
+        const staged = await stageSession.cookies.get({ domain, name });
+        for (const cookie of staged) {
+          if (!cookie.domain) continue;
+          const host = cookie.domain.replace(/^\./, "").toLowerCase();
+          if (
+            !COOKIE_SCOPES[provider].some(
+              (scope) => host === scope || host.endsWith("." + scope),
+            )
+          )
+            continue;
+          verified.push({
+            url: `https://${cookie.domain.replace(/^\./, "")}/`,
+            name: cookie.name,
+            value: cookie.value,
+            domain: cookie.domain,
+            path: cookie.path ?? "/",
+            secure: !!cookie.secure,
+            httpOnly: !!cookie.httpOnly,
+            sameSite: cookie.sameSite,
+            ...(cookie.expirationDate !== undefined
+              ? { expirationDate: cookie.expirationDate }
+              : {}),
+          });
+        }
+      }
+    }
+    const finalDestination = await providerDestination(targetId, provider);
+    if (finalDestination) {
+      state.notice =
+        `${label} hiện có phiên. Phiên đang dùng được giữ nguyên.`;
+      return { status: finalDestination };
+    }
+    const target = views.activate(targetId);
+    if (!win.contentView.children.includes(target))
+      win.contentView.addChildView(target);
+    layout();
+    target.webContents.stop();
+    await replaceProviderCookies(
+      partition(targetId).cookies,
+      verified,
+      COOKIE_SCOPES[provider],
+      AUTH_COOKIE_NAMES[provider],
+      () => verifyProvider(target.webContents, provider),
+      true,
+    );
+    activate(targetId);
+    status(targetId, "authenticated");
+    state.notice = `Đã dùng phiên ${label} có sẵn.`;
+    return { status: "imported" };
+  } catch (error) {
+    const code =
+      error instanceof ImportFailure
+        ? error.code
+        : error instanceof Error && error.message === "destination-has-session"
+          ? "already-connected"
+          : error instanceof Error && error.message === "rollback-failed"
+            ? "rollback-failed"
+            : "import-failed";
+    const messages: Record<string, string> = {
+      "needs-login": `Profile Chrome chưa có phiên ${label} còn hiệu lực. Đăng nhập trên Chrome rồi thử lại.`,
+      "needs-os-authorization":
+        "macOS chưa cho phép Gom đọc Chrome Safe Storage. Anh có thể đăng nhập trực tiếp trong app.",
+      "source-busy": "Chrome đang bận. Anh đợi một chút rồi thử lại.",
+      "verification-failed":
+        `Không xác minh được phiên ${label}. Phiên đích vẫn được giữ; hãy đăng nhập trực tiếp trong Gom.`,
+      "source-unavailable": "Không đọc được profile Chrome đã chọn.",
+      "unsupported-session":
+        `${label} lưu phiên trong vùng dữ liệu không thể nhập an toàn bằng cookie. Hãy đăng nhập trực tiếp trong Gom${provider === "telegram" || provider === "zalo" ? " hoặc quét QR" : ""}.`,
+      "rollback-failed":
+        `Chưa khôi phục được cookie ${label}. Hãy mở lại tài khoản để kiểm tra phiên.`,
+      unsupported: "Định dạng cookie Chrome này chưa được hỗ trợ.",
+    };
+    state.notice =
+      messages[code] ??
+      `Chưa nhập được phiên ${label}. Phiên tài khoản đích vẫn được giữ.`;
+    return { status: code };
+  } finally {
+    cookies.forEach((cookie) => (cookie.value = ""));
+    verified.forEach((cookie) => (cookie.value = ""));
     if (stage && !stage.isDestroyed()) stage.destroy();
     await stageSession?.clearStorageData().catch(() => {});
     state.importing = false;
@@ -2012,14 +2197,19 @@ else {
             typeof arg === "object" && arg?.accountId
               ? arg.accountId
               : "messenger";
+          const target = findAccount(targetId);
+          const targetProvider = target?.provider;
           if (
             typeof sourceId === "string" &&
             sourceId.length < 100 &&
-            findAccount(targetId)?.provider === "messenger" &&
+            target &&
+            isBuiltinProviderId(targetProvider) &&
             !state.accountBusy
           )
             return (
-              imports.run(() => importMessenger(sourceId, targetId)) ?? {
+              imports.run(() =>
+                importProviderSession(sourceId, targetId, targetProvider),
+              ) ?? {
                 status: "busy",
               }
             );
