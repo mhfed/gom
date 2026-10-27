@@ -126,9 +126,15 @@
 
     <main>
       <header aria-label="Điều hướng Gom">
-        <div class="toolbar-brand" title="Gom · Trò chuyện, gọn một nơi.">
+        <button
+          id="welcome-home"
+          class="toolbar-brand"
+          type="button"
+          title="Về trang đầu Gom"
+          aria-label="Về trang đầu Gom"
+        >
           <img src="app.png" alt="" draggable="false" /><span>Gom</span>
-        </div>
+        </button>
         <div class="provider-navigation">
           <div id="provider-tab-area">
             <nav
@@ -226,11 +232,60 @@
         </div>
         <p id="subtitle" class="sr-only" role="status">Đang kết nối…</p>
       </header>
+      <section id="welcome-panel" hidden aria-labelledby="welcome-title">
+        <div class="welcome-content">
+          <section class="welcome-hero">
+            <div class="welcome-copy">
+              <p class="eyebrow">GOM · KHÔNG GIAN CỦA BẠN</p>
+              <h1 id="welcome-title">Chào mừng đến với Gom.</h1>
+              <p>
+                Các cuộc trò chuyện quen thuộc, trong một cửa sổ. Chọn tài
+                khoản để tiếp tục hoặc mở thêm nền tảng.
+              </p>
+              <div class="welcome-actions">
+                <button id="welcome-open-providers" class="primary" type="button">
+                  <svg aria-hidden="true"><use href="#i-plus" /></svg>
+                  Mở nền tảng
+                </button>
+                <button id="welcome-add-account" class="secondary" type="button">
+                  Thêm tài khoản
+                </button>
+              </div>
+            </div>
+            <div class="welcome-emblem" aria-hidden="true">
+              <span class="welcome-orbit welcome-orbit-one"></span>
+              <span class="welcome-orbit welcome-orbit-two"></span>
+              <img src="app.png" alt="" draggable="false" />
+              <span class="welcome-emblem-caption">Trò chuyện, gọn một nơi.</span>
+            </div>
+          </section>
+          <section class="welcome-continue" aria-labelledby="welcome-continue-title">
+            <div class="welcome-section-heading">
+              <div>
+                <p class="eyebrow">QUAY LẠI NHANH</p>
+                <h2 id="welcome-continue-title">Tiếp tục</h2>
+              </div>
+              <span id="welcome-account-count" class="welcome-count"></span>
+            </div>
+            <div id="welcome-accounts" class="welcome-account-grid"></div>
+            <div id="welcome-empty" class="welcome-empty" hidden>
+              <p>Chưa có tài khoản nào để tiếp tục.</p>
+              <button class="secondary" type="button" data-open-providers>
+                Chọn nền tảng đầu tiên
+              </button>
+            </div>
+          </section>
+          <p class="welcome-private-note">
+            <svg aria-hidden="true"><use href="#i-lock" /></svg>
+            Mỗi tài khoản giữ phiên đăng nhập riêng trên máy.
+          </p>
+        </div>
+      </section>
       <section id="providers-panel" hidden aria-labelledby="providers-title">
         <div class="providers-content">
           <div class="providers-heading">
             <div>
-              <p class="eyebrow">KHÔNG GIAN CỦA ANH</p>
+              <p class="eyebrow">KHÔNG GIAN CỦA BẠN</p>
               <h1 id="providers-title">Mở một tab mới</h1>
               <p>Nền tảng quen thuộc và website riêng, ngay trong Gom.</p>
             </div>
@@ -488,10 +543,11 @@
                   </div>
                   <p id="import-hint" class="hint field-hint" role="status"></p>
                   <p class="hint">
-                    Gom chỉ đọc cookie xác thực được hỗ trợ của đúng nền tảng.
-                    Hiện chưa nhập phiên Chrome cho Gmail, Discord và Telegram;
-                    hãy đăng nhập hoặc quét QR trong Gom. Phiên tài khoản đích
-                    được giữ nếu nhập không thành công.
+                    Gom chỉ nhập dữ liệu xác thực cần thiết của đúng nền tảng.
+                    Tinder cần bạn chạy lệnh một lần trong Console của tab
+                    Chrome đã đăng nhập; Gom chỉ nhận dữ liệu Tinder qua kết
+                    nối nội bộ. Gmail, Discord và Telegram chưa nhập phiên
+                    Chrome. Phiên tài khoản đích được giữ nếu nhập thất bại.
                   </p>
                 </div>
               </details>

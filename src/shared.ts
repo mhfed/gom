@@ -6,7 +6,8 @@ export type BuiltinProviderId =
   | "gmail"
   | "instagram"
   | "discord"
-  | "slack";
+  | "slack"
+  | "tinder";
 export type ProviderId = BuiltinProviderId | `web_${string}`;
 export const PROVIDER_ORDER = [
   "zalo",
@@ -16,6 +17,7 @@ export const PROVIDER_ORDER = [
   "instagram",
   "discord",
   "slack",
+  "tinder",
 ] as const;
 export interface ProviderDefinition {
   id: ProviderId;
@@ -115,6 +117,14 @@ export const PROVIDERS = {
     color: "#611f69",
     custom: false,
   },
+  tinder: {
+    id: "tinder",
+    label: "Tinder",
+    entry: "https://tinder.com/app/login",
+    hosts: ["tinder.com", "www.tinder.com", "accounts.google.com"],
+    color: "#ff6b6b",
+    custom: false,
+  },
 } as const;
 export interface ProfileSource {
   id: string;
@@ -171,7 +181,7 @@ export interface AppState {
   collapsed: boolean;
   unread: Record<AccountId, UnreadInfo>;
   active: AccountId;
-  panel: "service" | "settings" | "providers";
+  panel: "service" | "settings" | "providers" | "welcome";
   statuses: Record<AccountId, ProviderStatus>;
   profiles: ProfileSource[];
   importing: boolean;
@@ -184,6 +194,7 @@ export interface DesktopBridge {
   activate(id: AccountId): Promise<void>;
   activateProvider(provider: ProviderId, focusPage?: boolean): Promise<void>;
   providerLibrary(open: boolean): Promise<void>;
+  welcome(): Promise<void>;
   providerMenu(request: {
     x: number;
     y: number;

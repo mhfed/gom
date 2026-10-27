@@ -34,6 +34,7 @@ const icons: Record<string, string> = {
   instagram: "instagram.svg",
   discord: "discord.svg",
   slack: "slack.svg",
+  tinder: "tinder.svg",
 };
 let current: AppState;
 let activeTab = "accounts";
@@ -621,6 +622,60 @@ function renderToolbar(state: AppState, active: Account) {
     "Thêm tài khoản " + providerOf(active.provider).label,
   );
 }
+function renderWelcome(state: AppState) {
+  const accounts = state.accounts.filter((account) => !account.archived);
+  const ordered: Account[] = [];
+  const included = new Set<AccountId>();
+  const addAccount = (account: Account | undefined) => {
+    if (account && !account.archived && !included.has(account.id)) {
+      included.add(account.id);
+      ordered.push(account);
+    }
+  };
+  const active = accounts.find((account) => account.id === state.active);
+  addAccount(active);
+  for (const id of state.presentation.pinned)
+    addAccount(accounts.find((account) => account.id === id));
+  for (const provider of state.providerTabs.open)
+    addAccount(
+      accounts.find((account) => account.id === state.active && account.provider === provider) ||
+        accounts.find((account) => account.provider === provider),
+    );
+  for (const account of accounts) addAccount(account);
+
+  const list = $("welcome-accounts");
+  list.replaceChildren();
+  for (const account of ordered.slice(0, 8)) {
+    const provider = providerOf(account.provider);
+    const card = element("button", "welcome-account");
+    card.type = "button";
+    card.setAttribute("aria-label", `Mở ${account.name} trên ${provider.label}`);
+    card.append(providerLogo(provider));
+    const details = element("span", "welcome-account-details");
+    details.append(
+      element("strong", "welcome-account-name", account.name),
+      element("span", "welcome-account-provider", provider.label),
+    );
+    card.append(details);
+    const unread = state.unread[account.id]?.count;
+    if (unread !== null && unread !== undefined && unread > 0) {
+      const badge = element("span", "welcome-unread", String(unread));
+      badge.setAttribute("aria-label", `${unread} chưa đọc`);
+      card.append(badge);
+    } else {
+      card.append(icon("arrow"));
+    }
+    card.onclick = () => void window.desktop.activate(account.id);
+    list.append(card);
+  }
+  setProperty(
+    $("welcome-account-count"),
+    "textContent",
+    `${accounts.length} tài khoản`,
+  );
+  setProperty($("welcome-empty"), "hidden", accounts.length > 0);
+  setProperty(list, "hidden", accounts.length === 0);
+}
 async function selectProvider(provider: ProviderId, focusPage = true) {
   const hasAccount = current.accounts.some(
     (a) => a.provider === provider && !a.archived,
@@ -661,6 +716,7 @@ function render(state: AppState) {
   const rebuilt = rebuildAccounts(state);
   const settings = state.panel === "settings";
   const library = state.panel === "providers";
+  const welcome = state.panel === "welcome";
   const refreshSettings = settings || !previous || rebuilt;
   const root = document.documentElement,
     choice = state.presentation.theme;
@@ -696,6 +752,7 @@ function render(state: AppState) {
   setProperty($("theme-toggle"), "title", themeToggleLabel);
   setAttribute($("theme-toggle"), "aria-label", themeToggleLabel);
   renderToolbar(state, active);
+  renderWelcome(state);
   renderUpdates(state);
   for (const a of state.accounts.filter((a) => !a.archived)) {
     if (refreshSettings) {
@@ -862,10 +919,11 @@ function render(state: AppState) {
     );
   }
   setProperty($("settings-panel"), "hidden", !settings);
+  setProperty($("welcome-panel"), "hidden", !welcome);
   setProperty(
     $("service-loading"),
     "hidden",
-    settings || library || failed || state.commandOpen,
+    settings || library || welcome || failed || state.commandOpen,
   );
   setProperty($("catalog-warning"), "textContent", state.catalogWarning);
   setProperty($("catalog-warning"), "hidden", !state.catalogWarning);
@@ -895,6 +953,15 @@ $("settings").onclick = () => {
   if (current.updates?.phase === "available") showTab("updates");
   void window.desktop.settings();
 };
+$("welcome-home").onclick = () => void window.desktop.welcome();
+$("welcome-open-providers").onclick = () =>
+  void window.desktop.providerLibrary(true);
+$("welcome-add-account").onclick = () =>
+  void window.desktop.accountEditor(true);
+for (const button of document.querySelectorAll<HTMLButtonElement>(
+  "[data-open-providers]",
+))
+  button.onclick = () => void window.desktop.providerLibrary(true);
 $("close-settings").onclick = () => void window.desktop.providerLibrary(false);
 $("check-updates").onclick = () =>
   void window.desktop.checkUpdates().catch(() => {

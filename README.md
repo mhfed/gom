@@ -1,26 +1,26 @@
-> **Gom 0.7.4 — Chuẩn hóa cách xưng hô:** nhập phiên cookie có giới hạn cho Messenger, Instagram, Slack và Zalo; Gmail, Discord, Telegram đăng nhập trực tiếp trong Gom. Có thể chọn tài khoản đích và profile nguồn rõ ràng. Bản cài này vẫn cập nhật bằng cách tải DMG/ZIP và thay app thủ công; tự cài cần Developer ID và notarization.
+> **Gom 0.7.5:** có màn chào mừng khi mở app, nút logo quay về trang này, Tinder Web và thư viện nền tảng theo nhóm. Khoảng trống phía trên Messenger đã được thu gọn. Cập nhật vẫn cần tải DMG/ZIP và thay app thủ công; tự cài trong app cần Developer ID và notarization.
 >
 > Kiểm tra giao diện hiện hành: `npm run test:providers`, `npm run test:shell` và `npm run test:settings` (fixture cách ly, không dùng phiên cá nhân). Connector chat thống nhất đã dừng theo yêu cầu; mã nghiên cứu không được đóng gói. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
 
 # Gom — macOS
 
-**Trò chuyện, gọn một nơi.** Gom là ứng dụng cá nhân bọc giao diện web chính thức của Zalo, Messenger, Telegram, Gmail, Instagram, Discord và Slack. Hỗ trợ nhiều tài khoản cho mỗi nền tảng, mỗi tài khoản giữ phiên riêng và trang đang mở khi chuyển qua lại.
+**Trò chuyện, gọn một nơi.** Gom bọc giao diện web chính thức của Zalo, Messenger, Telegram, Gmail, Instagram, Discord, Slack và Tinder Web. Bumble chưa có trải nghiệm web để tích hợp. Mỗi tài khoản giữ phiên riêng và trang đang mở khi chuyển qua lại.
 
 ## Tải app
 
-Bản mới nhất: **Gom 0.7.4**, phát hành ngày 27/10/2026 cho Mac Apple Silicon (arm64).
+Bản mới nhất: **Gom 0.7.5**, phát hành ngày 27/10/2026 cho Mac Apple Silicon (arm64).
 
-- [Tải DMG](https://github.com/mhfed/gom/releases/download/v0.7.4/Gom-macOS-arm64-0.7.4.dmg)
-- [Tải ZIP](https://github.com/mhfed/gom/releases/download/v0.7.4/Gom-macOS-arm64-0.7.4.zip)
-- [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.7.4)
+- [Tải DMG](https://github.com/mhfed/gom/releases/download/v0.7.5/Gom-macOS-arm64-0.7.5.dmg)
+- [Tải ZIP](https://github.com/mhfed/gom/releases/download/v0.7.5/Gom-macOS-arm64-0.7.5.zip)
+- [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.7.5)
 
-Tab đang mở có thể ghim, đóng và tự gom vào menu khi thiếu chỗ. Nút **+** mở thư viện để tìm nền tảng hoặc thêm website riêng. Nhớ tab mở, tab ghim và tài khoản cuối khi khởi động lại. Header giữ 52px; Cài đặt hỗ trợ danh sách nền tảng động và giao diện sáng/tối. Giữ dữ liệu tài khoản và định danh khóa mã hóa hiện có. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.4](docs/release-0.7.4.md).
+Màn chào mừng mở ra khi khởi động; chọn tài khoản để tiếp tục hoặc bấm logo Gom để quay lại. Nút **+** mở thư viện nền tảng theo nhóm hoặc thêm website riêng. Có thể dùng phiên Tinder đang mở trong Chrome bằng quy trình nhập một lần. Dữ liệu tài khoản và định danh khóa mã hóa được giữ nguyên khi nâng cấp. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.5](docs/release-0.7.5.md).
 
 Lưu bản nháp quan trọng, thoát app đang dùng bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp lần đầu, macOS có thể giữ app cũ riêng vì tên đã đổi; sau khi kiểm tra Gom, có thể gỡ app cũ khỏi Applications. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; lần đầu mở có thể bị macOS chặn. Nếu đã tin cậy nguồn tải, có thể bấm đúp `Mo-Gom.command` trong DMG hoặc dùng Open Anyway theo [hướng dẫn cài](docs/distribution.md).
 
 Repository đã chuyển sang `mhfed/gom`. Các bản 0.6.0 trở về trước cần tải DMG trực tiếp để nâng cấp lần này vì bộ kiểm tra cập nhật vẫn trỏ tới địa chỉ cũ. Bản 0.6.2 đã sửa nguồn cập nhật.
 
-Catalog tài khoản được nâng lên v2 khi lưu thay đổi. Bản 0.6.x không đọc được catalog mới; sau khi dùng 0.7.4 nên tiếp tục dùng 0.7.x hoặc mới hơn và giữ nguyên thư mục dữ liệu.
+Catalog tài khoản được nâng lên v2 khi lưu thay đổi. Bản 0.6.x không đọc được catalog mới; sau khi dùng 0.7.5 nên tiếp tục dùng 0.7.x hoặc mới hơn và giữ nguyên thư mục dữ liệu.
 
 ## Chạy và đóng gói
 
@@ -44,6 +44,7 @@ Bản app nằm trong `out-release/Gom-darwin-arm64/`; DMG và ZIP trong `out-re
 - Website riêng chỉ điều hướng trong cùng origin đã cấu hình; liên kết ra ngoài mở trình duyệt sau xác nhận. Luồng đăng nhập SSO chuyển sang origin khác có thể cần đăng nhập trực tiếp trên website hoặc được hỗ trợ thêm. Gom không suy diễn số tin chưa đọc cho website riêng.
 
 - **Dùng phiên Chrome:** trong Tài khoản & cài đặt, chọn tài khoản đích và hồ sơ Chrome. Cookie xác thực được cho phép của Messenger, Instagram, Slack và Zalo được đọc bằng SQLite chỉ đọc, giải mã qua Chrome Safe Storage trong Keychain, rồi thử trong cửa sổ tạm. Chỉ chuyển cookie sau khi trang dịch vụ xác minh đăng nhập; không chép cả profile hoặc cookie của dịch vụ khác. Nếu kiểm tra thất bại, cookie xác thực đích được khôi phục.
+- **Tinder trong source chưa đóng gói:** chọn profile Chrome, mở Tinder đã đăng nhập ở profile đó, rồi chạy lệnh một lần mà Gom chép vào clipboard trong DevTools Console. Lệnh gửi API token, device UUID và MFA record của Tinder qua kết nối loopback trong máy; không đọc kho dữ liệu Chrome khác và không gửi phiên lên máy chủ ngoài. Gom giữ phiên đích nếu đã có dữ liệu, và khôi phục nếu Tinder không xác nhận đăng nhập.
 - Gmail, Discord và Telegram chưa hỗ trợ nhập phiên Chrome; đăng nhập trực tiếp trong Gom (Zalo/Telegram có thể dùng QR). Nếu nền tảng thu hồi hoặc hết hạn phiên, phải đăng nhập lại.
 - Dữ liệu của app lưu tại `~/Library/Application Support/TinNhanDesktop`. Không sao chép toàn bộ Chrome profile; không xuất token ra log hoặc renderer.
 - Cmd+W hoặc nút đóng cửa sổ chỉ ẩn cửa sổ; app vẫn chạy và giữ các trang đang mở. Bấm icon Dock để mở lại. Cmd+Q mới thoát app sau khi ghi dữ liệu. Chuyển tab hoặc tài khoản giữ nguyên view và bản nháp đang mở; khôi phục bản nháp sau thoát phụ thuộc chính nền tảng.
@@ -76,7 +77,7 @@ Mặc định đo hai lượt cho 3/6/12 tài khoản và ba trang chờ đăng 
 
 `npm run test:renderer-performance` kiểm tra DOM thật bằng Chromium riêng; cần browser của Playwright hoặc đặt `TIN_NHAN_CHROMIUM` tới executable Chromium/Chrome đã cài. Test này không mở profile cá nhân.
 
-Các nền tảng nhắn tin có sẵn giữ trang tài khoản để bảo toàn bản nháp và hoạt động nền; website riêng chỉ tạo trang khi được chọn và đóng trang sau khi ghi dữ liệu phiên khi người dùng đóng tab. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition khi đóng/mở tab. Bản cài mới nhất là **Gom 0.7.4**, bổ sung nhập phiên Chrome có giới hạn: `outputs/Gom-macOS-arm64-0.7.4.dmg`, kèm `outputs/SHA256SUMS-Gom-0.7.4.txt`; các file tương ứng có tại link phát hành ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
+Các nền tảng nhắn tin có sẵn giữ trang tài khoản để bảo toàn bản nháp và hoạt động nền; website riêng chỉ tạo trang khi được chọn và đóng trang sau khi ghi dữ liệu phiên khi người dùng đóng tab. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition khi đóng/mở tab. Bản cài mới nhất là **Gom 0.7.5**, có màn chào mừng, Tinder Web, thư viện nền tảng theo nhóm và sửa khoảng trống Messenger: `outputs/Gom-macOS-arm64-0.7.5.dmg`, kèm `outputs/SHA256SUMS-Gom-0.7.5.txt`; các file tương ứng có tại link phát hành ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
 
 Chi tiết thay đổi, phương pháp và kết quả đối chiếu: [báo cáo hiệu năng 26/10/2026](docs/performance-2026-10-26.md).
 

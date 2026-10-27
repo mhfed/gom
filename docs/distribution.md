@@ -1,12 +1,12 @@
 # Phân phối Gom bằng DMG và cập nhật thủ công
 
-Bản 0.7.4 tạo bộ cài **macOS Apple Silicon (arm64)**. Chưa có bản Intel hoặc Universal. Ứng dụng ký ad-hoc để chạy trên máy Mac, chưa ký bằng Apple Developer ID và chưa notarize. DMG không làm thay đổi giới hạn này.
+Bản 0.7.5 tạo bộ cài **macOS Apple Silicon (arm64)**. Chưa có bản Intel hoặc Universal. Ứng dụng ký ad-hoc để chạy trên máy Mac, chưa ký bằng Apple Developer ID và chưa notarize. DMG không làm thay đổi giới hạn này.
 
-Bản 0.7.4 gồm DMG, ZIP và checksum tại [GitHub Releases](https://github.com/mhfed/gom/releases/tag/v0.7.4).
+Bản 0.7.5 gồm DMG, ZIP và checksum tại [GitHub Releases](https://github.com/mhfed/gom/releases/tag/v0.7.5).
 
 ## Cài đặt và gửi cho người khác
 
-1. Gửi file `Gom-macOS-arm64-0.7.4.dmg` cùng file SHA-256, hoặc gửi đường dẫn GitHub Release sau khi người duy trì phát hành.
+1. Gửi file `Gom-macOS-arm64-0.7.5.dmg` cùng file SHA-256, hoặc gửi đường dẫn GitHub Release sau khi người duy trì phát hành.
 2. Người nhận mở DMG rồi kéo **Gom.app** vào **Applications**.
 3. Eject ổ đĩa Gom, mở ứng dụng từ Applications. Tránh chạy trực tiếp trong DMG.
 4. Lần đầu mở, macOS có thể báo “Apple could not verify Gom is free of malware” vì app chưa notarize. Chỉ khi đã tin cậy nguồn tải, chọn một trong hai cách:
@@ -29,7 +29,7 @@ Bản đóng gói mặc định kiểm tra sau 30 giây khởi động và mỗi
 
 ### Tự cập nhật
 
-Mã nguồn có nhánh Electron `autoUpdater` để tải ZIP trong app, hiện tiến độ và cài sau khi người dùng chọn khởi động lại. Bản phát hành 0.7.4 này ký ad-hoc vì máy build chưa có chứng chỉ và thông tin notarize, nên nút tải sẽ mở GitHub Release để cài thủ công. Bản 0.7.2 cũng cần nâng cấp thủ công một lần.
+Mã nguồn có nhánh Electron `autoUpdater` để tải ZIP trong app, hiện tiến độ và cài sau khi người dùng chọn khởi động lại. Bản phát hành 0.7.5 này ký ad-hoc vì máy build chưa có chứng chỉ và thông tin notarize, nên nút tải sẽ mở GitHub Release để cài thủ công. Bản 0.7.2 cũng cần nâng cấp thủ công một lần.
 
 Để tạo bản phát hành tự cập nhật, cài chứng chỉ **Developer ID Application** vào Keychain của máy build, rồi truyền `GOM_MACOS_SIGNING_IDENTITY`, `GOM_APPLE_ID`, `GOM_APPLE_APP_SPECIFIC_PASSWORD` và `GOM_APPLE_TEAM_ID` vào `npm run make`. Không ghi chứng chỉ, app-specific password hay thông tin tài khoản vào Git. Giữ cùng Developer ID cho các phiên bản tiếp theo.
 
@@ -58,8 +58,8 @@ npm run make
 
 Electron Forge tạo cả hai định dạng bằng cùng app bundle:
 
-- DMG: `out-release/make/dmg/arm64/Gom-macOS-arm64-0.7.4.dmg`
-- ZIP: `out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.7.4.zip`
+- DMG: `out-release/make/dmg/arm64/Gom-macOS-arm64-0.7.5.dmg`
+- ZIP: `out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.7.5.zip`
 - App: `out-release/Gom-darwin-arm64/Gom.app`
 
 Cấu hình `forge.config.cjs` chỉ đưa `package.json` và các file runtime đã liệt kê trong `dist/` vào app. Mỗi khi thêm tài nguyên runtime phải cập nhật danh sách này. Source nghiên cứu, hồ sơ người dùng, kết quả kiểm thử, `node_modules` và các bản build cũ đều nằm ngoài danh sách. Kiểm tra lại nội dung `app.asar` trước khi phân phối.
@@ -70,20 +70,20 @@ Sao chép gói đã kiểm chứng sang tên phát hành thống nhất và tạ
 
 ```sh
 mkdir -p outputs
-cp out-release/make/dmg/arm64/Gom-macOS-arm64-0.7.4.dmg outputs/
-cp 'out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.7.4.zip' outputs/Gom-macOS-arm64-0.7.4.zip
+cp out-release/make/dmg/arm64/Gom-macOS-arm64-0.7.5.dmg outputs/
+cp 'out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.7.5.zip' outputs/Gom-macOS-arm64-0.7.5.zip
 cd outputs
-shasum -a 256 Gom-macOS-arm64-0.7.4.dmg Gom-macOS-arm64-0.7.4.zip > SHA256SUMS-Gom-0.7.4.txt
+shasum -a 256 Gom-macOS-arm64-0.7.5.dmg Gom-macOS-arm64-0.7.5.zip > SHA256SUMS-Gom-0.7.5.txt
 ```
 
 ## Phát hành trên GitHub
 
-Bản 0.7.4 dùng tag `v0.7.4` trong đúng repository `mhfed/gom`, kèm ghi chú [release-0.7.4.md](release-0.7.4.md) và các file:
+Bản 0.7.5 dùng tag `v0.7.5` trong đúng repository `mhfed/gom`, kèm ghi chú [release-0.7.5.md](release-0.7.5.md) và các file:
 
-- `Gom-macOS-arm64-0.7.4.dmg`
-- `Gom-macOS-arm64-0.7.4.zip`
-- `SHA256SUMS-Gom-0.7.4.txt`
-Checksum của 0.7.4 chỉ bao gồm DMG và ZIP phát hành dưới tên Gom.
+- `Gom-macOS-arm64-0.7.5.dmg`
+- `Gom-macOS-arm64-0.7.5.zip`
+- `SHA256SUMS-Gom-0.7.5.txt`
+Checksum của 0.7.5 chỉ bao gồm DMG và ZIP phát hành dưới tên Gom.
 
 Tag phải khớp version trong `package.json`; tên gói cần chứa version và kiến trúc. Chỉ đăng bản ổn định sau khi có đủ gói đã kiểm chứng. Bộ kiểm tra bỏ qua draft/prerelease; bản cài mới hơn bản public sẽ thông báo rõ tình trạng đó. Các bản sau tăng version và lặp lại quy trình. Sau lần nâng cấp trực tiếp lên 0.6.2 hoặc mới hơn, chức năng kiểm tra dùng repository mới.
 

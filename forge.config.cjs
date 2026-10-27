@@ -27,6 +27,7 @@ const runtimePaths = new Set([
   "/dist/logos/instagram.svg",
   "/dist/logos/discord.svg",
   "/dist/logos/slack.svg",
+  "/dist/logos/tinder.svg",
   "/dist/logos/zalo.png",
   "/dist/logos/SOURCES.md",
 ]);
@@ -63,6 +64,8 @@ module.exports = {
       NSCameraUsageDescription: "Dùng camera khi bạn chọn gọi video.",
       NSMicrophoneUsageDescription:
         "Dùng micro khi bạn chọn gọi thoại hoặc video.",
+      NSLocationUsageDescription:
+        "Tinder dùng vị trí khi bạn chọn tìm người phù hợp gần mình.",
     },
   },
   makers: [
