@@ -29,6 +29,10 @@ const icons: Record<string, string> = {
   zalo: "zalo.png",
   messenger: "messenger.svg",
   telegram: "telegram.svg",
+  gmail: "gmail.svg",
+  instagram: "instagram.svg",
+  discord: "discord.svg",
+  slack: "slack.svg",
 };
 let current: AppState;
 let activeTab = "accounts";
@@ -210,17 +214,22 @@ function showTab(tab: string) {
 let updateCheckedAt: number | null | undefined;
 function renderUpdates(state: AppState) {
   const updates = state.updates;
-  const available = updates?.phase === "available";
-  setClass($("settings"), "has-update", available);
+  const hasUpdate = [
+    "available",
+    "downloading",
+    "downloaded",
+    "error",
+  ].includes(updates?.phase ?? "");
+  setClass($("settings"), "has-update", hasUpdate);
   setProperty(
     $("settings"),
     "title",
-    available ? "Cài đặt · Có bản cập nhật mới" : "Cài đặt (⌘,)",
+    hasUpdate ? "Cài đặt · Có bản cập nhật mới" : "Cài đặt (⌘,)",
   );
   setAttribute(
     $("settings"),
     "aria-label",
-    available ? "Cài đặt · Có bản cập nhật mới" : "Cài đặt",
+    hasUpdate ? "Cài đặt · Có bản cập nhật mới" : "Cài đặt",
   );
   setProperty(
     $<HTMLInputElement>("auto-check-updates"),
@@ -255,7 +264,12 @@ function renderUpdates(state: AppState) {
     );
   }
   const checking = updates.phase === "checking";
-  setProperty($<HTMLButtonElement>("check-updates"), "disabled", checking);
+  const updaterBusy = ["downloading", "installing"].includes(updates.phase);
+  setProperty(
+    $<HTMLButtonElement>("check-updates"),
+    "disabled",
+    checking || updaterBusy || updates.phase === "downloaded",
+  );
   setProperty(
     $("check-updates"),
     "textContent",
@@ -264,8 +278,50 @@ function renderUpdates(state: AppState) {
   setProperty(
     $("download-update"),
     "hidden",
-    !available || !updates.releaseUrl,
+    !updates.releaseUrl ||
+      ![
+        "available",
+        "downloading",
+        "downloaded",
+        "installing",
+        "error",
+      ].includes(updates.phase),
   );
+  setProperty($<HTMLButtonElement>("download-update"), "disabled", updaterBusy);
+  setProperty(
+    $("download-update"),
+    "textContent",
+    updates.phase === "downloading"
+      ? "Đang tải…"
+      : updates.phase === "downloaded"
+        ? "Khởi động lại để cài"
+        : updates.phase === "installing"
+          ? "Đang cài đặt…"
+          : updates.phase === "error"
+            ? "Tải thủ công"
+            : updates.automaticInstallAvailable
+              ? "Tải và cài đặt"
+              : "Tải bản mới",
+  );
+  const progress = updates.downloadProgress;
+  setProperty(
+    $("update-progress"),
+    "hidden",
+    progress === null || updates.phase !== "downloading",
+  );
+  if (progress !== null) {
+    const percent = Math.max(0, Math.min(100, progress));
+    setProperty(
+      $<HTMLElement>("update-progress-bar").style,
+      "width",
+      `${percent}%`,
+    );
+    setAttribute(
+      $("update-progress"),
+      "aria-valuenow",
+      String(Math.floor(percent)),
+    );
+  }
   const notes = updates.releaseNotes.slice(0, 12000);
   setProperty($("update-notes-container"), "hidden", !notes);
   setProperty($("update-notes"), "textContent", notes);

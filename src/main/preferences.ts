@@ -1,8 +1,8 @@
 import { mkdir, writeFile, rename } from "node:fs/promises";
 import { dirname } from "node:path";
-import type { Preferences } from "../shared.ts";
+import { PROVIDER_ORDER, type Preferences } from "../shared.ts";
 export const defaultPreferences = (
-  ids: string[] = ["zalo", "messenger", "telegram"],
+  ids: string[] = [...PROVIDER_ORDER],
 ): Preferences => ({
   paused: false,
   shortcut: false,
@@ -11,7 +11,7 @@ export const defaultPreferences = (
 });
 export function normalizePreferences(
   raw: unknown,
-  ids: string[] = ["zalo", "messenger", "telegram"],
+  ids: string[] = [...PROVIDER_ORDER],
 ): Preferences {
   const out = defaultPreferences(ids);
   if (!raw || typeof raw !== "object") return out;

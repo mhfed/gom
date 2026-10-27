@@ -1,6 +1,32 @@
 /** Only count indicators are returned; message text and account identifiers never leave the view. */
 export const unreadScript = `(()=>{
  const host=location.hostname;
+ if(host==='mail.google.com'){
+  const title=document.title.match(/^\\(([\\d,]+\\+?)\\)/);
+  const label=[...document.querySelectorAll('[aria-label],[data-tooltip]')].map(e=>e.getAttribute('aria-label')||e.getAttribute('data-tooltip')||'').find(v=>/(?:Inbox|Hộp thư đến).*?\\d/i.test(v));
+  const count=label?.match(/(\\d[\\d,]*\\+?)/)?.[1];
+  return {global:title?.[1]??count??null,loaded:null,kind:'messages'};
+ }
+ if(host==='www.instagram.com'||host==='instagram.com'){
+  const title=document.title.match(/^\\((\\d+\\+?)\\)/);
+  const labels=[...document.querySelectorAll('[aria-label],[title]')].map(e=>e.getAttribute('aria-label')||e.getAttribute('title')||'');
+  const labeledCount=labels.map(v=>v.match(/(\\d+\\+?).{0,32}(?:unread|new messages?|tin nhắn mới|tin nhắn chưa đọc)/i)?.[1]).find(Boolean);
+  const unreadMarker=document.querySelector('[aria-label="Unread"],[aria-label="Chưa đọc"],[data-testid*="unread"]');
+  return {global:title?.[1]??labeledCount??(unreadMarker?'1+':null),loaded:null,kind:'conversations'};
+ }
+ if(host==='slack.com'||host.endsWith('.slack.com')){
+  const title=document.title.match(/^\\(([\\d,]+\\+?)\\)/);
+  const badges=[...document.querySelectorAll('[data-qa="channel_sidebar_unread_badge"],[data-qa="unread_badge"]')].map(e=>e.textContent.trim()).filter(v=>/^\\d+(?:,\\d{3})*\\+?$/.test(v));
+  const total=badges.reduce((sum,v)=>sum+Number(v.replace(/[,+]/g,'')),0);
+  const totalText=total?String(total)+(badges.some(v=>v.endsWith('+'))?'+':''):null;
+  const unreadMarker=document.querySelector('[aria-label="Unread"],[aria-label="Chưa đọc"]');
+  return {global:title?.[1]??totalText??(unreadMarker?'1+':null),loaded:null,kind:'conversations'};
+ }
+ if(host==='discord.com'||host.endsWith('.discord.com')||host.endsWith('.discordapp.com')){
+  const title=document.title.match(/^\\((\\d+\\+?)\\)/);
+  const unreadMarker=document.querySelector('[aria-label="Unread"],[aria-label="Chưa đọc"]');
+  return {global:title?.[1]??(unreadMarker?'1+':null),loaded:null,kind:'conversations'};
+ }
  if(host==='web.telegram.org'){
   const tab=[...document.querySelectorAll('[role="tab"]')].find(e=>{const label=e.cloneNode(true);label.querySelectorAll('.badge').forEach(b=>b.remove());return /^(Unread|Chưa đọc)$/i.test(label.textContent.trim());});
   const badge=tab?.querySelector('.badge');

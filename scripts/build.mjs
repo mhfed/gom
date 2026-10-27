@@ -1,5 +1,11 @@
 import { build } from "esbuild";
 import { mkdir, copyFile, cp, readFile } from "node:fs/promises";
+const automaticUpdatesSupported = Boolean(
+  process.env.GOM_MACOS_SIGNING_IDENTITY?.trim() &&
+    process.env.GOM_APPLE_ID?.trim() &&
+    process.env.GOM_APPLE_APP_SPECIFIC_PASSWORD &&
+    process.env.GOM_APPLE_TEAM_ID?.trim(),
+);
 await mkdir("dist", { recursive: true });
 await cp("src/renderer/logos", "dist/logos", { recursive: true });
 await Promise.all([
@@ -10,6 +16,11 @@ await Promise.all([
     platform: "node",
     format: "cjs",
     external: ["electron"],
+    define: {
+      "process.env.GOM_AUTOMATIC_UPDATES_ENABLED": JSON.stringify(
+        automaticUpdatesSupported ? "true" : "false",
+      ),
+    },
   }),
   build({
     entryPoints: ["src/main/platform-preload.ts"],

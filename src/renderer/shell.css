@@ -1513,7 +1513,9 @@ input[aria-invalid="true"] {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
-#update-message[data-phase="available"] {
+#update-message[data-phase="available"],
+#update-message[data-phase="downloading"],
+#update-message[data-phase="downloaded"] {
   color: var(--accent);
 }
 #update-message[data-phase="error"] {
@@ -1526,6 +1528,23 @@ input[aria-invalid="true"] {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.update-progress {
+  height: 5px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+#update-progress[hidden] {
+  display: none;
+}
+#update-progress-bar {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 180ms ease;
 }
 .update-notes {
   border: 1px solid var(--line);

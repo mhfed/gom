@@ -1,7 +1,22 @@
 import type { UpdateState } from "./update-types.ts";
-export type BuiltinProviderId = "zalo" | "messenger" | "telegram";
+export type BuiltinProviderId =
+  | "zalo"
+  | "messenger"
+  | "telegram"
+  | "gmail"
+  | "instagram"
+  | "discord"
+  | "slack";
 export type ProviderId = BuiltinProviderId | `web_${string}`;
-export const PROVIDER_ORDER = ["zalo", "telegram", "messenger"] as const;
+export const PROVIDER_ORDER = [
+  "zalo",
+  "telegram",
+  "messenger",
+  "gmail",
+  "instagram",
+  "discord",
+  "slack",
+] as const;
 export interface ProviderDefinition {
   id: ProviderId;
   label: string;
@@ -60,6 +75,44 @@ export const PROVIDERS = {
     entry: "https://web.telegram.org/k/",
     hosts: ["web.telegram.org"],
     color: "#279cda",
+    custom: false,
+  },
+  gmail: {
+    id: "gmail",
+    label: "Gmail",
+    entry: "https://mail.google.com/mail/u/0/",
+    hosts: ["mail.google.com", "accounts.google.com"],
+    color: "#ea4335",
+    custom: false,
+  },
+  instagram: {
+    id: "instagram",
+    label: "Instagram",
+    entry: "https://www.instagram.com/direct/inbox/",
+    hosts: [
+      "www.instagram.com",
+      "instagram.com",
+      "accountscenter.instagram.com",
+      "www.facebook.com",
+      "facebook.com",
+    ],
+    color: "#d62976",
+    custom: false,
+  },
+  discord: {
+    id: "discord",
+    label: "Discord",
+    entry: "https://discord.com/app",
+    hosts: ["discord.com", "discordapp.com", "discord.gg", "accounts.google.com"],
+    color: "#5865f2",
+    custom: false,
+  },
+  slack: {
+    id: "slack",
+    label: "Slack",
+    entry: "https://slack.com/signin",
+    hosts: ["slack.com", "app.slack.com", "accounts.google.com"],
+    color: "#611f69",
     custom: false,
   },
 } as const;

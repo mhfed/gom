@@ -14,22 +14,32 @@ import {
   moveAccount,
   AccountCatalogStore,
 } from "../src/main/accounts.ts";
+import { defaultProviders } from "../src/main/providers.ts";
 import { normalizePreferences } from "../src/main/preferences.ts";
 import { ViewRegistry } from "../src/main/view-registry.ts";
 import type { Account, ProviderDefinition } from "../src/shared.ts";
 const uuid = "12345678-1234-4234-8234-123456789abc";
 test("legacy migration keeps exact partition names; new same-platform accounts have immutable separate partitions", () => {
   const legacy = defaultAccounts();
-  assert.deepEqual(legacy.map(accountPartition), [
+  assert.deepEqual(legacy.slice(0, 3).map(accountPartition), [
     "persist:zalo",
     "persist:messenger",
     "persist:telegram",
+  ]);
+  assert.deepEqual(legacy.slice(3).map((account) => account.id), [
+    "gmail",
+    "instagram",
+    "discord",
+    "slack",
   ]);
   const added = createAccount("zalo", "Công việc", "💼", uuid);
   assert.equal(added.id, "acc_" + uuid);
   assert.equal(accountPartition(added), "persist:tn-account-acc_" + uuid);
   const edited = editAccount([...legacy, added], added.id, "Tên mới", "M");
-  assert.equal(accountPartition(edited[3]), accountPartition(added));
+  assert.equal(
+    accountPartition(edited.find((account) => account.id === added.id)!),
+    accountPartition(added),
+  );
   assert.equal(edited[0].id, "zalo");
 });
 test("catalog rejects provider reassignment, duplicate IDs, path-like IDs and missing legacy references", () => {
@@ -49,10 +59,15 @@ test("catalog rejects provider reassignment, duplicate IDs, path-like IDs and mi
         archived: false,
       },
     ],
-    accounts.slice(1),
   ]) {
     assert.throws(() => validateCatalog({ version: 1, accounts: list }));
   }
+  assert.equal(
+    validateCatalog({ version: 1, accounts: accounts.slice(1) }).some(
+      (account) => account.id === "zalo",
+    ),
+    true,
+  );
   assert.throws(() => validateCatalog({ version: 99, accounts }));
 });
 test("archive is reversible and never changes session identity; last enabled account cannot be archived", () => {
@@ -65,8 +80,8 @@ test("archive is reversible and never changes session identity; last enabled acc
   assert.equal(accountPartition(accounts[0]), "persist:zalo");
   accounts = restoreAccount(accounts, "zalo");
   assert.equal(accounts[0].archived, false);
-  for (const id of ["zalo", "messenger", "telegram"])
-    accounts = archiveAccount(accounts, id);
+  for (const account of defaultAccounts())
+    accounts = archiveAccount(accounts, account.id);
   assert.throws(() => archiveAccount(accounts, "acc_" + uuid));
 });
 test("reordering stays within provider and keeps all account IDs/other-platform order", () => {
@@ -81,7 +96,9 @@ test("reordering stays within provider and keeps all account IDs/other-platform 
   );
   assert.deepEqual(
     moved.filter((a) => a.provider !== "zalo").map((a) => a.id),
-    ["messenger", "telegram"],
+    defaultAccounts()
+      .filter((a) => a.provider !== "zalo")
+      .map((a) => a.id),
   );
 });
 test("per-account preferences preserve old choices and reject unknown account IDs", () => {
@@ -124,12 +141,15 @@ test("catalog writes are durable and corrupt primary falls back read-only withou
       ...initial.accounts,
       createAccount("telegram", "Work", "W", uuid),
     ]);
-    assert.equal(JSON.parse(await readFile(path, "utf8")).accounts.length, 4);
+    assert.equal(
+      JSON.parse(await readFile(path, "utf8")).accounts.length,
+      initial.accounts.length + 1,
+    );
     await writeFile(path, "broken");
     const restored = new AccountCatalogStore(path);
     const safe = await restored.load();
     assert.equal(safe.writable, false);
-    assert.equal(safe.accounts.length, 3);
+    assert.equal(safe.accounts.length, defaultAccounts().length);
     await assert.rejects(() => restored.commit(defaultAccounts()));
     assert.equal(await readFile(path, "utf8"), "broken");
   } finally {
@@ -173,11 +193,17 @@ test("v2 catalog restores registered websites without changing legacy or isolate
     providers: [website],
     accounts: [...defaultAccounts(), websiteAccount],
   });
-  assert.equal(accounts[3].provider, websiteId);
+  assert.equal(
+    accounts.find((account) => account.id === websiteAccount.id)?.provider,
+    websiteId,
+  );
   assert.deepEqual(accounts.map(accountPartition), [
     "persist:zalo",
     "persist:messenger",
     "persist:telegram",
+    ...defaultAccounts()
+      .slice(3)
+      .map((account) => accountPartition(account)),
     "persist:tn-account-acc_" + uuid,
   ]);
   assert.throws(() => accountPartition({ ...websiteAccount, id: websiteId }));
@@ -197,8 +223,8 @@ test("legacy catalog upgrades on a successful atomic website/account commit and 
     );
     const store = new AccountCatalogStore(path);
     const before = await store.load();
-    assert.equal(before.providers.length, 3);
-    assert.deepEqual(before.accounts.map(accountPartition), [
+    assert.equal(before.providers.length, defaultProviders().length);
+    assert.deepEqual(before.accounts.slice(0, 3).map(accountPartition), [
       "persist:zalo",
       "persist:messenger",
       "persist:telegram",
@@ -209,20 +235,31 @@ test("legacy catalog upgrades on a successful atomic website/account commit and 
     assert.equal(saved.version, 2);
     assert.equal(saved.providers.length, 1);
     assert.equal(saved.providers[0].id, websiteId);
-    assert.equal(saved.accounts[3].provider, websiteId);
+    assert.equal(
+      saved.accounts.find((account: Account) => account.id === websiteAccount.id)
+        ?.provider,
+      websiteId,
+    );
     const reopened = new AccountCatalogStore(path);
     const after = await reopened.load();
     assert.equal(after.writable, true);
     assert.equal(
-      after.providers[3].entry,
+      after.providers.find((provider) => provider.id === websiteId)?.entry,
       "https://work.example.test:8443/dashboard",
     );
     await reopened.commit(
       editAccount(after.accounts, websiteAccount.id, "Work", "W"),
     );
     const retained = await new AccountCatalogStore(path).load();
-    assert.equal(retained.providers[3].id, websiteId);
-    assert.equal(retained.accounts[3].name, "Work");
+    assert.equal(
+      retained.providers.find((provider) => provider.id === websiteId)?.id,
+      websiteId,
+    );
+    assert.equal(
+      retained.accounts.find((account) => account.id === websiteAccount.id)
+        ?.name,
+      "Work",
+    );
     const good = await readFile(path, "utf8");
     await assert.rejects(() =>
       reopened.commit(retained.accounts, before.providers),
@@ -246,11 +283,17 @@ test("v2 backup retains matching website definitions and sessions while blocking
     const recovered = new AccountCatalogStore(path);
     const result = await recovered.load();
     assert.equal(result.writable, false);
-    assert.equal(result.providers[3].id, websiteId);
-    assert.equal(result.accounts[3].provider, websiteId);
-    assert.equal(result.accounts[3].name, "Cá nhân");
     assert.equal(
-      accountPartition(result.accounts[3]),
+      result.providers.find((provider) => provider.id === websiteId)?.id,
+      websiteId,
+    );
+    const restoredWebsiteAccount = result.accounts.find(
+      (account) => account.id === websiteAccount.id,
+    )!;
+    assert.equal(restoredWebsiteAccount.provider, websiteId);
+    assert.equal(restoredWebsiteAccount.name, "Cá nhân");
+    assert.equal(
+      accountPartition(restoredWebsiteAccount),
       "persist:tn-account-acc_" + uuid,
     );
     await assert.rejects(() => recovered.commit(result.accounts));
