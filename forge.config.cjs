@@ -55,6 +55,7 @@ module.exports = {
         contents: (options) => [
           { x: 192, y: 344, type: "file", path: options.appPath },
           { x: 448, y: 344, type: "link", path: "/Applications" },
+          { x: 320, y: 150, type: "file", path: "assets/Mo-Gom.command" },
         ],
       }),
     },

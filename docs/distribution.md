@@ -9,7 +9,11 @@ Bản 0.7.1 đã được phát hành tại [GitHub Releases](https://github.com
 1. Gửi file `Gom-macOS-arm64-0.7.0.dmg` cùng file SHA-256, hoặc gửi đường dẫn GitHub Release sau khi người duy trì phát hành.
 2. Người nhận mở DMG rồi kéo **Gom.app** vào **Applications**.
 3. Eject ổ đĩa Gom, mở ứng dụng từ Applications. Tránh chạy trực tiếp trong DMG.
-4. Nếu macOS chặn vì chưa xác minh nhà phát triển, chỉ khi đã tin cậy nguồn tải: thử mở app trước, vào **System Settings → Privacy & Security → Open Anyway**, rồi xác nhận **Open**. Máy do tổ chức quản lý có thể không cho phép thao tác này. Xem [hướng dẫn chính thức của Apple](https://support.apple.com/en-us/102445).
+4. Lần đầu mở, macOS có thể báo "Apple could not verify Gom is free of malware" vì app chưa notarize. Chỉ khi đã tin cậy nguồn tải, chọn một trong hai cách:
+   - **Cách nhanh:** sau khi kéo Gom.app vào Applications, bấm đúp **Mo-Gom.command** trong DMG. Script gỡ cờ cách ly của `Gom.app` rồi mở app. Nếu chính file này bị chặn, bấm **Done**, rồi dùng cách bên dưới cho file đó, hoặc chạy `xattr -dr com.apple.quarantine /Applications/Gom.app` trong Terminal.
+   - **Cách thủ công:** bấm **Done** (không chọn Move to Trash), vào **System Settings → Privacy & Security**, kéo xuống mục Security, bấm **Open Anyway** cạnh dòng "Gom was blocked", nhập mật khẩu rồi xác nhận **Open**.
+
+   Máy do tổ chức quản lý có thể không cho phép các thao tác này. Xem [hướng dẫn chính thức của Apple](https://support.apple.com/en-us/102445).
 
 Không cần tắt Gatekeeper toàn hệ thống. Nếu thông báo nói ứng dụng hỏng hoặc có mã độc, kiểm tra lại nguồn tải và SHA-256 thay vì bỏ qua cảnh báo.
 

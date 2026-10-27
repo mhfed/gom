@@ -16,7 +16,7 @@ Bản mới nhất: **Gom 0.7.1**, phát hành ngày 27/10/2026 cho Mac Apple Si
 
 Tab đang mở có thể ghim, đóng và tự gom vào menu khi thiếu chỗ. Nút **+** mở thư viện để tìm nền tảng hoặc thêm website riêng. Nhớ tab mở, tab ghim và tài khoản cuối khi khởi động lại. Header giữ 52px; Cài đặt hỗ trợ danh sách nền tảng động và giao diện sáng/tối. Giữ dữ liệu tài khoản và định danh khóa mã hóa của Tin Nhan. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.1](docs/release-0.7.1.md).
 
-Lưu bản nháp quan trọng, thoát Tin Nhan/Gom bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp từ Tin Nhan lần đầu, tên file khác nên macOS không tự thay app cũ; sau khi kiểm tra Gom, có thể bỏ `Tin Nhan.app` cũ. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; macOS có thể cần Open Anyway theo hướng dẫn cài.
+Lưu bản nháp quan trọng, thoát Tin Nhan/Gom bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp từ Tin Nhan lần đầu, tên file khác nên macOS không tự thay app cũ; sau khi kiểm tra Gom, có thể bỏ `Tin Nhan.app` cũ. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; lần đầu mở macOS có thể chặn; bấm đúp **Mo-Gom.command** trong DMG hoặc dùng Open Anyway theo [hướng dẫn cài](docs/distribution.md).
 
 Repository đã chuyển sang `mhfed/gom`. Các bản 0.6.0 trở về trước cần tải DMG trực tiếp để nâng cấp lần này vì bộ kiểm tra cập nhật vẫn trỏ tới địa chỉ cũ. Bản 0.6.2 đã sửa nguồn cập nhật. File `TinNhan-macOS-arm64-0.7.1.dmg` là bản sao cùng nội dung, giữ tên gói cũ; người dùng mới chọn file Gom.
 
