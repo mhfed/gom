@@ -314,7 +314,7 @@ export class ManualUpdateChecker {
             phase === "ahead"
               ? "Bản đang dùng mới hơn bản phát hành công khai."
               : phase === "current"
-                ? "Anh đang dùng phiên bản mới nhất được công bố."
+                ? "Bạn đang dùng phiên bản mới nhất được công bố."
                 : phase === "available"
                   ? `Đã có Gom ${release.version}.`
                   : `Đã có phiên bản ${release.version}, nhưng chưa có gói phù hợp với máy này.`;

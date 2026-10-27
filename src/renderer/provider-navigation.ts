@@ -70,11 +70,11 @@ export function createProviderNavigation(options: {
       const result = await window.desktop.closeProvider(id);
       if (!result.ok) {
         await window.desktop.providerLibrary(true);
-        report(result.message || "Chưa đóng được tab. Anh thử lại nhé.");
+        report(result.message || "Chưa đóng được tab. Bạn thử lại nhé.");
       }
     } catch {
       await window.desktop.providerLibrary(true);
-      report("Chưa đóng được tab. Anh thử lại nhé.");
+      report("Chưa đóng được tab. Bạn thử lại nhé.");
     }
   };
   const menu = async (
@@ -380,7 +380,7 @@ export function createProviderNavigation(options: {
       if (!result.ok) {
         report(
           result.message ||
-            "Chưa thêm được website. Anh kiểm tra lại tên và địa chỉ nhé.",
+            "Chưa thêm được website. Bạn kiểm tra lại tên và địa chỉ nhé.",
         );
         return;
       }
@@ -388,7 +388,7 @@ export function createProviderNavigation(options: {
       if (result.accountId) await window.desktop.activate(result.accountId);
       else if (result.providerId) await options.select(result.providerId);
     } catch {
-      report("Chưa thêm được website. Anh thử lại nhé.");
+      report("Chưa thêm được website. Bạn thử lại nhé.");
     } finally {
       adding = false;
       prop($("provider-save"), "textContent", "Thêm và mở website");

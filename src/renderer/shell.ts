@@ -53,7 +53,7 @@ const settingsSections: Record<string, { title: string; description: string }> =
     },
     notifications: {
       title: "Thông báo",
-      description: "Giữ kết nối theo cách của anh.",
+      description: "Giữ kết nối theo cách của bạn.",
     },
     macos: {
       title: "macOS",
@@ -61,7 +61,7 @@ const settingsSections: Record<string, { title: string; description: string }> =
     },
     updates: {
       title: "Cập nhật",
-      description: "Phiên bản mới, khi anh sẵn sàng.",
+      description: "Phiên bản mới, khi bạn sẵn sàng.",
     },
   };
 function setProperty<T, K extends keyof T>(node: T, key: K, value: T[K]) {
@@ -336,7 +336,7 @@ async function accountAction(promise: Promise<AccountResult>) {
       : result.message || "Chưa cập nhật được tài khoản.";
   } catch {
     $("account-feedback").textContent =
-      "Chưa cập nhật được tài khoản. Anh thử lại nhé.";
+      "Chưa cập nhật được tài khoản. Bạn thử lại nhé.";
   }
 }
 async function openEditor(a?: Account, provider?: ProviderId) {
@@ -780,10 +780,10 @@ function render(state: AppState) {
       $("connection-detail"),
       "textContent",
       c.phase === "offline"
-        ? "Anh kết nối lại mạng; app sẽ kiểm tra lại khi có mạng."
+        ? "Bạn kết nối lại mạng; app sẽ kiểm tra lại khi có mạng."
         : c.retryAt
           ? "App đang tự thử lại có giới hạn. Các tài khoản khác vẫn hoạt động bình thường."
-          : "Anh có thể thử lại hoặc về trang đầu. App không xóa phiên đăng nhập.",
+          : "Bạn có thể thử lại hoặc về trang đầu. App không xóa phiên đăng nhập.",
     );
   }
   if (refreshSettings) {
@@ -840,13 +840,13 @@ function render(state: AppState) {
       $("import-hint"),
       "textContent",
       state.importing
-        ? "Đang kiểm tra phiên đã chọn. Anh đợi một chút nhé."
+        ? "Đang kiểm tra phiên đã chọn. Bạn đợi một chút nhé."
         : state.accountBusy
           ? "Đợi thao tác tài khoản hoàn tất để dùng phiên Chrome."
           : !target.value
             ? "Thêm một tài khoản trước khi chọn phiên Chrome."
             : !state.profiles.length
-              ? "Chưa tìm thấy profile Chrome trên máy. Anh có thể đăng nhập trực tiếp trong tài khoản đích."
+              ? "Chưa tìm thấy profile Chrome trên máy. Bạn có thể đăng nhập trực tiếp trong tài khoản đích."
               : `Chọn tài khoản ${nameOf(state.accounts.find((account) => account.id === target.value)!)} và profile Chrome đã đăng nhập dịch vụ đó.`,
     );
     const button = $<HTMLButtonElement>("import");
@@ -901,7 +901,7 @@ $("check-updates").onclick = () =>
     setProperty(
       $("update-message"),
       "textContent",
-      "Chưa kiểm tra được bản mới. Anh thử lại nhé.",
+      "Chưa kiểm tra được bản mới. Bạn thử lại nhé.",
     );
   });
 $("download-update").onclick = () =>
@@ -909,7 +909,7 @@ $("download-update").onclick = () =>
     setProperty(
       $("update-message"),
       "textContent",
-      "Chưa mở được trang tải. Anh thử lại nhé.",
+      "Chưa mở được trang tải. Bạn thử lại nhé.",
     );
   });
 $("auto-check-updates").onchange = (event) =>
@@ -978,7 +978,7 @@ $("account-form").onsubmit = async (event) => {
       await window.desktop.activate(result.accountId);
   } catch {
     $("account-editor-error").textContent =
-      "Chưa lưu được tài khoản. Anh thử lại nhé.";
+      "Chưa lưu được tài khoản. Bạn thử lại nhé.";
   } finally {
     button.disabled = false;
   }
