@@ -6,6 +6,7 @@ import {
   type AccountResult,
   type AppState,
   type DesktopBridge,
+  PROVIDER_ORDER,
   type ProviderId,
   type ProviderDefinition,
   type NotificationChoice,
@@ -570,13 +571,16 @@ function rebuildAccounts(state: AppState) {
       $("archived-accounts").append(row);
     }
   }
-  const target = $<HTMLSelectElement>("messenger-target");
+  const target = $<HTMLSelectElement>("import-target");
   syncSelectOptions(
     target,
     state.accounts
-      .filter((a) => a.provider === "messenger" && !a.archived)
-      .map((a) => ({ value: a.id, label: a.name })),
-    "Chưa có tài khoản Messenger",
+      .filter(
+        (a) =>
+          !a.archived && PROVIDER_ORDER.some((provider) => provider === a.provider),
+      )
+      .map((a) => ({ value: a.id, label: nameOf(a) })),
+    "Chưa có tài khoản",
   );
   applyAccountFilter();
   const nextFocus = focusId
@@ -826,8 +830,8 @@ function render(state: AppState) {
       })),
       "Chưa tìm thấy profile Chrome",
     );
-    const target = $<HTMLSelectElement>("messenger-target");
-    if (settings && lastPanel !== "settings" && active.provider === "messenger")
+    const target = $<HTMLSelectElement>("import-target");
+    if (settings && lastPanel !== "settings")
       setProperty(target, "value", active.id);
     const importBusy = state.importing || state.accountBusy;
     setProperty(select, "disabled", importBusy || !state.profiles.length);
@@ -840,10 +844,10 @@ function render(state: AppState) {
         : state.accountBusy
           ? "Đợi thao tác tài khoản hoàn tất để dùng phiên Chrome."
           : !target.value
-            ? "Thêm một tài khoản Messenger trước khi chọn phiên Chrome."
+            ? "Thêm một tài khoản trước khi chọn phiên Chrome."
             : !state.profiles.length
-              ? "Chưa tìm thấy profile Chrome trên máy. Anh có thể mở Messenger và đăng nhập trực tiếp."
-              : "Chọn đúng tài khoản Messenger và profile Chrome muốn sử dụng.",
+              ? "Chưa tìm thấy profile Chrome trên máy. Anh có thể đăng nhập trực tiếp trong tài khoản đích."
+              : `Chọn tài khoản ${nameOf(state.accounts.find((account) => account.id === target.value)!)} và profile Chrome đã đăng nhập dịch vụ đó.`,
     );
     const button = $<HTMLButtonElement>("import");
     setProperty(
@@ -914,9 +918,9 @@ $("auto-check-updates").onchange = (event) =>
     (event.target as HTMLInputElement).checked,
   );
 $("import").onclick = () =>
-  void window.desktop.importMessenger(
+  void window.desktop.importSession(
     $<HTMLSelectElement>("profiles").value,
-    $<HTMLSelectElement>("messenger-target").value,
+    $<HTMLSelectElement>("import-target").value,
   );
 $("retry-connection").onclick = () => void window.desktop.reload();
 $("open-at-login").onchange = (e) =>

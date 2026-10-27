@@ -1,4 +1,4 @@
-> **Gom 0.7.2 — Thêm Gmail, Instagram, Discord và Slack:** có badge chưa đọc ngay trên tab; Messenger ẩn thanh điều hướng Facebook dư thừa. Tab có thể đóng/ghim, menu chứa các tab chưa vừa cửa sổ, thư viện có tìm kiếm và hỗ trợ thêm website riêng. Mỗi tab nhớ tài khoản cuối, từng tài khoản giữ phiên riêng. Bản cài này vẫn cập nhật bằng cách tải DMG/ZIP và thay app thủ công; tự cài cần Developer ID và notarization.
+> **Gom 0.7.3 — Dùng phiên Chrome:** nhập phiên cookie có giới hạn cho Messenger, Instagram, Slack và Zalo; Gmail, Discord, Telegram đăng nhập trực tiếp trong Gom. Có thể chọn tài khoản đích và profile nguồn rõ ràng. Bản cài này vẫn cập nhật bằng cách tải DMG/ZIP và thay app thủ công; tự cài cần Developer ID và notarization.
 >
 > Kiểm tra giao diện hiện hành: `npm run test:providers`, `npm run test:shell` và `npm run test:settings` (fixture cách ly, không dùng phiên cá nhân). Connector chat thống nhất đã dừng theo yêu cầu; mã nghiên cứu không được đóng gói. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
 
@@ -8,19 +8,19 @@
 
 ## Tải app
 
-Bản mới nhất: **Gom 0.7.2**, phát hành ngày 27/10/2026 cho Mac Apple Silicon (arm64).
+Bản mới nhất: **Gom 0.7.3**, phát hành ngày 27/10/2026 cho Mac Apple Silicon (arm64).
 
-- [Tải DMG](https://github.com/mhfed/gom/releases/download/v0.7.2/Gom-macOS-arm64-0.7.2.dmg)
-- [Tải ZIP](https://github.com/mhfed/gom/releases/download/v0.7.2/Gom-macOS-arm64-0.7.2.zip)
-- [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.7.2)
+- [Tải DMG](https://github.com/mhfed/gom/releases/download/v0.7.3/Gom-macOS-arm64-0.7.3.dmg)
+- [Tải ZIP](https://github.com/mhfed/gom/releases/download/v0.7.3/Gom-macOS-arm64-0.7.3.zip)
+- [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.7.3)
 
-Tab đang mở có thể ghim, đóng và tự gom vào menu khi thiếu chỗ. Nút **+** mở thư viện để tìm nền tảng hoặc thêm website riêng. Nhớ tab mở, tab ghim và tài khoản cuối khi khởi động lại. Header giữ 52px; Cài đặt hỗ trợ danh sách nền tảng động và giao diện sáng/tối. Giữ dữ liệu tài khoản và định danh khóa mã hóa hiện có. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.2](docs/release-0.7.2.md).
+Tab đang mở có thể ghim, đóng và tự gom vào menu khi thiếu chỗ. Nút **+** mở thư viện để tìm nền tảng hoặc thêm website riêng. Nhớ tab mở, tab ghim và tài khoản cuối khi khởi động lại. Header giữ 52px; Cài đặt hỗ trợ danh sách nền tảng động và giao diện sáng/tối. Giữ dữ liệu tài khoản và định danh khóa mã hóa hiện có. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.3](docs/release-0.7.3.md).
 
 Lưu bản nháp quan trọng, thoát app đang dùng bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp lần đầu, macOS có thể giữ app cũ riêng vì tên đã đổi; sau khi kiểm tra Gom, có thể gỡ app cũ khỏi Applications. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; lần đầu mở có thể bị macOS chặn. Nếu đã tin cậy nguồn tải, có thể bấm đúp `Mo-Gom.command` trong DMG hoặc dùng Open Anyway theo [hướng dẫn cài](docs/distribution.md).
 
 Repository đã chuyển sang `mhfed/gom`. Các bản 0.6.0 trở về trước cần tải DMG trực tiếp để nâng cấp lần này vì bộ kiểm tra cập nhật vẫn trỏ tới địa chỉ cũ. Bản 0.6.2 đã sửa nguồn cập nhật.
 
-Catalog tài khoản được nâng lên v2 khi lưu thay đổi. Bản 0.6.x không đọc được catalog mới; sau khi dùng 0.7.2 nên tiếp tục dùng 0.7.x hoặc mới hơn và giữ nguyên thư mục dữ liệu.
+Catalog tài khoản được nâng lên v2 khi lưu thay đổi. Bản 0.6.x không đọc được catalog mới; sau khi dùng 0.7.3 nên tiếp tục dùng 0.7.x hoặc mới hơn và giữ nguyên thư mục dữ liệu.
 
 ## Chạy và đóng gói
 
@@ -43,9 +43,8 @@ Bản app nằm trong `out-release/Gom-darwin-arm64/`; DMG và ZIP trong `out-re
 - **Đóng tab:** không gỡ nền tảng hoặc xóa dữ liệu đăng nhập. Tab cuối đóng sẽ mở thư viện. Website riêng chỉ tải khi được chọn, đóng tab sẽ lưu phiên và giải phóng trang; dữ liệu chưa gửi trên trang phụ thuộc website. Ba nền tảng nhắn tin có sẵn vẫn giữ hoạt động nền theo cơ chế cũ.
 - Website riêng chỉ điều hướng trong cùng origin đã cấu hình; liên kết ra ngoài mở trình duyệt sau xác nhận. Luồng đăng nhập SSO chuyển sang origin khác có thể cần đăng nhập trực tiếp trên website hoặc được hỗ trợ thêm. Gom không suy diễn số tin chưa đọc cho website riêng.
 
-- Messenger: mở Tài khoản & cài đặt, chọn hồ sơ Chrome, bấm Dùng phiên có sẵn. Anh chọn hồ sơ trong danh sách; app không ghi cứng email cá nhân. Chỉ hai cookie Facebook cần thiết được đọc bằng SQLite ở chế độ chỉ đọc và giải mã qua Chrome Safe Storage trong Keychain.
-- Phiên được thử trong cửa sổ tạm trước; chỉ chấp nhận sau khi Messenger đích đã xác minh đăng nhập. Thất bại sẽ khôi phục cặp cookie cũ. Đóng app trong lúc nhập sẽ đợi giao dịch kết thúc.
-- Zalo và Telegram: đăng nhập QR trực tiếp trên giao diện chính thức. Nếu nền tảng thu hồi hoặc hết hạn phiên, phải đăng nhập lại.
+- **Dùng phiên Chrome:** trong Tài khoản & cài đặt, chọn tài khoản đích và hồ sơ Chrome. Cookie xác thực được cho phép của Messenger, Instagram, Slack và Zalo được đọc bằng SQLite chỉ đọc, giải mã qua Chrome Safe Storage trong Keychain, rồi thử trong cửa sổ tạm. Chỉ chuyển cookie sau khi trang dịch vụ xác minh đăng nhập; không chép cả profile hoặc cookie của dịch vụ khác. Nếu kiểm tra thất bại, cookie xác thực đích được khôi phục.
+- Gmail, Discord và Telegram chưa hỗ trợ nhập phiên Chrome; đăng nhập trực tiếp trong Gom (Zalo/Telegram có thể dùng QR). Nếu nền tảng thu hồi hoặc hết hạn phiên, phải đăng nhập lại.
 - Dữ liệu của app lưu tại `~/Library/Application Support/TinNhanDesktop`. Không sao chép toàn bộ Chrome profile; không xuất token ra log hoặc renderer.
 - Cmd+W hoặc nút đóng cửa sổ chỉ ẩn cửa sổ; app vẫn chạy và giữ các trang đang mở. Bấm icon Dock để mở lại. Cmd+Q mới thoát app sau khi ghi dữ liệu. Chuyển tab hoặc tài khoản giữ nguyên view và bản nháp đang mở; khôi phục bản nháp sau thoát phụ thuộc chính nền tảng.
 
@@ -77,7 +76,7 @@ Mặc định đo hai lượt cho 3/6/12 tài khoản và ba trang chờ đăng 
 
 `npm run test:renderer-performance` kiểm tra DOM thật bằng Chromium riêng; cần browser của Playwright hoặc đặt `TIN_NHAN_CHROMIUM` tới executable Chromium/Chrome đã cài. Test này không mở profile cá nhân.
 
-Các nền tảng nhắn tin có sẵn giữ trang tài khoản để bảo toàn bản nháp và hoạt động nền; website riêng chỉ tạo trang khi được chọn và đóng trang sau khi ghi dữ liệu phiên khi người dùng đóng tab. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition khi đóng/mở tab. Bản cài mới nhất là **Gom 0.7.2**, bổ sung Gmail, Instagram, Discord, Slack và badge chưa đọc trên tab: `outputs/Gom-macOS-arm64-0.7.2.dmg`, kèm `outputs/SHA256SUMS-Gom-0.7.2.txt`; các file tương ứng có tại link phát hành ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
+Các nền tảng nhắn tin có sẵn giữ trang tài khoản để bảo toàn bản nháp và hoạt động nền; website riêng chỉ tạo trang khi được chọn và đóng trang sau khi ghi dữ liệu phiên khi người dùng đóng tab. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition khi đóng/mở tab. Bản cài mới nhất là **Gom 0.7.3**, bổ sung nhập phiên Chrome có giới hạn: `outputs/Gom-macOS-arm64-0.7.3.dmg`, kèm `outputs/SHA256SUMS-Gom-0.7.3.txt`; các file tương ứng có tại link phát hành ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
 
 Chi tiết thay đổi, phương pháp và kết quả đối chiếu: [báo cáo hiệu năng 26/10/2026](docs/performance-2026-10-26.md).
 
@@ -130,7 +129,7 @@ Danh sách nằm trong `accounts.json` (chỉ ID/nền tảng/tên/ký hiệu/tr
 
 Mỗi tài khoản có unread, màu giao diện, quyền thông báo và phục hồi lỗi riêng. Bấm thông báo mở đúng tài khoản phát ra, không nhảy về tài khoản mặc định cùng nền tảng. Các giới hạn thông báo gốc/service worker ở0.3 vẫn áp dụng. Cmd+1/2/3 trở về tài khoản vừa chọn gần nhất của nền tảng tương ứng; menu bar liệt kê tên từng tài khoản.
 
-Zalo/Telegram thêm bằng QR trong phiên mới. Messenger có thể đăng nhập trực tiếp hoặc chọn rõ **Tài khoản Messenger đích** và hồ sơ Chrome nguồn trong Cài đặt. Tài khoản đích được giữ cố định suốt giao dịch nhập; app kiểm tra trực tiếp trước và sau bước xác minh nguồn; nếu đích đang tải hoặc đã có cookie đăng nhập thì từ chối nhập để giữ phiên cũ, kể cả khi trạng thái giao diện chưa kịp cập nhật. App không thay phiên của tài khoản đã xác thực và không cho gỡ/sửa danh sách khi đang nhập. Phiên còn hiệu lực phụ thuộc chính sách/expiry của nền tảng.
+Zalo/Telegram thêm bằng QR trong phiên mới. Dùng phiên Chrome cho Messenger, Instagram, Slack hoặc Zalo bằng cách chọn rõ tài khoản đích và profile nguồn trong Cài đặt. Tài khoản đích được giữ cố định suốt giao dịch; app kiểm tra trạng thái đăng nhập cả trước lẫn sau xác minh nguồn. Cookie xác thực đang có hoặc trùng cookie nguồn sẽ không bị ghi đè; lỗi xác minh sẽ khôi phục cookie được phép. App không cho gỡ/sửa tài khoản khi đang nhập. Phiên còn hiệu lực phụ thuộc chính sách/expiry của nền tảng.
 
 Mọi tài khoản chưa gỡ được mở nền khi khởi động để duy trì thông báo và unread; số tài khoản tăng sẽ dùng thêm RAM. Chưa có chế độ ngủ tài khoản trong0.4.
 

@@ -60,7 +60,7 @@ const bridge: DesktopBridge = {
     ipcRenderer.on("updates-requested", listener);
     return () => ipcRenderer.removeListener("updates-requested", listener);
   },
-  importMessenger: (sourceId, accountId) =>
+  importSession: (sourceId, accountId) =>
     ipcRenderer.invoke("desktop", "import", { sourceId, accountId }),
   changed(callback) {
     const listener = (_: unknown, state: AppState) => callback(state);

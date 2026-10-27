@@ -231,7 +231,7 @@ export interface DesktopBridge {
   setNotification(id: AccountId, choice: NotificationChoice): Promise<void>;
   testNotification(id: AccountId): Promise<void>;
   notificationSettings(): Promise<void>;
-  importMessenger(
+  importSession(
     sourceId: string,
     accountId?: AccountId,
   ): Promise<{ status: string }>;
