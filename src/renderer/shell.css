@@ -228,6 +228,7 @@ header {
   color: var(--ink);
 }
 .provider-tab-label {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -278,18 +279,27 @@ header {
   color: var(--ink);
 }
 .platform-unread {
-  width: 5px;
-  height: 5px;
+  min-width: 12px;
+  height: 13px;
+  padding: 0 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--accent);
   border: 1px solid var(--cream);
-  border-radius: 50%;
-  position: absolute;
-  top: 4px;
-  left: 21px;
+  border-radius: 8px;
+  color: var(--accent-ink);
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  flex: none;
+  pointer-events: none;
 }
 .provider-tab.is-pinned .platform-unread {
-  left: auto;
-  right: 4px;
+  position: absolute;
+  top: 1px;
+  right: 1px;
 }
 header #provider-overflow {
   width: 34px;
