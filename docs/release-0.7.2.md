@@ -12,7 +12,6 @@
 
 - `Gom-macOS-arm64-0.7.2.dmg`
 - `Gom-macOS-arm64-0.7.2.zip`
-- `TinNhan-macOS-arm64-0.7.2.dmg` — cùng nội dung DMG Gom, giữ tên gói cũ.
 - `SHA256SUMS-Gom-0.7.2.txt`
 
 Dành cho Mac Apple Silicon (arm64). App ký ad-hoc, chưa có Developer ID/notarization; có thể cần xác nhận mở app trong Cài đặt hệ thống. Để nâng cấp, thoát app bằng ⌘Q, kéo Gom.app vào Applications và chọn thay thế. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`.

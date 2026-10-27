@@ -2,7 +2,7 @@
 
 Bản 0.7.2 tạo bộ cài **macOS Apple Silicon (arm64)**. Chưa có bản Intel hoặc Universal. Ứng dụng ký ad-hoc để chạy trên máy Mac, chưa ký bằng Apple Developer ID và chưa notarize. DMG không làm thay đổi giới hạn này.
 
-Bản 0.7.2 gồm DMG, ZIP, file tương thích TinNhan và checksum tại [GitHub Releases](https://github.com/mhfed/gom/releases/tag/v0.7.2).
+Bản 0.7.2 gồm DMG, ZIP và checksum tại [GitHub Releases](https://github.com/mhfed/gom/releases/tag/v0.7.2).
 
 ## Cài đặt và gửi cho người khác
 
@@ -35,13 +35,13 @@ Mã nguồn có nhánh Electron `autoUpdater` để tải ZIP trong app, hiện 
 
 Chữ ký xác nhận nhà phát hành và tính toàn vẹn của app; không cấp cho app quyền đọc thêm tài khoản hoặc nội dung chat. Khi chuyển từ app ad-hoc sang Developer ID lần đầu, macOS có thể hỏi quyền Keychain lại. Bundle ID, tên Keychain hiện dùng (`Tin Nhan`), thư mục `TinNhanDesktop` và partition phiên đăng nhập vẫn được giữ nguyên.
 
-Để nâng cấp, lưu hoặc sao chép bản nháp quan trọng, thoát Tin Nhan/Gom bằng **⌘Q**, rồi kéo **Gom.app** vào Applications. Nếu đã có Gom, chọn thay thế. Khi nâng cấp từ Tin Nhan lần đầu, tên file app thay đổi nên macOS không tự thay `Tin Nhan.app`; sau khi kiểm tra Gom, có thể bỏ bản app Tin Nhan cũ khỏi Applications. Giữ nguyên thư mục `~/Library/Application Support/TinNhanDesktop`. App mới dùng lại dữ liệu cũ; phiên đăng nhập vẫn phụ thuộc thời hạn và chính sách của từng nền tảng. Bản nháp giữ nguyên khi chuyển tab trong app, còn khôi phục sau thoát phụ thuộc Zalo, Telegram hoặc Messenger.
+Để nâng cấp, lưu hoặc sao chép bản nháp quan trọng, thoát app đang dùng bằng **⌘Q**, rồi kéo **Gom.app** vào Applications. Nếu đã có Gom, chọn thay thế. Khi nâng cấp lần đầu, macOS có thể giữ app cũ riêng vì tên đã đổi; sau khi kiểm tra Gom, có thể gỡ app cũ khỏi Applications. Giữ nguyên thư mục `~/Library/Application Support/TinNhanDesktop`. App mới dùng lại dữ liệu cũ; phiên đăng nhập vẫn phụ thuộc thời hạn và chính sách của từng nền tảng. Bản nháp giữ nguyên khi chuyển tab trong app, còn khôi phục sau thoát phụ thuộc Zalo, Telegram hoặc Messenger.
 
 Bản 0.7.0 đọc catalog cũ và lưu catalog v2 khi thay đổi tài khoản hoặc thêm website. Các bản 0.6.x không đọc được catalog v2, kể cả bản backup sau khi lưu. Sau khi nâng cấp nên tiếp tục dùng 0.7.x hoặc mới hơn; không xóa thư mục dữ liệu để hạ phiên bản.
 
 Tên nội bộ dùng cho khóa mã hóa macOS vẫn là `Tin Nhan`; bundle ID, thư mục dữ liệu và partition không đổi. Chữ ký vẫn là ad-hoc, nên macOS có thể yêu cầu quyền Keychain khi mở bản mới. Không xóa hoặc tạo lại khóa `Tin Nhan Safe Storage`.
 
-Nếu trước đây bật chạy cùng máy cho Tin Nhan, kiểm tra **System Settings → General → Login Items** và bỏ mục app Tin Nhan cũ; bật lại **Mở Gom khi đăng nhập** trong Gom nếu muốn. Bộ cài không tự thay đổi mục đăng nhập macOS.
+Nếu trước đây bật chạy cùng máy cho bản cũ, kiểm tra **System Settings → General → Login Items** và bỏ mục app cũ; bật lại **Mở Gom khi đăng nhập** trong Gom nếu muốn. Bộ cài không tự thay đổi mục đăng nhập macOS.
 
 Việc cập nhật phiên bản không đồng bộ cookie hoặc tài khoản giữa các máy. Mỗi người dùng giữ dữ liệu của mình trên máy của họ.
 
@@ -72,9 +72,8 @@ Sao chép gói đã kiểm chứng sang tên phát hành thống nhất và tạ
 mkdir -p outputs
 cp out-release/make/dmg/arm64/Gom-macOS-arm64-0.7.2.dmg outputs/
 cp 'out-release/make/zip/darwin/arm64/Gom-darwin-arm64-0.7.2.zip' outputs/Gom-macOS-arm64-0.7.2.zip
-cp outputs/Gom-macOS-arm64-0.7.2.dmg outputs/TinNhan-macOS-arm64-0.7.2.dmg
 cd outputs
-shasum -a 256 Gom-macOS-arm64-0.7.2.dmg Gom-macOS-arm64-0.7.2.zip TinNhan-macOS-arm64-0.7.2.dmg > SHA256SUMS-Gom-0.7.2.txt
+shasum -a 256 Gom-macOS-arm64-0.7.2.dmg Gom-macOS-arm64-0.7.2.zip > SHA256SUMS-Gom-0.7.2.txt
 ```
 
 ## Phát hành trên GitHub
@@ -84,9 +83,7 @@ Bản 0.7.2 dùng tag `v0.7.2` trong đúng repository `mhfed/gom`, kèm ghi ch�
 - `Gom-macOS-arm64-0.7.2.dmg`
 - `Gom-macOS-arm64-0.7.2.zip`
 - `SHA256SUMS-Gom-0.7.2.txt`
-- `TinNhan-macOS-arm64-0.7.2.dmg` — bản sao cùng nội dung DMG Gom, giữ tên gói cũ.
-
-Gom nhận cả tên gói Gom và TinNhan cũ. Asset tên cũ được giữ cho tính tương thích tên file; nó không sửa lỗi địa chỉ repository trong các app cũ. Tạo bằng `cp outputs/Gom-macOS-arm64-0.7.2.dmg outputs/TinNhan-macOS-arm64-0.7.2.dmg` và đưa cả file này vào checksum. Đây vẫn là bundle Gom, không phải bản chương trình khác.
+Checksum của 0.7.2 chỉ bao gồm DMG và ZIP phát hành dưới tên Gom.
 
 Tag phải khớp version trong `package.json`; tên gói cần chứa version và kiến trúc. Chỉ đăng bản ổn định sau khi có đủ gói đã kiểm chứng. Bộ kiểm tra bỏ qua draft/prerelease; bản cài mới hơn bản public sẽ thông báo rõ tình trạng đó. Các bản sau tăng version và lặp lại quy trình. Sau lần nâng cấp trực tiếp lên 0.6.2 hoặc mới hơn, chức năng kiểm tra dùng repository mới.
 

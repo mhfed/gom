@@ -4,7 +4,7 @@
 
 # Gom — macOS
 
-**Trò chuyện, gọn một nơi.** Gom (trước đây là Tin Nhan) là ứng dụng cá nhân bọc giao diện web chính thức của Zalo, Messenger, Telegram, Gmail, Instagram, Discord và Slack. Hỗ trợ nhiều tài khoản cho mỗi nền tảng, mỗi tài khoản giữ phiên riêng và trang đang mở khi chuyển qua lại.
+**Trò chuyện, gọn một nơi.** Gom là ứng dụng cá nhân bọc giao diện web chính thức của Zalo, Messenger, Telegram, Gmail, Instagram, Discord và Slack. Hỗ trợ nhiều tài khoản cho mỗi nền tảng, mỗi tài khoản giữ phiên riêng và trang đang mở khi chuyển qua lại.
 
 ## Tải app
 
@@ -14,11 +14,11 @@ Bản mới nhất: **Gom 0.7.2**, phát hành ngày 27/10/2026 cho Mac Apple Si
 - [Tải ZIP](https://github.com/mhfed/gom/releases/download/v0.7.2/Gom-macOS-arm64-0.7.2.zip)
 - [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.7.2)
 
-Tab đang mở có thể ghim, đóng và tự gom vào menu khi thiếu chỗ. Nút **+** mở thư viện để tìm nền tảng hoặc thêm website riêng. Nhớ tab mở, tab ghim và tài khoản cuối khi khởi động lại. Header giữ 52px; Cài đặt hỗ trợ danh sách nền tảng động và giao diện sáng/tối. Giữ dữ liệu tài khoản và định danh khóa mã hóa của Tin Nhan. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.2](docs/release-0.7.2.md).
+Tab đang mở có thể ghim, đóng và tự gom vào menu khi thiếu chỗ. Nút **+** mở thư viện để tìm nền tảng hoặc thêm website riêng. Nhớ tab mở, tab ghim và tài khoản cuối khi khởi động lại. Header giữ 52px; Cài đặt hỗ trợ danh sách nền tảng động và giao diện sáng/tối. Giữ dữ liệu tài khoản và định danh khóa mã hóa hiện có. Có kiểm tra cập nhật trong Cài đặt và menu Gom. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.2](docs/release-0.7.2.md).
 
-Lưu bản nháp quan trọng, thoát Tin Nhan/Gom bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp từ Tin Nhan lần đầu, tên file khác nên macOS không tự thay app cũ; sau khi kiểm tra Gom, có thể bỏ `Tin Nhan.app` cũ. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; lần đầu mở có thể bị macOS chặn. Nếu đã tin cậy nguồn tải, có thể bấm đúp `Mo-Gom.command` trong DMG hoặc dùng Open Anyway theo [hướng dẫn cài](docs/distribution.md).
+Lưu bản nháp quan trọng, thoát app đang dùng bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp lần đầu, macOS có thể giữ app cũ riêng vì tên đã đổi; sau khi kiểm tra Gom, có thể gỡ app cũ khỏi Applications. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; lần đầu mở có thể bị macOS chặn. Nếu đã tin cậy nguồn tải, có thể bấm đúp `Mo-Gom.command` trong DMG hoặc dùng Open Anyway theo [hướng dẫn cài](docs/distribution.md).
 
-Repository đã chuyển sang `mhfed/gom`. Các bản 0.6.0 trở về trước cần tải DMG trực tiếp để nâng cấp lần này vì bộ kiểm tra cập nhật vẫn trỏ tới địa chỉ cũ. Bản 0.6.2 đã sửa nguồn cập nhật. File `TinNhan-macOS-arm64-0.7.2.dmg` là bản sao cùng nội dung, giữ tên gói cũ; người dùng mới chọn file Gom.
+Repository đã chuyển sang `mhfed/gom`. Các bản 0.6.0 trở về trước cần tải DMG trực tiếp để nâng cấp lần này vì bộ kiểm tra cập nhật vẫn trỏ tới địa chỉ cũ. Bản 0.6.2 đã sửa nguồn cập nhật.
 
 Catalog tài khoản được nâng lên v2 khi lưu thay đổi. Bản 0.6.x không đọc được catalog mới; sau khi dùng 0.7.2 nên tiếp tục dùng 0.7.x hoặc mới hơn và giữ nguyên thư mục dữ liệu.
 
