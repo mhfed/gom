@@ -1,5 +1,6 @@
 import { createCommandPalette } from "./command.ts";
 import { createProviderNavigation } from "./provider-navigation.ts";
+import { createPrivateSpaceUI } from "./private-space.ts";
 import {
   type Account,
   type AccountId,
@@ -51,6 +52,7 @@ let lastPanel = "";
 let logoDialogProvider: ProviderDefinition | null = null;
 let logoDialogSelection: ProviderLogoChange | undefined;
 let logoDialogBusy = false;
+let privacyGeneration = 0;
 const settingsSections: Record<string, { title: string; description: string }> =
   {
     accounts: {
@@ -102,8 +104,7 @@ function applyPlatformCopy() {
     "notification-platform-hint":
       "Bật thông báo trong từng nền tảng. Nút “Gửi thử” gửi một thông báo từ Gom; chế độ Không làm phiền có thể ẩn thông báo này.",
     "startup-option-label": "Chạy cùng Windows",
-    "global-shortcut-hint":
-      "Ctrl+Shift+Space · giữ nguyên các trang đang mở.",
+    "global-shortcut-hint": "Ctrl+Shift+Space · giữ nguyên các trang đang mở.",
     "shortcut-switch-account": "Ctrl K",
     "shortcut-settings": "Ctrl ,",
     "shortcut-hide": "Ctrl W",
@@ -154,13 +155,15 @@ function icon(name: string) {
 }
 function providerLogo(provider: ProviderDefinition) {
   const selected = provider.logo;
-  const builtinId = selected?.kind === "builtin" ? selected.providerId : provider.id;
+  const builtinId =
+    selected?.kind === "builtin" ? selected.providerId : provider.id;
   if (icons[builtinId]) {
     const logo = element("img", "provider-logo");
     logo.src = "logos/" + icons[builtinId];
     logo.alt = "";
     logo.draggable = false;
-    if (selected?.kind === "image") applyCustomLogo(logo, provider, selected.revision);
+    if (selected?.kind === "image")
+      applyCustomLogo(logo, provider, selected.revision);
     return logo;
   }
   const initials = provider.label
@@ -172,7 +175,8 @@ function providerLogo(provider: ProviderDefinition) {
     .toLocaleUpperCase();
   const logo = element("span", "provider-logo provider-initials", initials);
   logo.setAttribute("aria-hidden", "true");
-  if (selected?.kind === "image") applyCustomLogo(logo, provider, selected.revision);
+  if (selected?.kind === "image")
+    applyCustomLogo(logo, provider, selected.revision);
   return logo;
 }
 const providerLogoData = new Map<string, Promise<string | null>>();
@@ -184,7 +188,9 @@ function applyCustomLogo(
   const key = `${provider.id}:${revision}`;
   let request = providerLogoData.get(key);
   if (!request) {
-    request = window.desktop.getProviderLogo(provider.id, revision).catch(() => null);
+    request = window.desktop
+      .getProviderLogo(provider.id, revision)
+      .catch(() => null);
     providerLogoData.set(key, request);
   }
   void request.then((dataUrl) => {
@@ -524,19 +530,29 @@ function renderUpdates(state: AppState) {
 }
 
 async function accountAction(promise: Promise<AccountResult>) {
+  const generation = privacyGeneration;
   try {
     const result = await promise;
+    if (generation !== privacyGeneration) return;
     $("account-feedback").textContent = result.ok
       ? "Đã cập nhật tài khoản."
       : result.message || "Chưa cập nhật được tài khoản.";
   } catch {
+    if (generation !== privacyGeneration) return;
     $("account-feedback").textContent =
       "Chưa cập nhật được tài khoản. Bạn thử lại nhé.";
   }
 }
 async function openEditor(a?: Account, provider?: ProviderId) {
+  const generation = privacyGeneration;
   await window.desktop.accountEditor(true);
+  if (generation !== privacyGeneration) return;
   render(await window.desktop.state());
+  if (
+    generation !== privacyGeneration ||
+    (a && !current.accounts.some((item) => item.id === a.id))
+  )
+    return;
   editing = a?.id ?? null;
   $("account-editor-title").textContent = a
     ? "Đổi tên tài khoản"
@@ -546,7 +562,9 @@ async function openEditor(a?: Account, provider?: ProviderId) {
   select.value =
     a?.provider ||
     provider ||
-    current.accounts.find((a) => a.id === current.active)!.provider;
+    current.accounts.find((a) => a.id === current.active)?.provider ||
+    current.providers[0]?.id ||
+    "";
   select.disabled = !!a;
   const name = $<HTMLInputElement>("account-name");
   name.value = a?.name || "";
@@ -631,6 +649,10 @@ function rebuildAccounts(state: AppState) {
       status.id = "account-status-" + a.id;
       const meta = element("div", "account-meta");
       meta.append(element("small", "", providerLabel), status);
+      if (a.private)
+        meta.append(
+          element("small", "private-account-label", "Không gian kín"),
+        );
       label.append(name, meta);
       identity.append(avatar(a), label);
       const tools = element("div", "account-actions");
@@ -694,7 +716,15 @@ function rebuildAccounts(state: AppState) {
       );
       for (const [i, b] of [up, down, hide].entries())
         b.dataset.focus = "account-" + a.id + "-" + i;
-      menu.append(up, down, hide);
+      const privacy = action(
+        a.private ? "Đưa ra ngoài không gian kín" : "Đưa vào không gian kín",
+        a.private
+          ? "Đưa tài khoản ra ngoài không gian kín"
+          : "Đưa tài khoản vào không gian kín",
+        () => privateSpaceUI.move(a),
+      );
+      privacy.dataset.focus = "private-" + a.id;
+      menu.append(privacy, up, down, hide);
       menu.addEventListener("click", (event) => {
         if ((event.target as HTMLElement).closest("button:not(:disabled)")) {
           more.open = false;
@@ -704,6 +734,7 @@ function rebuildAccounts(state: AppState) {
       tools.append(more);
       row.append(identity, tools);
       $("account-manager").append(row);
+      if (a.private) continue;
       const nrow = element("div", "notification-row");
       const nlabel = element("label");
       nlabel.append(
@@ -772,7 +803,9 @@ function rebuildAccounts(state: AppState) {
     state.accounts
       .filter(
         (a) =>
-          !a.archived && PROVIDER_ORDER.some((provider) => provider === a.provider),
+          !a.archived &&
+          !a.private &&
+          PROVIDER_ORDER.some((provider) => provider === a.provider),
       )
       .map((a) => ({ value: a.id, label: nameOf(a) })),
     "Chưa có tài khoản",
@@ -794,9 +827,19 @@ const providerNavigation = createProviderNavigation({
   logo: providerLogo,
   icon,
 });
-function renderToolbar(state: AppState, active: Account) {
+function renderToolbar(state: AppState, active: Account | undefined) {
   providerNavigation.sync(state);
   const select = $<HTMLButtonElement>("account-select");
+  select.disabled = !active;
+  if (!active) {
+    select.value = "";
+    $("account-select-label").textContent = "Chọn tài khoản";
+    select.setAttribute("aria-label", "Chọn tài khoản");
+    select.title = "Chọn tài khoản";
+    $("active-account-status").className = "account-status dot idle";
+    $("add-account-toolbar").title = "Thêm tài khoản";
+    return;
+  }
   setProperty(select, "value", active.id);
   setProperty($("account-select-label"), "textContent", active.name);
   setAttribute(select, "aria-label", "Tài khoản đang dùng: " + active.name);
@@ -837,8 +880,10 @@ function renderWelcome(state: AppState) {
     addAccount(accounts.find((account) => account.id === id));
   for (const provider of state.providerTabs.open)
     addAccount(
-      accounts.find((account) => account.id === state.active && account.provider === provider) ||
-        accounts.find((account) => account.provider === provider),
+      accounts.find(
+        (account) =>
+          account.id === state.active && account.provider === provider,
+      ) || accounts.find((account) => account.provider === provider),
     );
   for (const account of accounts) addAccount(account);
 
@@ -848,7 +893,10 @@ function renderWelcome(state: AppState) {
     const provider = providerOf(account.provider);
     const card = element("button", "welcome-account");
     card.type = "button";
-    card.setAttribute("aria-label", `Mở ${account.name} trên ${provider.label}`);
+    card.setAttribute(
+      "aria-label",
+      `Mở ${account.name} trên ${provider.label}`,
+    );
     card.append(providerLogo(provider));
     const details = element("span", "welcome-account-details");
     details.append(
@@ -910,8 +958,15 @@ $("account-select").onkeydown = (event) => {
 $("navigation-menu").onclick = () => void window.desktop.navigationMenu();
 function render(state: AppState) {
   const previous = current;
-  const active = state.accounts.find((a) => a.id === state.active)!;
+  const active = state.accounts.find((a) => a.id === state.active);
+  const justLocked =
+    previous &&
+    ((previous.privateSpace?.unlocked && !state.privateSpace?.unlocked) ||
+      (state.privateSpace?.lockVersion !== undefined &&
+        state.privateSpace.lockVersion !== previous.privateSpace?.lockVersion));
+  if (justLocked) scrubPrivateUI();
   current = state;
+  privateSpaceUI.sync(state);
   const rebuilt = rebuildAccounts(state);
   const settings = state.panel === "settings";
   const library = state.panel === "providers";
@@ -973,6 +1028,7 @@ function render(state: AppState) {
         "connected",
         state.statuses[a.id] === "authenticated",
       );
+      if (a.private) continue;
       setProperty(
         $<HTMLSelectElement>("notification-" + a.id),
         "value",
@@ -1008,7 +1064,11 @@ function render(state: AppState) {
         (a) => !a.archived && state.statuses[a.id] === "authenticated",
       ).length + " tài khoản đã kết nối",
     );
-  const c = state.connections[state.active];
+  const c = state.connections[state.active] || {
+    phase: "connecting",
+    reason: null,
+    retryAt: null,
+  };
   setProperty(
     $("subtitle"),
     "textContent",
@@ -1089,7 +1149,7 @@ function render(state: AppState) {
       "Chưa tìm thấy profile Chrome",
     );
     const target = $<HTMLSelectElement>("import-target");
-    if (settings && lastPanel !== "settings")
+    if (settings && lastPanel !== "settings" && active && !active.private)
       setProperty(target, "value", active.id);
     const importBusy = state.importing || state.accountBusy;
     setProperty(select, "disabled", importBusy || !state.profiles.length);
@@ -1228,6 +1288,7 @@ $("provider-logo-reset").onclick = () => {
   renderProviderLogoEditor();
 };
 $<HTMLInputElement>("provider-logo-file").onchange = async (event) => {
+  const generation = privacyGeneration;
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file || !logoDialogProvider) return;
@@ -1244,22 +1305,29 @@ $<HTMLInputElement>("provider-logo-file").onchange = async (event) => {
   logoDialogBusy = true;
   renderProviderLogoEditor();
   try {
-    logoDialogSelection = {
-      kind: "image",
-      dataUrl: await cropLogoFile(file),
-    };
+    const dataUrl = await cropLogoFile(file);
+    if (generation !== privacyGeneration) return;
+    logoDialogSelection = { kind: "image", dataUrl };
     renderProviderLogoEditor();
   } catch (error) {
+    if (generation !== privacyGeneration) return;
     $("provider-logo-error").textContent =
       error instanceof Error ? error.message : "Không xử lý được ảnh.";
   } finally {
-    logoDialogBusy = false;
-    renderProviderLogoEditor();
+    if (generation === privacyGeneration) {
+      logoDialogBusy = false;
+      renderProviderLogoEditor();
+    }
   }
 };
 $<HTMLFormElement>("provider-logo-form").onsubmit = async (event) => {
   event.preventDefault();
-  if (!logoDialogProvider || logoDialogSelection === undefined || logoDialogBusy)
+  const generation = privacyGeneration;
+  if (
+    !logoDialogProvider ||
+    logoDialogSelection === undefined ||
+    logoDialogBusy
+  )
     return;
   const provider = logoDialogProvider;
   const selection = logoDialogSelection;
@@ -1272,6 +1340,7 @@ $<HTMLFormElement>("provider-logo-form").onsubmit = async (event) => {
   renderProviderLogoEditor();
   try {
     const result = await window.desktop.setProviderLogo(provider.id, selection);
+    if (generation !== privacyGeneration) return;
     if (!result.ok) {
       $("provider-logo-error").textContent =
         result.message || "Chưa lưu được logo. Bạn thử lại nhé.";
@@ -1280,9 +1349,14 @@ $<HTMLFormElement>("provider-logo-form").onsubmit = async (event) => {
     if (previousLogoKey) providerLogoData.delete(previousLogoKey);
     $<HTMLDialogElement>("provider-logo-editor").close();
   } catch {
-    $("provider-logo-error").textContent = "Chưa lưu được logo. Bạn thử lại nhé.";
+    if (generation !== privacyGeneration) return;
+    $("provider-logo-error").textContent =
+      "Chưa lưu được logo. Bạn thử lại nhé.";
   } finally {
-    if ($<HTMLDialogElement>("provider-logo-editor").open) {
+    if (
+      generation === privacyGeneration &&
+      $<HTMLDialogElement>("provider-logo-editor").open
+    ) {
       logoDialogBusy = false;
       renderProviderLogoEditor();
     }
@@ -1297,6 +1371,7 @@ $("account-name").oninput = () => {
 };
 $("account-form").onsubmit = async (event) => {
   event.preventDefault();
+  const generation = privacyGeneration;
   $("account-editor-error").textContent = "";
   const name = $<HTMLInputElement>("account-name").value,
     avatar = $<HTMLInputElement>("account-avatar").value;
@@ -1310,6 +1385,7 @@ $("account-form").onsubmit = async (event) => {
           name,
           avatar,
         );
+    if (generation !== privacyGeneration) return;
     if (!result.ok) {
       $("account-editor-error").textContent =
         result.message || "Chưa lưu được tài khoản.";
@@ -1318,9 +1394,11 @@ $("account-form").onsubmit = async (event) => {
     const wasNew = !editing;
     $<HTMLDialogElement>("account-editor").close();
     await window.desktop.accountEditor(false);
+    if (generation !== privacyGeneration) return;
     if (wasNew && result.accountId)
       await window.desktop.activate(result.accountId);
   } catch {
+    if (generation !== privacyGeneration) return;
     $("account-editor-error").textContent =
       "Chưa lưu được tài khoản. Bạn thử lại nhé.";
   } finally {
@@ -1336,10 +1414,48 @@ const command = createCommandPalette({
     void window.desktop.settings();
   },
 });
+const privateSpaceUI = createPrivateSpaceUI({
+  getState: () => current,
+  showAccounts: () => showTab("accounts"),
+});
+function scrubPrivateUI() {
+  privacyGeneration++;
+  privateSpaceUI.reset();
+  command.reset();
+  providerNavigation.reset();
+  for (const id of ["account-editor", "provider-logo-editor"]) {
+    const dialog = $<HTMLDialogElement>(id);
+    if (dialog.open) dialog.close();
+  }
+  editing = null;
+  logoDialogProvider = null;
+  logoDialogSelection = undefined;
+  logoDialogBusy = false;
+  providerLogoData.clear();
+  accountFilter = "all";
+  signature = "";
+  for (const id of ["account-name", "account-avatar", "provider-logo-file"])
+    $<HTMLInputElement>(id).value = "";
+  for (const id of [
+    "account-editor-error",
+    "account-feedback",
+    "provider-logo-error",
+    "private-space-feedback",
+    "provider-error",
+    "notice",
+    "notification-status",
+  ])
+    $(id).textContent = "";
+  $("provider-logo-title").textContent = "Đổi logo nền tảng";
+  $("provider-logo-preview").replaceChildren();
+  $("provider-logo-gallery").replaceChildren();
+  $("account-editor-title").textContent = "Thêm tài khoản";
+}
 function requestCommand() {
   if (
     $<HTMLDialogElement>("account-editor").open ||
-    $<HTMLDialogElement>("provider-logo-editor").open
+    $<HTMLDialogElement>("provider-logo-editor").open ||
+    $<HTMLDialogElement>("private-space-dialog").open
   )
     return;
   void window.desktop.command(!current.commandOpen);

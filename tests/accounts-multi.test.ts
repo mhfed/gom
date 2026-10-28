@@ -31,6 +31,7 @@ test("legacy migration keeps exact partition names; new same-platform accounts h
     "instagram",
     "discord",
     "slack",
+    "tinder",
   ]);
   const added = createAccount("zalo", "Công việc", "💼", uuid);
   assert.equal(added.id, "acc_" + uuid);

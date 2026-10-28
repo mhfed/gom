@@ -51,6 +51,7 @@ export interface Account {
   name: string;
   avatar: string;
   archived: boolean;
+  private?: boolean;
 }
 export interface AccountResult {
   ok: boolean;
@@ -118,7 +119,12 @@ export const PROVIDERS = {
     id: "discord",
     label: "Discord",
     entry: "https://discord.com/app",
-    hosts: ["discord.com", "discordapp.com", "discord.gg", "accounts.google.com"],
+    hosts: [
+      "discord.com",
+      "discordapp.com",
+      "discord.gg",
+      "accounts.google.com",
+    ],
     color: "#5865f2",
     custom: false,
   },
@@ -177,6 +183,13 @@ export interface Presentation {
   pinned: AccountId[];
 }
 export interface AppState {
+  privateSpace?: {
+    configured: boolean;
+    unlocked: boolean;
+    unavailable: boolean;
+    lockVersion?: number;
+    retryAt: number;
+  };
   providers: ProviderDefinition[];
   providerTabs: ProviderTabs;
   presentation: Presentation;
@@ -203,6 +216,15 @@ export interface AppState {
   updates: UpdateState;
 }
 export interface DesktopBridge {
+  privateSpace(
+    action: "setup" | "unlock" | "lock" | "change-password" | "membership",
+    data?: {
+      password?: string;
+      newPassword?: string;
+      accountId?: AccountId;
+      private?: boolean;
+    },
+  ): Promise<AccountResult>;
   state(): Promise<AppState>;
   activate(id: AccountId): Promise<void>;
   activateProvider(provider: ProviderId, focusPage?: boolean): Promise<void>;
@@ -214,7 +236,10 @@ export interface DesktopBridge {
     provider?: ProviderId;
     overflow?: ProviderId[];
   }): Promise<void>;
-  getProviderLogo(provider: ProviderId, revision: number): Promise<string | null>;
+  getProviderLogo(
+    provider: ProviderId,
+    revision: number,
+  ): Promise<string | null>;
   setProviderLogo(
     provider: ProviderId,
     change: ProviderLogoChange,

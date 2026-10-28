@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge, AppState, ProviderId } from "../shared.ts";
 const bridge: DesktopBridge = {
+  privateSpace: (action, data) =>
+    ipcRenderer.invoke("desktop", "private-space", { action, data }),
   state: () => ipcRenderer.invoke("desktop", "state"),
   activate: (id) => ipcRenderer.invoke("desktop", "activate", id),
   activateProvider: (provider, focusPage = true) =>
