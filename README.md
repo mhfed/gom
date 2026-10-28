@@ -1,4 +1,4 @@
-> **Gom 0.7.5:** có màn chào mừng khi mở app, nút logo quay về trang này, Tinder Web và thư viện nền tảng theo nhóm. Khoảng trống phía trên Messenger đã được thu gọn. Cập nhật vẫn cần tải DMG/ZIP và thay app thủ công; tự cài trong app cần Developer ID và notarization.
+> **Gom 0.7.6:** thêm menu chuột phải trên trang nền tảng để sao chép văn bản, ảnh, địa chỉ ảnh, liên kết hoặc lưu ảnh; ⌘C trên ảnh đang trỏ chuột cũng sao chép ảnh. Vẫn cần tải DMG/ZIP và thay app thủ công; tự cài trong app cần Developer ID và notarization.
 >
 > Kiểm tra giao diện hiện hành: `npm run test:providers`, `npm run test:shell` và `npm run test:settings` (fixture cách ly, không dùng phiên cá nhân). Connector chat thống nhất đã dừng theo yêu cầu; mã nghiên cứu không được đóng gói. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
 
@@ -8,19 +8,19 @@
 
 ## Tải app
 
-Bản mới nhất: **Gom 0.7.5**, phát hành ngày 27/10/2026 cho Mac Apple Silicon (arm64).
+Bản mới nhất: **Gom 0.7.6**, phát hành ngày 28/10/2026 cho Mac Apple Silicon (arm64).
 
-- [Tải DMG](https://github.com/mhfed/gom/releases/download/v0.7.5/Gom-macOS-arm64-0.7.5.dmg)
-- [Tải ZIP](https://github.com/mhfed/gom/releases/download/v0.7.5/Gom-macOS-arm64-0.7.5.zip)
-- [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.7.5)
+- [Tải DMG](https://github.com/mhfed/gom/releases/download/v0.7.6/Gom-macOS-arm64-0.7.6.dmg)
+- [Tải ZIP](https://github.com/mhfed/gom/releases/download/v0.7.6/Gom-macOS-arm64-0.7.6.zip)
+- [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.7.6)
 
-Màn chào mừng mở ra khi khởi động; chọn tài khoản để tiếp tục hoặc bấm logo Gom để quay lại. Nút **+** mở thư viện nền tảng theo nhóm hoặc thêm website riêng. Có thể dùng phiên Tinder đang mở trong Chrome bằng quy trình nhập một lần. Dữ liệu tài khoản và định danh khóa mã hóa được giữ nguyên khi nâng cấp. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.5](docs/release-0.7.5.md).
+Màn chào mừng mở ra khi khởi động; chọn tài khoản để tiếp tục hoặc bấm logo Gom để quay lại. Nút **+** mở thư viện nền tảng theo nhóm hoặc thêm website riêng. Có thể dùng phiên Tinder đang mở trong Chrome bằng quy trình nhập một lần. Dữ liệu tài khoản và định danh khóa mã hóa được giữ nguyên khi nâng cấp. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.6](docs/release-0.7.6.md).
 
 Lưu bản nháp quan trọng, thoát app đang dùng bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp lần đầu, macOS có thể giữ app cũ riêng vì tên đã đổi; sau khi kiểm tra Gom, có thể gỡ app cũ khỏi Applications. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; lần đầu mở có thể bị macOS chặn. Nếu đã tin cậy nguồn tải, có thể bấm đúp `Mo-Gom.command` trong DMG hoặc dùng Open Anyway theo [hướng dẫn cài](docs/distribution.md).
 
 Repository đã chuyển sang `mhfed/gom`. Các bản 0.6.0 trở về trước cần tải DMG trực tiếp để nâng cấp lần này vì bộ kiểm tra cập nhật vẫn trỏ tới địa chỉ cũ. Bản 0.6.2 đã sửa nguồn cập nhật.
 
-Catalog tài khoản được nâng lên v2 khi lưu thay đổi. Bản 0.6.x không đọc được catalog mới; sau khi dùng 0.7.5 nên tiếp tục dùng 0.7.x hoặc mới hơn và giữ nguyên thư mục dữ liệu.
+Catalog tài khoản được nâng lên v2 khi lưu thay đổi. Bản 0.6.x không đọc được catalog mới; sau khi dùng 0.7.6 nên tiếp tục dùng 0.7.x hoặc mới hơn và giữ nguyên thư mục dữ liệu.
 
 ## Chạy và đóng gói
 
@@ -77,7 +77,7 @@ Mặc định đo hai lượt cho 3/6/12 tài khoản và ba trang chờ đăng 
 
 `npm run test:renderer-performance` kiểm tra DOM thật bằng Chromium riêng; cần browser của Playwright hoặc đặt `TIN_NHAN_CHROMIUM` tới executable Chromium/Chrome đã cài. Test này không mở profile cá nhân.
 
-Các nền tảng nhắn tin có sẵn giữ trang tài khoản để bảo toàn bản nháp và hoạt động nền; website riêng chỉ tạo trang khi được chọn và đóng trang sau khi ghi dữ liệu phiên khi người dùng đóng tab. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition khi đóng/mở tab. Bản cài mới nhất là **Gom 0.7.5**, có màn chào mừng, Tinder Web, thư viện nền tảng theo nhóm và sửa khoảng trống Messenger: `outputs/Gom-macOS-arm64-0.7.5.dmg`, kèm `outputs/SHA256SUMS-Gom-0.7.5.txt`; các file tương ứng có tại link phát hành ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
+Các nền tảng nhắn tin có sẵn giữ trang tài khoản để bảo toàn bản nháp và hoạt động nền; website riêng chỉ tạo trang khi được chọn và đóng trang sau khi ghi dữ liệu phiên khi người dùng đóng tab. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition khi đóng/mở tab. Bản cài mới nhất là **Gom 0.7.6**, bổ sung menu chuột phải và sao chép ảnh bằng ⌘C: `outputs/Gom-macOS-arm64-0.7.6.dmg`, kèm `outputs/SHA256SUMS-Gom-0.7.6.txt`; các file tương ứng có tại link phát hành ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
 
 Chi tiết thay đổi, phương pháp và kết quả đối chiếu: [báo cáo hiệu năng 26/10/2026](docs/performance-2026-10-26.md).
 

@@ -161,6 +161,39 @@ const MESSENGER_CHROME_CSS = `
     display: none !important;
   }
 `;
+type CopyShortcutTarget =
+  | { kind: "image"; x: number; y: number }
+  | { kind: "text" | "none" };
+const COPY_SHORTCUT_TARGET_SCRIPT = `(() => {
+  const active = document.activeElement;
+  const textInput = active instanceof HTMLInputElement &&
+    ["text", "search", "url", "tel", "email", "password"].includes(active.type);
+  const textArea = active instanceof HTMLTextAreaElement;
+  const editable = textInput || textArea ||
+    (active instanceof HTMLElement && active.isContentEditable);
+  let inputSelection = false;
+  if (textInput || textArea) {
+    try { inputSelection = active.selectionStart !== active.selectionEnd; } catch {}
+  }
+  if (document.getSelection()?.toString().length || inputSelection)
+    return { kind: "text" };
+  if (editable) return { kind: "none" };
+
+  const image = Array.from(document.querySelectorAll("img:hover"))
+    .find((candidate) => candidate.complete && candidate.naturalWidth > 0);
+  if (!image) return { kind: "none" };
+  const rect = image.getBoundingClientRect();
+  const left = Math.max(0, rect.left);
+  const right = Math.min(window.innerWidth, rect.right);
+  const top = Math.max(0, rect.top);
+  const bottom = Math.min(window.innerHeight, rect.bottom);
+  if (right <= left || bottom <= top) return { kind: "none" };
+  return {
+    kind: "image",
+    x: Math.floor((left + right) / 2),
+    y: Math.floor((top + bottom) / 2),
+  };
+})()`;
 const updateChecker = new ManualUpdateChecker({
   currentVersion: app.getVersion(),
   arch: process.arch,
@@ -478,6 +511,115 @@ function guard(contents: WebContents, id: AccountId) {
     if (url.hostname !== "facebook.com" && url.hostname !== "www.facebook.com")
       return;
     void contents.insertCSS(MESSENGER_CHROME_CSS).catch(() => {});
+  });
+  contents.on("before-input-event", (event, input) => {
+    const copyShortcut =
+      input.type === "keyDown" &&
+      input.key.toLowerCase() === "c" &&
+      (input.meta || input.control) &&
+      !input.alt &&
+      !input.shift &&
+      !input.isComposing &&
+      !input.isAutoRepeat;
+    if (
+      !copyShortcut ||
+      closing ||
+      contents.isDestroyed() ||
+      !findAccount(id)
+    )
+      return;
+
+    event.preventDefault();
+    void contents
+      .executeJavaScript(COPY_SHORTCUT_TARGET_SCRIPT)
+      .then((target: CopyShortcutTarget) => {
+        if (closing || contents.isDestroyed() || !findAccount(id)) return;
+        if (target?.kind === "image")
+          contents.copyImageAt(target.x, target.y);
+        else contents.copy();
+      })
+      .catch(() => {
+        if (!closing && !contents.isDestroyed() && findAccount(id))
+          contents.copy();
+      });
+  });
+  contents.on("context-menu", (event, params) => {
+    if (closing || contents.isDestroyed() || !findAccount(id)) return;
+
+    const items: Electron.MenuItemConstructorOptions[] = [];
+    const selectedText = !!params.selectionText.trim();
+    if (selectedText || params.isEditable)
+      items.push({ role: "copy", label: "Sao chép" });
+    if (params.isEditable) {
+      if (items.length) items.push({ type: "separator" });
+      items.push(
+        { role: "cut", label: "Cắt" },
+        { role: "paste", label: "Dán" },
+        { role: "selectAll", label: "Chọn tất cả" },
+      );
+    }
+
+    const image = params.mediaType === "image" && params.hasImageContents;
+    const imageUrl = (() => {
+      if (!params.srcURL) return undefined;
+      try {
+        const url = new URL(params.srcURL);
+        return url.protocol === "http:" || url.protocol === "https:"
+          ? url.href
+          : undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+    if (image) {
+      if (items.length) items.push({ type: "separator" });
+      items.push({
+        label: "Sao chép ảnh",
+        click: () => {
+          if (!closing && !contents.isDestroyed() && findAccount(id))
+            contents.copyImageAt(params.x, params.y);
+        },
+      });
+      if (params.srcURL)
+        items.push({
+          label: "Sao chép địa chỉ ảnh",
+          click: () => {
+            if (!closing && !contents.isDestroyed() && findAccount(id))
+              clipboard.writeText(params.srcURL);
+          },
+        });
+      if (imageUrl)
+        items.push({
+          label: "Lưu ảnh thành…",
+          click: () => {
+            if (!closing && !contents.isDestroyed() && findAccount(id))
+              contents.downloadURL(imageUrl);
+          },
+        });
+    }
+    if (params.linkURL) {
+      if (items.length) items.push({ type: "separator" });
+      items.push({
+        label: "Sao chép liên kết",
+        click: () => {
+          if (!closing && !contents.isDestroyed() && findAccount(id))
+            clipboard.writeText(params.linkURL);
+        },
+      });
+    }
+    if (!items.length)
+      items.push({
+        label: "Tải lại trang",
+        click: () => {
+          if (!closing && !contents.isDestroyed() && findAccount(id))
+            contents.reload();
+        },
+      });
+
+    const owner = BrowserWindow.fromWebContents(contents);
+    if (!owner || owner.isDestroyed()) return;
+    event.preventDefault();
+    Menu.buildFromTemplate(items).popup({ window: owner });
   });
   contents.on("will-navigate", (event, url) => {
     const policy = navigationPolicy(providerFor(id), url, state.providers);
