@@ -1,14 +1,14 @@
 # Phân phối Gom cho macOS và Windows
 
-Source đang chuẩn bị phiên bản **0.7.7**. Bản public hiện tại vẫn là **0.7.6** cho macOS arm64; chưa chạy build Windows hoặc tạo release 0.7.7. Chỉ cập nhật số phiên bản source không có nghĩa là gói mới đã được phát hành.
+Gom **0.7.7** đã phát hành cho macOS Apple Silicon (arm64) và Windows x64. Release gồm DMG/ZIP cho Mac, Setup Squirrel cho Windows và checksum theo nền tảng.
 
-Bản 0.7.6 tạo bộ cài **macOS Apple Silicon (arm64)**. Chưa có bản Intel hoặc Universal. Ứng dụng ký ad-hoc để chạy trên máy Mac, chưa ký bằng Apple Developer ID và chưa notarize. DMG không làm thay đổi giới hạn này.
+Bản Mac chỉ hỗ trợ **Apple Silicon (arm64)**, chưa có bản Intel hoặc Universal. Ứng dụng ký ad-hoc để chạy trên máy Mac, chưa ký bằng Apple Developer ID và chưa notarize. DMG không làm thay đổi giới hạn này. Windows chưa ký Authenticode.
 
-Bản 0.7.6 gồm DMG, ZIP và checksum tại [GitHub Releases](https://github.com/mhfed/gom/releases/tag/v0.7.6).
+Bản 0.7.7 gồm DMG, ZIP, bộ cài Windows và checksum tại [GitHub Release](https://github.com/mhfed/gom/releases/tag/v0.7.7).
 
 ## Cài đặt và gửi cho người khác
 
-1. Gửi file `Gom-macOS-arm64-0.7.6.dmg` cùng file SHA-256, hoặc gửi đường dẫn GitHub Release sau khi người duy trì phát hành.
+1. Gửi file `Gom-macOS-arm64-0.7.7.dmg` cùng file SHA-256, hoặc gửi đường dẫn [GitHub Release 0.7.7](https://github.com/mhfed/gom/releases/tag/v0.7.7).
 2. Người nhận mở DMG rồi kéo **Gom.app** vào **Applications**.
 3. Eject ổ đĩa Gom, mở ứng dụng từ Applications. Tránh chạy trực tiếp trong DMG.
 4. Lần đầu mở, macOS có thể báo “Apple could not verify Gom is free of malware” vì app chưa notarize. Chỉ khi đã tin cậy nguồn tải, chọn một trong hai cách:
@@ -31,7 +31,7 @@ Bản đóng gói mặc định kiểm tra sau 30 giây khởi động và mỗi
 
 ### Tự cập nhật
 
-Mã nguồn có nhánh Electron `autoUpdater` để tải ZIP trong app, hiện tiến độ và cài sau khi người dùng chọn khởi động lại. Bản phát hành 0.7.6 này ký ad-hoc vì máy build chưa có chứng chỉ và thông tin notarize, nên nút tải sẽ mở GitHub Release để cài thủ công. Bản 0.7.2 cũng cần nâng cấp thủ công một lần.
+Mã nguồn có nhánh Electron `autoUpdater` để tải ZIP trong app, hiện tiến độ và cài sau khi người dùng chọn khởi động lại. Bản phát hành 0.7.7 này ký ad-hoc vì máy build chưa có chứng chỉ và thông tin notarize, nên nút tải sẽ mở GitHub Release để cài thủ công. Bản 0.7.2 cũng cần nâng cấp thủ công một lần.
 
 Để tạo bản phát hành tự cập nhật, cài chứng chỉ **Developer ID Application** vào Keychain của máy build, rồi truyền `GOM_MACOS_SIGNING_IDENTITY`, `GOM_APPLE_ID`, `GOM_APPLE_APP_SPECIFIC_PASSWORD` và `GOM_APPLE_TEAM_ID` vào `npm run make`. Không ghi chứng chỉ, app-specific password hay thông tin tài khoản vào Git. Giữ cùng Developer ID cho các phiên bản tiếp theo.
 
@@ -39,9 +39,9 @@ Chữ ký xác nhận nhà phát hành và tính toàn vẹn của app; không c
 
 ### Windows 0.7.7
 
-Bản Windows dự kiến hỗ trợ x64 và cài theo tài khoản hiện tại bằng Squirrel.Windows, không yêu cầu quyền quản trị viên. `Gom-win32-x64-0.7.7-Setup.exe` là bộ cài ban đầu; sau đó Gom kiểm tra cùng GitHub Releases, tải gói Squirrel trong app và chỉ cài khi bạn chọn khởi động lại. Bộ kiểm tra chỉ nhận một release có đủ Setup, gói `.nupkg` đầy đủ và tệp `RELEASES`.
+Bản Windows x64 cài theo tài khoản hiện tại bằng Squirrel.Windows, không yêu cầu quyền quản trị viên. `Gom-win32-x64-0.7.7-Setup.exe` là bộ cài ban đầu; sau đó Gom kiểm tra cùng GitHub Releases, tải gói Squirrel trong app và chỉ cài khi bạn chọn khởi động lại. Bộ kiểm tra chỉ nhận một release có đủ Setup, gói `.nupkg` đầy đủ và tệp `RELEASES`.
 
-Bản Windows chưa ký Authenticode. SmartScreen có thể cảnh báo tệp tải từ Internet; Smart App Control hoặc chính sách của tổ chức có thể chặn app. SHA-256 của Setup và gói `.nupkg` sẽ nằm trong `SHA256SUMS-Gom-0.7.7-windows.txt` để kiểm tra tính toàn vẹn.
+Bản Windows chưa ký Authenticode. SmartScreen có thể cảnh báo tệp tải từ Internet; Smart App Control hoặc chính sách của tổ chức có thể chặn app. SHA-256 của Setup và gói `.nupkg` nằm trong `SHA256SUMS-Gom-0.7.7-windows.txt` để kiểm tra tính toàn vẹn.
 
 Nhập phiên Chrome trên Windows hỗ trợ Zalo, Messenger, Instagram và Slack qua SQLite chỉ đọc, DPAPI của tài khoản Windows hiện tại và AES-GCM cho cookie `v10` không App-Bound. Cookie App-Bound `v20` không được giải mã; Gom sẽ giữ nguyên phiên đích và hướng dẫn đăng nhập trực tiếp. Tinder dùng cầu nối DevTools một lần, mở Console bằng `Ctrl+Shift+J`. Gmail, Telegram và Discord vẫn đăng nhập trực tiếp.
 
