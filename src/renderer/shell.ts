@@ -5,10 +5,12 @@ import {
   type AccountId,
   type AccountResult,
   type AppState,
+  type BuiltinProviderId,
   type DesktopBridge,
   PROVIDER_ORDER,
   type ProviderId,
   type ProviderDefinition,
+  type ProviderLogoChange,
   type NotificationChoice,
 } from "../shared.ts";
 declare global {
@@ -18,6 +20,10 @@ declare global {
 }
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T;
+const IS_MAC =
+  typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
+const PLATFORM_NAME = IS_MAC ? "macOS" : "Windows";
+const SHORTCUT_MODIFIER = IS_MAC ? "⌘" : "Ctrl";
 const labels = {
   idle: "Chưa mở",
   loading: "Đang kết nối…",
@@ -42,6 +48,9 @@ let accountFilter = "all";
 let signature = "";
 let editing: AccountId | null = null;
 let lastPanel = "";
+let logoDialogProvider: ProviderDefinition | null = null;
+let logoDialogSelection: ProviderLogoChange | undefined;
+let logoDialogBusy = false;
 const settingsSections: Record<string, { title: string; description: string }> =
   {
     accounts: {
@@ -57,8 +66,10 @@ const settingsSections: Record<string, { title: string; description: string }> =
       description: "Giữ kết nối theo cách của bạn.",
     },
     macos: {
-      title: "macOS",
-      description: "Những tùy chọn giúp Gom thân quen trên Mac.",
+      title: PLATFORM_NAME,
+      description: IS_MAC
+        ? "Những tùy chọn giúp Gom thân quen trên Mac."
+        : "Những tùy chọn giúp Gom hoạt động thuận tiện trên Windows.",
     },
     updates: {
       title: "Cập nhật",
@@ -80,6 +91,30 @@ function setStyle(node: HTMLElement, name: string, value = "") {
   if (value) node.style.setProperty(name, value);
   else node.style.removeProperty(name);
 }
+function applyPlatformCopy() {
+  if (IS_MAC) return;
+  const copy: Record<string, string> = {
+    "platform-tab-label": "Windows",
+    "platform-sidebar-label": "Dành cho Windows",
+    "theme-system-hint": "Tự đổi theo nền tảng, Windows hoặc giữ màu đã chọn.",
+    "theme-system-option": "Theo Windows",
+    "notification-settings-label": "Quyền thông báo Windows",
+    "notification-platform-hint":
+      "Bật thông báo trong từng nền tảng. Nút “Gửi thử” gửi một thông báo từ Gom; chế độ Không làm phiền có thể ẩn thông báo này.",
+    "startup-option-label": "Chạy cùng Windows",
+    "global-shortcut-hint":
+      "Ctrl+Shift+Space · giữ nguyên các trang đang mở.",
+    "shortcut-switch-account": "Ctrl K",
+    "shortcut-settings": "Ctrl ,",
+    "shortcut-hide": "Ctrl W",
+    "shortcut-quit": "Ctrl Q",
+    "shortcut-provider-tabs": "Ctrl 1 / 2 / 3",
+    "update-product-name": "Gom cho Windows",
+  };
+  for (const [id, value] of Object.entries(copy))
+    setProperty($(id), "textContent", value);
+}
+applyPlatformCopy();
 function providerOf(id: ProviderId) {
   return current.providers.find((provider) => provider.id === id)!;
 }
@@ -118,11 +153,14 @@ function icon(name: string) {
   return svg;
 }
 function providerLogo(provider: ProviderDefinition) {
-  if (icons[provider.id]) {
+  const selected = provider.logo;
+  const builtinId = selected?.kind === "builtin" ? selected.providerId : provider.id;
+  if (icons[builtinId]) {
     const logo = element("img", "provider-logo");
-    logo.src = "logos/" + icons[provider.id];
+    logo.src = "logos/" + icons[builtinId];
     logo.alt = "";
     logo.draggable = false;
+    if (selected?.kind === "image") applyCustomLogo(logo, provider, selected.revision);
     return logo;
   }
   const initials = provider.label
@@ -134,7 +172,161 @@ function providerLogo(provider: ProviderDefinition) {
     .toLocaleUpperCase();
   const logo = element("span", "provider-logo provider-initials", initials);
   logo.setAttribute("aria-hidden", "true");
+  if (selected?.kind === "image") applyCustomLogo(logo, provider, selected.revision);
   return logo;
+}
+const providerLogoData = new Map<string, Promise<string | null>>();
+function applyCustomLogo(
+  target: HTMLElement,
+  provider: ProviderDefinition,
+  revision: number,
+) {
+  const key = `${provider.id}:${revision}`;
+  let request = providerLogoData.get(key);
+  if (!request) {
+    request = window.desktop.getProviderLogo(provider.id, revision).catch(() => null);
+    providerLogoData.set(key, request);
+  }
+  void request.then((dataUrl) => {
+    if (!dataUrl) return;
+    if (target instanceof HTMLImageElement) {
+      target.src = dataUrl;
+      return;
+    }
+    const image = element("img", "provider-logo-image");
+    image.src = dataUrl;
+    image.alt = "";
+    image.draggable = false;
+    target.replaceChildren(image);
+    target.classList.remove("provider-initials");
+    target.classList.add("provider-logo-has-image");
+  });
+}
+function renderProviderLogoEditor() {
+  const provider = logoDialogProvider;
+  if (!provider) return;
+  const preview = $("provider-logo-preview");
+  const choice = logoDialogSelection;
+  if (choice?.kind === "image") {
+    const image = element("img", "provider-logo");
+    image.src = choice.dataUrl;
+    image.alt = "";
+    image.draggable = false;
+    preview.replaceChildren(image);
+  } else {
+    const shown =
+      choice === null
+        ? { ...provider, logo: undefined }
+        : choice?.kind === "builtin"
+          ? { ...provider, logo: choice }
+          : provider;
+    preview.replaceChildren(providerLogo(shown));
+  }
+  setProperty(
+    $("provider-logo-preview-label"),
+    "textContent",
+    choice === undefined ? "Logo đang dùng" : "Logo sẽ được áp dụng",
+  );
+
+  let selectedId: ProviderId | null = null;
+  if (choice?.kind === "builtin") selectedId = choice.providerId;
+  else if (choice === undefined && provider.logo?.kind === "builtin")
+    selectedId = provider.logo.providerId;
+  else if (
+    choice === null ||
+    (choice === undefined && !provider.logo && !provider.custom)
+  ) {
+    if (icons[provider.id]) selectedId = provider.id;
+  }
+  const gallery = $("provider-logo-gallery");
+  gallery.replaceChildren(
+    ...current.providers
+      .filter((item) => !item.custom && !!icons[item.id])
+      .map((item) => {
+        const button = element("button", "provider-logo-choice");
+        button.type = "button";
+        button.disabled = logoDialogBusy;
+        button.setAttribute("aria-pressed", String(selectedId === item.id));
+        button.append(
+          providerLogo({ ...item, logo: undefined }),
+          element("span", "", item.label),
+        );
+        button.onclick = () => {
+          logoDialogSelection = {
+            kind: "builtin",
+            providerId: item.id as BuiltinProviderId,
+          };
+          $<HTMLInputElement>("provider-logo-file").value = "";
+          $("provider-logo-error").textContent = "";
+          renderProviderLogoEditor();
+        };
+        return button;
+      }),
+  );
+  const save = $<HTMLButtonElement>("provider-logo-save");
+  save.disabled = logoDialogBusy || logoDialogSelection === undefined;
+  $<HTMLInputElement>("provider-logo-file").disabled = logoDialogBusy;
+  $<HTMLButtonElement>("provider-logo-reset").disabled =
+    logoDialogBusy ||
+    logoDialogSelection === null ||
+    (logoDialogSelection === undefined && !provider.logo);
+}
+function openProviderLogoEditor(id: ProviderId) {
+  const provider = current?.providers.find((item) => item.id === id);
+  if (!provider) return;
+  logoDialogProvider = provider;
+  logoDialogSelection = undefined;
+  logoDialogBusy = false;
+  $("provider-logo-title").textContent = `Đổi logo · ${provider.label}`;
+  $("provider-logo-error").textContent = "";
+  $<HTMLInputElement>("provider-logo-file").value = "";
+  renderProviderLogoEditor();
+  const dialog = $<HTMLDialogElement>("provider-logo-editor");
+  if (!dialog.open) dialog.showModal();
+  $("provider-logo-cancel").focus();
+}
+function cropLogoFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      try {
+        if (!image.naturalWidth || !image.naturalHeight) {
+          reject(new Error("Ảnh không đọc được."));
+          return;
+        }
+        const side = Math.min(image.naturalWidth, image.naturalHeight);
+        const canvas = document.createElement("canvas");
+        canvas.width = 64;
+        canvas.height = 64;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error("Không xử lý được ảnh."));
+          return;
+        }
+        context.drawImage(
+          image,
+          (image.naturalWidth - side) / 2,
+          (image.naturalHeight - side) / 2,
+          side,
+          side,
+          0,
+          0,
+          64,
+          64,
+        );
+        resolve(canvas.toDataURL("image/png"));
+      } catch {
+        reject(new Error("Không xử lý được ảnh."));
+      }
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Ảnh không đọc được."));
+    };
+    image.src = objectUrl;
+  });
 }
 function avatar(a: Account) {
   const e = element("span", "account-avatar avatar-" + a.provider, a.avatar);
@@ -226,7 +418,9 @@ function renderUpdates(state: AppState) {
   setProperty(
     $("settings"),
     "title",
-    hasUpdate ? "Cài đặt · Có bản cập nhật mới" : "Cài đặt (⌘,)",
+    hasUpdate
+      ? "Cài đặt · Có bản cập nhật mới"
+      : `Cài đặt (${SHORTCUT_MODIFIER},)`,
   );
   setAttribute(
     $("settings"),
@@ -621,6 +815,11 @@ function renderToolbar(state: AppState, active: Account) {
     "title",
     "Thêm tài khoản " + providerOf(active.provider).label,
   );
+  setProperty(
+    $("quick-switch"),
+    "title",
+    `Chuyển nhanh (${SHORTCUT_MODIFIER}K)`,
+  );
 }
 function renderWelcome(state: AppState) {
   const accounts = state.accounts.filter((account) => !account.archived);
@@ -858,7 +1057,9 @@ function render(state: AppState) {
       $("startup-hint"),
       "textContent",
       state.startupAvailable
-        ? "Có thể quản lý thêm trong Cài đặt hệ thống → Cài đặt chung → Mục đăng nhập."
+        ? IS_MAC
+          ? "Có thể quản lý thêm trong Cài đặt hệ thống → Cài đặt chung → Mục đăng nhập."
+          : "Có thể quản lý thêm trong Cài đặt Windows → Ứng dụng → Khởi động."
         : "Tùy chọn này dùng trong bản app đã đóng gói.",
     );
     setProperty(
@@ -1012,6 +1213,82 @@ $("add-account-settings").onclick = () => void openEditor();
 $("account-editor").onclose = () => void window.desktop.accountEditor(false);
 $("account-editor-cancel").onclick = () =>
   $<HTMLDialogElement>("account-editor").close();
+$("provider-logo-editor").onclose = () => {
+  logoDialogProvider = null;
+  logoDialogSelection = undefined;
+  logoDialogBusy = false;
+};
+$("provider-logo-cancel").onclick = () =>
+  $<HTMLDialogElement>("provider-logo-editor").close();
+$("provider-logo-reset").onclick = () => {
+  if (!logoDialogProvider || logoDialogBusy) return;
+  logoDialogSelection = null;
+  $<HTMLInputElement>("provider-logo-file").value = "";
+  $("provider-logo-error").textContent = "";
+  renderProviderLogoEditor();
+};
+$<HTMLInputElement>("provider-logo-file").onchange = async (event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file || !logoDialogProvider) return;
+  input.value = "";
+  $("provider-logo-error").textContent = "";
+  if (!(["image/png", "image/jpeg"] as string[]).includes(file.type)) {
+    $("provider-logo-error").textContent = "Chỉ nhận ảnh PNG hoặc JPG.";
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    $("provider-logo-error").textContent = "Ảnh vượt quá giới hạn 10 MB.";
+    return;
+  }
+  logoDialogBusy = true;
+  renderProviderLogoEditor();
+  try {
+    logoDialogSelection = {
+      kind: "image",
+      dataUrl: await cropLogoFile(file),
+    };
+    renderProviderLogoEditor();
+  } catch (error) {
+    $("provider-logo-error").textContent =
+      error instanceof Error ? error.message : "Không xử lý được ảnh.";
+  } finally {
+    logoDialogBusy = false;
+    renderProviderLogoEditor();
+  }
+};
+$<HTMLFormElement>("provider-logo-form").onsubmit = async (event) => {
+  event.preventDefault();
+  if (!logoDialogProvider || logoDialogSelection === undefined || logoDialogBusy)
+    return;
+  const provider = logoDialogProvider;
+  const selection = logoDialogSelection;
+  const previousLogoKey =
+    provider.logo?.kind === "image"
+      ? `${provider.id}:${provider.logo.revision}`
+      : undefined;
+  logoDialogBusy = true;
+  $("provider-logo-error").textContent = "";
+  renderProviderLogoEditor();
+  try {
+    const result = await window.desktop.setProviderLogo(provider.id, selection);
+    if (!result.ok) {
+      $("provider-logo-error").textContent =
+        result.message || "Chưa lưu được logo. Bạn thử lại nhé.";
+      return;
+    }
+    if (previousLogoKey) providerLogoData.delete(previousLogoKey);
+    $<HTMLDialogElement>("provider-logo-editor").close();
+  } catch {
+    $("provider-logo-error").textContent = "Chưa lưu được logo. Bạn thử lại nhé.";
+  } finally {
+    if ($<HTMLDialogElement>("provider-logo-editor").open) {
+      logoDialogBusy = false;
+      renderProviderLogoEditor();
+    }
+  }
+};
+window.desktop.onProviderLogoEditor(openProviderLogoEditor);
 $("account-name").oninput = () => {
   const name = $<HTMLInputElement>("account-name");
   name.setCustomValidity(
@@ -1060,7 +1337,11 @@ const command = createCommandPalette({
   },
 });
 function requestCommand() {
-  if ($<HTMLDialogElement>("account-editor").open) return;
+  if (
+    $<HTMLDialogElement>("account-editor").open ||
+    $<HTMLDialogElement>("provider-logo-editor").open
+  )
+    return;
   void window.desktop.command(!current.commandOpen);
 }
 window.desktop.commandRequested(requestCommand);

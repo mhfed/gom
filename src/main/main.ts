@@ -43,6 +43,7 @@ import { ProbeQueue } from "./probe-queue.ts";
 import { configureMacOSInput } from "./macos-input.ts";
 import { ManualUpdateChecker } from "./update-check.ts";
 import { UpdateSchedule } from "./update-schedule.ts";
+import { ProviderLogoStore } from "./provider-logos.ts";
 import {
   app,
   BrowserWindow,
@@ -64,9 +65,10 @@ import {
   type Session,
   type WebContents,
 } from "electron";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { readFile, copyFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { constants } from "node:fs";
 import {
   PROVIDERS,
@@ -106,13 +108,52 @@ import {
   type TinderChromeSession,
 } from "./tinder-chrome-bridge.ts";
 configureMacOSInput(app.commandLine, process.platform, process.versions);
+const SQUIRREL_FIRST_RUN =
+  process.platform === "win32" && process.argv.includes("--squirrel-firstrun");
+let firstRunUpdateReady = !SQUIRREL_FIRST_RUN;
+let squirrelStartupHandled = false;
+if (process.platform === "win32") {
+  app.setAppUserModelId("com.squirrel.Gom_win32_x64.Gom");
+  const command = process.argv[1];
+  const executable = process.execPath.split(/[\\/]/).pop() || "Gom.exe";
+  const updateExe = resolve(dirname(process.execPath), "..", "Update.exe");
+  const squirrelArgs: Record<string, string[]> = {
+    "--squirrel-install": ["--createShortcut", executable],
+    "--squirrel-updated": ["--createShortcut", executable],
+    "--squirrel-uninstall": ["--removeShortcut", executable],
+    "--squirrel-obsolete": [],
+  };
+  if (command && Object.hasOwn(squirrelArgs, command)) {
+    squirrelStartupHandled = true;
+    const args = squirrelArgs[command];
+    if (args.length) {
+      try {
+        const child = spawn(updateExe, args, {
+          detached: true,
+          windowsHide: true,
+          stdio: "ignore",
+        });
+        child.once("error", () => {});
+        child.unref();
+      } catch {}
+    }
+    app.quit();
+  }
+}
 // Electron 45 derives macOS cookie/safeStorage Keychain names from app.getName().
 // Retain the original encryption identity even though the visible app is Gom.
 app.setName("Tin Nhan");
 app.setPath("userData", join(app.getPath("appData"), "TinNhanDesktop"));
-const sources = new ChromeSources(
-  join(homedir(), "Library/Application Support/Google/Chrome"),
-);
+const chromeRoot =
+  process.platform === "win32"
+    ? join(
+        process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local"),
+        "Google",
+        "Chrome",
+        "User Data",
+      )
+    : join(homedir(), "Library/Application Support/Google/Chrome");
+const sources = new ChromeSources(chromeRoot, "", process.platform);
 let win: BrowserWindow;
 let closing = false,
   closed = false;
@@ -134,14 +175,25 @@ let sleeping = false;
 let accountEditorOpen = false;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let wakeTimer: ReturnType<typeof setTimeout> | undefined;
+let firstRunUpdateTimer: ReturnType<typeof setTimeout> | undefined;
 const lastNotificationClicks = new Map<AccountId, number>();
 const permissionPrompts = new Set<AccountId>();
 const locationPermissionGrants = new Set<AccountId>();
 const closingProviders = new Set<ProviderId>();
 const testAlerts = new Map<AccountId, Notification>();
 const SHORTCUT = "CommandOrControl+Shift+Space";
+const SHORTCUT_DISPLAY =
+  process.platform === "win32" ? "Ctrl+Shift+Space" : "Cmd+Shift+Space";
 const AUTOMATIC_UPDATES_SUPPORTED =
   process.env.GOM_AUTOMATIC_UPDATES_ENABLED === "true";
+function automaticUpdatesAvailable() {
+  return (
+    AUTOMATIC_UPDATES_SUPPORTED &&
+    app.isPackaged &&
+    firstRunUpdateReady &&
+    (process.platform === "win32" || process.platform === "darwin")
+  );
+}
 const PROVIDER_TAB_DEFAULTS_VERSION = 2;
 const BUILTIN_PROVIDER_TABS_BY_VERSION: Record<number, ProviderId[]> = {
   1: ["gmail", "instagram"],
@@ -196,11 +248,12 @@ const COPY_SHORTCUT_TARGET_SCRIPT = `(() => {
 })()`;
 const updateChecker = new ManualUpdateChecker({
   currentVersion: app.getVersion(),
+  platform: process.platform,
   arch: process.arch,
   onChange: (updates) => {
     state.updates = {
       ...updates,
-      automaticInstallAvailable: AUTOMATIC_UPDATES_SUPPORTED,
+      automaticInstallAvailable: automaticUpdatesAvailable(),
     };
     if (!closing) publish();
   },
@@ -228,7 +281,7 @@ const state: AppState = {
   openAtLogin: false,
   startupAvailable: app.isPackaged,
   notificationStatus:
-    "Thông báo gốc do từng nền tảng gửi; macOS quyết định hiển thị.",
+    "Thông báo gốc do từng nền tảng gửi; hệ điều hành quyết định hiển thị.",
   themes: Object.fromEntries(PROVIDER_ORDER.map((id) => [id, null])),
   collapsed: false,
   unread: Object.fromEntries(
@@ -250,13 +303,16 @@ const state: AppState = {
   version: app.getVersion(),
   updates: {
     ...updateChecker.snapshot(),
-    automaticInstallAvailable: AUTOMATIC_UPDATES_SUPPORTED,
+    automaticInstallAvailable: automaticUpdatesAvailable(),
   },
 };
 const settingsPath = join(app.getPath("userData"), "window.json");
 const settingsWriter = new SettingsWriter(settingsPath);
 const catalogStore = new AccountCatalogStore(
   join(app.getPath("userData"), "accounts.json"),
+);
+const providerLogoStore = new ProviderLogoStore(
+  join(app.getPath("userData"), "provider-logos.json"),
 );
 const views = new ViewRegistry<WebContentsView, AccountId>(createView);
 function findAccount(
@@ -1051,8 +1107,7 @@ function configureShortcut(enabled: boolean) {
     !globalShortcut.register(SHORTCUT, toggleWindow)
   ) {
     state.preferences.shortcut = false;
-    state.notice =
-      "Phím tắt Cmd+Shift+Space đang được app khác dùng. Bạn có thể bật lại sau.";
+    state.notice = `Phím tắt ${SHORTCUT_DISPLAY} đang được app khác dùng. Bạn có thể bật lại sau.`;
   } else state.preferences.shortcut = true;
 }
 async function persist(forcePublish = false) {
@@ -1078,7 +1133,8 @@ function testNotification(id: AccountId) {
     return;
   }
   if (!Notification.isSupported()) {
-    state.notificationStatus = "macOS hiện không hỗ trợ thông báo cho app.";
+    state.notificationStatus =
+      "Hệ điều hành hiện không hỗ trợ thông báo cho app.";
     publish();
     return;
   }
@@ -1097,18 +1153,18 @@ function testNotification(id: AccountId) {
   });
   notification.on("show", () => {
     state.notificationStatus =
-      "Đã gửi thông báo thử tới macOS. Nếu chưa thấy, kiểm tra quyền thông báo và chế độ Tập trung.";
+      "Đã gửi thông báo thử. Nếu chưa thấy, kiểm tra quyền thông báo và chế độ Tập trung hoặc Không làm phiền.";
     publish();
   });
   notification.on("failed", () => {
     state.notificationStatus =
-      "macOS chưa hiển thị được thông báo. Kiểm tra quyền thông báo cho Gom trong Cài đặt hệ thống.";
+      "Hệ điều hành chưa hiển thị được thông báo. Kiểm tra quyền thông báo cho Gom trong cài đặt hệ thống.";
     publish();
   });
   notification.on("close", () => {
     if (testAlerts.get(id) === notification) testAlerts.delete(id);
   });
-  state.notificationStatus = "Đang gửi thông báo thử tới macOS…";
+  state.notificationStatus = "Đang gửi thông báo thử…";
   publish();
   notification.show();
 }
@@ -1279,13 +1335,17 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
       "needs-login":
         "Hồ sơ này chưa có phiên Facebook còn hiệu lực. Bạn đăng nhập Facebook trên Chrome rồi thử lại.",
       "needs-os-authorization":
-        "Chưa được macOS cho phép đọc Chrome Safe Storage. Bạn có thể đăng nhập trực tiếp trong app.",
+        process.platform === "win32"
+          ? "Không thể mở khóa dữ liệu phiên Chrome bằng tài khoản Windows hiện tại. Bạn có thể đăng nhập trực tiếp trong app."
+          : "Chưa được macOS cho phép đọc Chrome Safe Storage. Bạn có thể đăng nhập trực tiếp trong app.",
       "source-busy": "Chrome đang bận. Bạn đợi một chút rồi thử lại.",
       "verification-failed":
         "Phiên có sẵn cần xác thực thêm. Bạn đăng nhập Messenger trực tiếp trong app.",
       "source-unavailable": "Không đọc được hồ sơ Chrome đã chọn.",
       "rollback-failed":
         "Chưa khôi phục được phiên cũ. Bạn đăng nhập Messenger trực tiếp trong app.",
+      "app-bound":
+        "Chrome bảo vệ phiên Messenger bằng App-Bound Encryption (v20), định dạng Gom không thể nhập. Bạn đăng nhập Messenger trực tiếp trong app.",
       unsupported: "Định dạng phiên Chrome này chưa được hỗ trợ.",
     };
     state.notice =
@@ -1352,8 +1412,9 @@ async function importTinderChromeSession(sourceId: string, targetId: AccountId) 
 
     bridge = await createTinderChromeBridge();
     clipboard.writeText(bridge.script);
-    state.notice =
-      "Gom đã chép lệnh một lần. Trong profile Chrome đã chọn, mở Tinder đang đăng nhập, mở Console (⌥⌘J), dán lệnh và nhấn Enter. Nếu Chrome chặn, gõ allow pasting rồi thử lại; nếu Chrome hỏi quyền mạng cục bộ, chọn cho phép. Chỉ dữ liệu phiên Tinder được gửi về Gom qua kết nối nội bộ.";
+    const consoleShortcut =
+      process.platform === "win32" ? "Ctrl+Shift+J" : "⌥⌘J";
+    state.notice = `Gom đã chép lệnh một lần. Trong profile Chrome đã chọn, mở Tinder đang đăng nhập, mở Console (${consoleShortcut}), dán lệnh và nhấn Enter. Nếu Chrome chặn, gõ allow pasting rồi thử lại; nếu Chrome hỏi quyền mạng cục bộ, chọn cho phép. Chỉ dữ liệu phiên Tinder được gửi về Gom qua kết nối nội bộ.`;
     publish();
     imported = await bridge.session;
 
@@ -1536,13 +1597,16 @@ async function importProviderSession(
     const messages: Record<string, string> = {
       "needs-login": `Profile Chrome chưa có phiên ${label} còn hiệu lực. Đăng nhập trên Chrome rồi thử lại.`,
       "needs-os-authorization":
-        "macOS chưa cho phép Gom đọc Chrome Safe Storage. Bạn có thể đăng nhập trực tiếp trong app.",
+        process.platform === "win32"
+          ? "Không thể mở khóa dữ liệu phiên Chrome bằng tài khoản Windows hiện tại. Bạn có thể đăng nhập trực tiếp trong app."
+          : "macOS chưa cho phép Gom đọc Chrome Safe Storage. Bạn có thể đăng nhập trực tiếp trong app.",
       "source-busy": "Chrome đang bận. Bạn đợi một chút rồi thử lại.",
       "verification-failed":
         `Không xác minh được phiên ${label}. Phiên đích vẫn được giữ; hãy đăng nhập trực tiếp trong Gom.`,
       "source-unavailable": "Không đọc được profile Chrome đã chọn.",
       "unsupported-session":
         `${label} lưu phiên trong vùng dữ liệu không thể nhập an toàn bằng cookie. Hãy đăng nhập trực tiếp trong Gom${provider === "telegram" || provider === "zalo" ? " hoặc quét QR" : ""}.`,
+      "app-bound": `Chrome bảo vệ phiên ${label} bằng App-Bound Encryption (v20), định dạng Gom không thể nhập. Hãy đăng nhập trực tiếp trong Gom.`,
       "rollback-failed":
         `Chưa khôi phục được cookie ${label}. Hãy mở lại tài khoản để kiểm tra phiên.`,
       unsupported: "Định dạng cookie Chrome này chưa được hỗ trợ.",
@@ -1727,6 +1791,14 @@ async function showProviderMenu(request: unknown) {
     if (!state.providerTabs.open.includes(id)) return;
     items.push(
       { label: providerDefinition(id).label, enabled: false },
+      { type: "separator" },
+      {
+        id: "provider-logo-edit",
+        label: "Đổi logo",
+        click: () => {
+          selected = () => win.webContents.send("provider-logo-editor", id);
+        },
+      },
       { type: "separator" },
       {
         id: "provider-pin",
@@ -2076,9 +2148,10 @@ function showAutomaticUpdateError() {
 function beginAutomaticUpdate() {
   if (
     automaticUpdateActive ||
-    !AUTOMATIC_UPDATES_SUPPORTED ||
+    !automaticUpdatesAvailable() ||
     !app.isPackaged ||
-    process.platform !== "darwin" ||
+    (process.platform === "win32" && process.arch !== "x64") ||
+    (process.platform !== "win32" && process.platform !== "darwin") ||
     !state.updates.latestVersion
   )
     return;
@@ -2091,8 +2164,14 @@ function beginAutomaticUpdate() {
   };
   publish();
   try {
-    const feed = `https://update.electronjs.org/mhfed/gom/darwin-${process.arch}/${app.getVersion()}`;
-    autoUpdater.setFeedURL({ url: feed, serverType: "json" });
+    const feed =
+      process.platform === "win32"
+        ? `https://update.electronjs.org/mhfed/gom/win32-x64/${app.getVersion()}/RELEASES`
+        : `https://update.electronjs.org/mhfed/gom/darwin-${process.arch}/${app.getVersion()}`;
+    autoUpdater.setFeedURL({
+      url: feed,
+      ...(process.platform === "darwin" ? { serverType: "json" as const } : {}),
+    });
     autoUpdater.checkForUpdates();
   } catch {
     showAutomaticUpdateError();
@@ -2104,6 +2183,7 @@ async function quit(installUpdate = false) {
   clearInterval(poll);
   clearTimeout(saveTimer);
   clearTimeout(wakeTimer);
+  clearTimeout(firstRunUpdateTimer);
   updateSchedule.stop();
   updateChecker.cancel();
   statePublisher.cancel();
@@ -2131,7 +2211,8 @@ async function quit(installUpdate = false) {
   if (installUpdate) autoUpdater.quitAndInstall();
   else app.quit();
 }
-if (!app.requestSingleInstanceLock()) app.quit();
+if (squirrelStartupHandled) app.quit();
+else if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on("activate", showWindow);
   app.on("second-instance", showWindow);
@@ -2144,8 +2225,8 @@ else {
   app.whenReady().then(async () => {
     if (
       app.isPackaged &&
-      process.platform === "darwin" &&
-      AUTOMATIC_UPDATES_SUPPORTED
+      AUTOMATIC_UPDATES_SUPPORTED &&
+      (process.platform === "darwin" || process.platform === "win32")
     ) {
       autoUpdater.on("checking-for-update", () => {
         if (!automaticUpdateActive) return;
@@ -2212,7 +2293,12 @@ else {
       state.collapsed = stored.collapsed;
     const catalog = await catalogStore.load();
     state.accounts = catalog.accounts;
-    state.providers = catalog.providers;
+    const knownProviderIds = new Set(catalog.providers.map((provider) => provider.id));
+    const providerLogos = await providerLogoStore.load(knownProviderIds);
+    state.providers = catalog.providers.map((provider) => {
+      const logo = providerLogos[provider.id];
+      return logo ? { ...provider, logo } : provider;
+    });
     state.providerTabs = normalizeProviderTabs(
       stored.providerTabs,
       state.providers.map((p) => p.id),
@@ -2274,8 +2360,12 @@ else {
       minWidth: Math.min(940, bounds.width),
       minHeight: Math.min(640, bounds.height),
       title: "Gom",
-      titleBarStyle: "hiddenInset",
-      trafficLightPosition: { x: 20, y: 15 },
+      ...(process.platform === "darwin"
+        ? {
+            titleBarStyle: "hiddenInset" as const,
+            trafficLightPosition: { x: 20, y: 15 },
+          }
+        : {}),
       backgroundColor: "#F7F7F2",
       webPreferences: {
         preload: join(__dirname, "preload.cjs"),
@@ -2362,6 +2452,46 @@ else {
           return;
         case "provider-menu":
           return showProviderMenu(arg);
+        case "provider-logo-get": {
+          if (
+            arg &&
+            typeof arg === "object" &&
+            !Array.isArray(arg) &&
+            knownProvider(arg.provider) &&
+            typeof arg.revision === "number" &&
+            Number.isSafeInteger(arg.revision) &&
+            arg.revision > 0
+          ) {
+            const logo = providerDefinition(arg.provider).logo;
+            if (logo?.kind === "image" && logo.revision === arg.revision)
+              return providerLogoStore.get(arg.provider, arg.revision);
+          }
+          return null;
+        }
+        case "provider-logo-set": {
+          if (
+            !arg ||
+            typeof arg !== "object" ||
+            Array.isArray(arg) ||
+            !knownProvider(arg.provider)
+          )
+            return { ok: false, message: "Nền tảng không tồn tại." };
+          const knownProviderIds = new Set(state.providers.map((p) => p.id));
+          const result = await providerLogoStore.set(
+            arg.provider,
+            arg.change,
+            knownProviderIds,
+          );
+          if (result.ok) {
+            const provider = state.providers.find((p) => p.id === arg.provider);
+            if (provider) {
+              if (result.logo) provider.logo = result.logo;
+              else delete provider.logo;
+              publish();
+            }
+          }
+          return result;
+        }
         case "provider-pin":
           if (
             !knownProvider(arg) ||
@@ -2445,12 +2575,7 @@ else {
             return;
           }
           if (!update.releaseUrl) return;
-          if (
-            update.phase === "available" &&
-            AUTOMATIC_UPDATES_SUPPORTED &&
-            app.isPackaged &&
-            process.platform === "darwin"
-          ) {
+          if (update.phase === "available" && automaticUpdatesAvailable()) {
             beginAutomaticUpdate();
             return;
           }
@@ -2487,7 +2612,9 @@ else {
               state.openAtLogin = app.getLoginItemSettings().openAtLogin;
             } catch {
               state.notice =
-                "Chưa đổi được chạy cùng macOS. Bạn kiểm tra mục Đăng nhập trong Cài đặt hệ thống.";
+                process.platform === "win32"
+                  ? "Chưa đổi được chạy cùng Windows. Bạn kiểm tra quyền chạy cùng máy của Gom trong Cài đặt Windows."
+                  : "Chưa đổi được chạy cùng macOS. Bạn kiểm tra mục Đăng nhập trong Cài đặt hệ thống.";
             }
           } else return;
           // A rejected OS preference can leave state unchanged while the native
@@ -2510,7 +2637,9 @@ else {
           return;
         case "notification-settings":
           await shell.openExternal(
-            "x-apple.systempreferences:com.apple.Notifications-Settings.extension",
+            process.platform === "win32"
+              ? "ms-settings:notifications"
+              : "x-apple.systempreferences:com.apple.Notifications-Settings.extension",
           );
           return;
         case "browser":
@@ -2569,7 +2698,11 @@ else {
               click: showSettings,
             },
             { type: "separator" },
-            { role: "quit", label: "Thoát Gom" },
+            {
+              role: "quit",
+              label: "Thoát Gom",
+              accelerator: "CmdOrCtrl+Q",
+            },
           ],
         },
         { role: "editMenu" },
@@ -2666,7 +2799,24 @@ else {
       wakeTimer = setTimeout(tick, 1200);
     });
     poll = setInterval(tick, 4000);
-    updateSchedule.configure(app.isPackaged && state.preferences.updateChecks);
+    if (SQUIRREL_FIRST_RUN) {
+      firstRunUpdateTimer = setTimeout(() => {
+        firstRunUpdateTimer = undefined;
+        firstRunUpdateReady = true;
+        updateSchedule.configure(
+          app.isPackaged && state.preferences.updateChecks,
+        );
+        state.updates = {
+          ...state.updates,
+          automaticInstallAvailable: automaticUpdatesAvailable(),
+        };
+        publish();
+      }, 60_000);
+    } else {
+      updateSchedule.configure(
+        app.isPackaged && state.preferences.updateChecks,
+      );
+    }
     tick();
   });
 }

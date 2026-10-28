@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { DesktopBridge, AppState } from "../shared.ts";
+import type { DesktopBridge, AppState, ProviderId } from "../shared.ts";
 const bridge: DesktopBridge = {
   state: () => ipcRenderer.invoke("desktop", "state"),
   activate: (id) => ipcRenderer.invoke("desktop", "activate", id),
@@ -13,6 +13,15 @@ const bridge: DesktopBridge = {
   welcome: () => ipcRenderer.invoke("desktop", "welcome"),
   providerMenu: (request) =>
     ipcRenderer.invoke("desktop", "provider-menu", request),
+  getProviderLogo: (provider, revision) =>
+    ipcRenderer.invoke("desktop", "provider-logo-get", { provider, revision }),
+  setProviderLogo: (provider, change) =>
+    ipcRenderer.invoke("desktop", "provider-logo-set", { provider, change }),
+  onProviderLogoEditor(callback) {
+    const listener = (_: unknown, provider: ProviderId) => callback(provider);
+    ipcRenderer.on("provider-logo-editor", listener);
+    return () => ipcRenderer.removeListener("provider-logo-editor", listener);
+  },
   pinProvider: (id) => ipcRenderer.invoke("desktop", "provider-pin", id),
   closeProvider: (id) => ipcRenderer.invoke("desktop", "provider-close", id),
   addProvider: (name, url) =>

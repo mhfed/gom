@@ -58,7 +58,7 @@ module.exports = {
       : {}),
     appBundleId: "local.mhfed.tinnhan.desktop",
     executableName: "Gom",
-    icon: "assets/app.icns",
+    icon: process.platform === "win32" ? "assets/app.ico" : "assets/app.icns",
     ignore: (file) => !runtimePaths.has(file),
     extendInfo: {
       NSCameraUsageDescription: "Dùng camera khi bạn chọn gọi video.",
@@ -69,6 +69,18 @@ module.exports = {
     },
   },
   makers: [
+    {
+      name: "@electron-forge/maker-squirrel",
+      platforms: ["win32"],
+      config: {
+        name: "Gom_win32_x64",
+        authors: "Gom",
+        description: "Không gian trò chuyện gọn một nơi.",
+        setupExe: `Gom-win32-x64-${version}-Setup.exe`,
+        setupIcon: "assets/app.ico",
+        noMsi: true,
+      },
+    },
     { name: "@electron-forge/maker-zip", platforms: ["darwin"] },
     {
       name: "@electron-forge/maker-dmg",

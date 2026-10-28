@@ -1,8 +1,8 @@
-> **Gom 0.7.6:** thêm menu chuột phải trên trang nền tảng để sao chép văn bản, ảnh, địa chỉ ảnh, liên kết hoặc lưu ảnh; ⌘C trên ảnh đang trỏ chuột cũng sao chép ảnh. Vẫn cần tải DMG/ZIP và thay app thủ công; tự cài trong app cần Developer ID và notarization.
+> **Đang chuẩn bị Gom 0.7.7:** thêm Windows x64, bộ cài Squirrel và tự cập nhật trong app. Bản công khai mới nhất hiện vẫn là 0.7.6 trên macOS; chưa có bộ cài 0.7.7 để tải.
 >
 > Kiểm tra giao diện hiện hành: `npm run test:providers`, `npm run test:shell` và `npm run test:settings` (fixture cách ly, không dùng phiên cá nhân). Connector chat thống nhất đã dừng theo yêu cầu; mã nghiên cứu không được đóng gói. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
 
-# Gom — macOS
+# Gom — macOS và Windows
 
 **Trò chuyện, gọn một nơi.** Gom bọc giao diện web chính thức của Zalo, Messenger, Telegram, Gmail, Instagram, Discord, Slack và Tinder Web. Bumble chưa có trải nghiệm web để tích hợp. Mỗi tài khoản giữ phiên riêng và trang đang mở khi chuyển qua lại.
 
@@ -15,6 +15,14 @@ Bản mới nhất: **Gom 0.7.6**, phát hành ngày 28/10/2026 cho Mac Apple Si
 - [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.7.6)
 
 Màn chào mừng mở ra khi khởi động; chọn tài khoản để tiếp tục hoặc bấm logo Gom để quay lại. Nút **+** mở thư viện nền tảng theo nhóm hoặc thêm website riêng. Có thể dùng phiên Tinder đang mở trong Chrome bằng quy trình nhập một lần. Dữ liệu tài khoản và định danh khóa mã hóa được giữ nguyên khi nâng cấp. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.6](docs/release-0.7.6.md).
+
+## Windows 0.7.7 (đang chuẩn bị)
+
+Bản dự kiến dành cho Windows x64, cài theo tài khoản người dùng bằng `Gom-win32-x64-0.7.7-Setup.exe`; khi có phiên bản mới, Gom tải qua Squirrel và cài sau khi bạn chọn khởi động lại. Bản hiện chưa được đóng gói hoặc phát hành.
+
+Windows sẽ nhập phiên Chrome cho Zalo, Messenger, Instagram và Slack bằng SQLite chỉ đọc cùng DPAPI của người dùng hiện tại; Tinder dùng quy trình DevTools một lần. Cookie Chrome App-Bound (`v20`) không nhập được, khi gặp định dạng này Gom sẽ hướng dẫn đăng nhập trực tiếp. Gmail, Telegram và Discord tiếp tục đăng nhập trực tiếp vì bản Mac hiện tại cũng chưa có luồng nhập cookie cho các dịch vụ đó.
+
+Bản Windows đầu chưa ký Authenticode. Windows SmartScreen có thể cảnh báo, và chính sách Smart App Control của một số máy có thể chặn app chưa ký. Tự cập nhật Windows sẽ dùng Squirrel.Windows; bản macOS vẫn cần cài thủ công khi gói không có Developer ID/notarization.
 
 Lưu bản nháp quan trọng, thoát app đang dùng bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp lần đầu, macOS có thể giữ app cũ riêng vì tên đã đổi; sau khi kiểm tra Gom, có thể gỡ app cũ khỏi Applications. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; lần đầu mở có thể bị macOS chặn. Nếu đã tin cậy nguồn tải, có thể bấm đúp `Mo-Gom.command` trong DMG hoặc dùng Open Anyway theo [hướng dẫn cài](docs/distribution.md).
 
@@ -43,7 +51,7 @@ Bản app nằm trong `out-release/Gom-darwin-arm64/`; DMG và ZIP trong `out-re
 - **Đóng tab:** không gỡ nền tảng hoặc xóa dữ liệu đăng nhập. Tab cuối đóng sẽ mở thư viện. Website riêng chỉ tải khi được chọn, đóng tab sẽ lưu phiên và giải phóng trang; dữ liệu chưa gửi trên trang phụ thuộc website. Ba nền tảng nhắn tin có sẵn vẫn giữ hoạt động nền theo cơ chế cũ.
 - Website riêng chỉ điều hướng trong cùng origin đã cấu hình; liên kết ra ngoài mở trình duyệt sau xác nhận. Luồng đăng nhập SSO chuyển sang origin khác có thể cần đăng nhập trực tiếp trên website hoặc được hỗ trợ thêm. Gom không suy diễn số tin chưa đọc cho website riêng.
 
-- **Dùng phiên Chrome:** trong Tài khoản & cài đặt, chọn tài khoản đích và hồ sơ Chrome. Cookie xác thực được cho phép của Messenger, Instagram, Slack và Zalo được đọc bằng SQLite chỉ đọc, giải mã qua Chrome Safe Storage trong Keychain, rồi thử trong cửa sổ tạm. Chỉ chuyển cookie sau khi trang dịch vụ xác minh đăng nhập; không chép cả profile hoặc cookie của dịch vụ khác. Nếu kiểm tra thất bại, cookie xác thực đích được khôi phục.
+- **Dùng phiên Chrome:** trong Tài khoản & cài đặt, chọn tài khoản đích và hồ sơ Chrome. Trên Mac, cookie xác thực được cho phép của Messenger, Instagram, Slack và Zalo được đọc bằng SQLite chỉ đọc rồi giải mã qua Chrome Safe Storage trong Keychain. Windows 0.7.7 dùng SQLite chỉ đọc và DPAPI cho định dạng Chrome cũ; App-Bound (`v20`) cần đăng nhập trực tiếp. Chỉ chuyển cookie sau khi trang dịch vụ xác minh đăng nhập; không chép cả profile hoặc cookie của dịch vụ khác. Nếu kiểm tra thất bại, cookie xác thực đích được khôi phục.
 - **Tinder trong source chưa đóng gói:** chọn profile Chrome, mở Tinder đã đăng nhập ở profile đó, rồi chạy lệnh một lần mà Gom chép vào clipboard trong DevTools Console. Lệnh gửi API token, device UUID và MFA record của Tinder qua kết nối loopback trong máy; không đọc kho dữ liệu Chrome khác và không gửi phiên lên máy chủ ngoài. Gom giữ phiên đích nếu đã có dữ liệu, và khôi phục nếu Tinder không xác nhận đăng nhập.
 - Gmail, Discord và Telegram chưa hỗ trợ nhập phiên Chrome; đăng nhập trực tiếp trong Gom (Zalo/Telegram có thể dùng QR). Nếu nền tảng thu hồi hoặc hết hạn phiên, phải đăng nhập lại.
 - Dữ liệu của app lưu tại `~/Library/Application Support/TinNhanDesktop`. Không sao chép toàn bộ Chrome profile; không xuất token ra log hoặc renderer.
@@ -145,7 +153,6 @@ Fixture cách ly seeding dữ liệu kiểu0.3 rồi chạy0.4, kiểm tra6 tài
 Sidebar mở rộng224px, thu gọn72px; hàng tài khoản44px. Giảm khoảng trống phía trên, giữ các nút Thêm tài khoản/Cài đặt cố định bên dưới; chỉ danh sách tài khoản cuộn khi thiếu chiều cao. Tên dài được rút gọn trong hàng, badge không co avatar. Kích thước nội dung nền tảng dùng cùng mốc với sidebar.
 
 Kiểm tra bố cục cách ly: `node scripts/sidebar-layout-check.mjs` sau `npm run build` (940×640,1024×720,1280×840; sáu tài khoản, cả hai chế độ).
-
 
 ## Giao diện 0.5.0
 

@@ -1,0 +1,86 @@
+name: Windows release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag
+        required: true
+        type: choice
+        options:
+          - v0.7.7
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-upload:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Confirm the release tag and package version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if ($env:RELEASE_TAG -ne "v0.7.7") { throw "Only v0.7.7 is supported by this workflow." }
+          $version = node -p "require('./package.json').version"
+          if ($version -ne "0.7.7") { throw "Expected package version 0.7.7; found $version." }
+          $draft = gh release view $env:RELEASE_TAG --repo mhfed/gom --json isDraft --jq .isDraft
+          if ($LASTEXITCODE -ne 0 -or $draft -ne "true") { throw "The target GitHub release must already exist as a draft." }
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Create Windows x64 Squirrel packages
+        run: npm run make:win
+
+      - name: Verify package assets and create checksums
+        shell: pwsh
+        run: |
+          $output = Join-Path $PWD "out-release/make/squirrel.windows/x64"
+          $files = @(
+            (Join-Path $output "Gom-win32-x64-0.7.7-Setup.exe"),
+            (Join-Path $output "Gom_win32_x64-0.7.7-full.nupkg"),
+            (Join-Path $output "RELEASES")
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing Squirrel release asset: $file" }
+          }
+          $checksumFile = Join-Path $output "SHA256SUMS-Gom-0.7.7-windows.txt"
+          $checksumLines = foreach ($file in $files[0..1]) {
+            $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $(Split-Path -Leaf $file)"
+          }
+          $checksumLines | Set-Content -LiteralPath $checksumFile -Encoding ascii
+
+      - name: Upload assets to the existing draft
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          $output = Join-Path $PWD "out-release/make/squirrel.windows/x64"
+          gh release upload $env:RELEASE_TAG `
+            (Join-Path $output "Gom-win32-x64-0.7.7-Setup.exe") `
+            (Join-Path $output "Gom_win32_x64-0.7.7-full.nupkg") `
+            (Join-Path $output "RELEASES") `
+            (Join-Path $output "SHA256SUMS-Gom-0.7.7-windows.txt") `
+            --repo mhfed/gom --clobber

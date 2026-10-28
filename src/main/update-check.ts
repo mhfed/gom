@@ -9,6 +9,7 @@ const STABLE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 type Options = {
   currentVersion: string;
+  platform?: NodeJS.Platform;
   arch: string;
   onChange: (state: UpdateState) => void;
   fetcher?: typeof fetch;
@@ -66,7 +67,20 @@ function compatibleName(name: string, version: string, arch: string): boolean {
   );
   return pattern.exec(name)?.[0] === name;
 }
-function inspectRelease(value: unknown, current: bigint[], arch: string) {
+function windowsAssetNames(version: string) {
+  const stem = `Gom-win32-x64-${version}`;
+  return new Set([
+    `${stem}-Setup.exe`,
+    `Gom_win32_x64-${version}-full.nupkg`,
+    "RELEASES",
+  ]);
+}
+function inspectRelease(
+  value: unknown,
+  current: bigint[],
+  platform: NodeJS.Platform,
+  arch: string,
+) {
   if (
     !object(value) ||
     value.draft !== false ||
@@ -85,13 +99,31 @@ function inspectRelease(value: unknown, current: bigint[], arch: string) {
   if (value.html_url !== url) return invalidRelease();
   const notes = plainNotes(value.body);
   let compatible = false;
+  const requiredWindowsAssets =
+    platform === "win32" && arch === "x64"
+      ? windowsAssetNames(version)
+      : undefined;
   for (const asset of value.assets) {
     if (!object(asset) || typeof asset.name !== "string")
       return invalidRelease();
-    if (!compatibleName(asset.name, version, arch)) continue;
+    const isCompatibleAsset = requiredWindowsAssets
+      ? requiredWindowsAssets.has(asset.name)
+      : platform === "darwin" &&
+        ["arm64", "x64", "universal"].includes(arch) &&
+        compatibleName(asset.name, version, arch);
+    if (!isCompatibleAsset) continue;
     const expected = `${RELEASES_URL}/download/${tag}/${encodeURIComponent(asset.name)}`;
     if (asset.browser_download_url !== expected) return invalidRelease();
     compatible = true;
+  }
+  if (requiredWindowsAssets) {
+    const names = new Set(
+      value.assets
+        .filter((asset): asset is Record<string, unknown> => object(asset))
+        .map((asset) => asset.name)
+        .filter((name): name is string => typeof name === "string"),
+    );
+    compatible = [...requiredWindowsAssets].every((name) => names.has(name));
   }
   return {
     version,
@@ -159,11 +191,13 @@ async function boundedJson(
 /** Discovers a public release only. It never downloads or installs an asset. */
 export class ManualUpdateChecker {
   private readonly options: Options;
+  private readonly platform: NodeJS.Platform;
   private state: UpdateState;
   private pending: PendingCheck | null = null;
 
   constructor(options: Options) {
     this.options = options;
+    this.platform = options.platform ?? "darwin";
     this.state = {
       phase: "idle",
       currentVersion: options.currentVersion,
@@ -288,7 +322,11 @@ export class ManualUpdateChecker {
       const current = versionParts(this.options.currentVersion);
       if (!current)
         throw new CheckFailure("Phiên bản ứng dụng hiện tại không hợp lệ.");
-      if (!["arm64", "x64", "universal"].includes(this.options.arch)) {
+      const supportedArchitecture =
+        (this.platform === "darwin" &&
+          ["arm64", "x64", "universal"].includes(this.options.arch)) ||
+        (this.platform === "win32" && this.options.arch === "x64");
+      if (!supportedArchitecture) {
         result = finished(
           "unavailable",
           "Chưa có gói cập nhật phù hợp với máy này.",
@@ -301,7 +339,12 @@ export class ManualUpdateChecker {
             "Chưa có bản phát hành công khai để kiểm tra.",
           );
         } else {
-          const release = inspectRelease(value, current, this.options.arch);
+          const release = inspectRelease(
+            value,
+            current,
+            this.platform,
+            this.options.arch,
+          );
           const phase =
             release.comparison < 0
               ? "ahead"

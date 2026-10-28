@@ -19,6 +19,18 @@ export const PROVIDER_ORDER = [
   "slack",
   "tinder",
 ] as const;
+export type ProviderLogoSelection =
+  | { kind: "builtin"; providerId: BuiltinProviderId }
+  | { kind: "image"; revision: number };
+export type ProviderLogoChange =
+  | { kind: "builtin"; providerId: BuiltinProviderId }
+  | { kind: "image"; dataUrl: string }
+  | null;
+export interface ProviderLogoResult {
+  ok: boolean;
+  logo?: ProviderLogoSelection | null;
+  message?: string;
+}
 export interface ProviderDefinition {
   id: ProviderId;
   label: string;
@@ -26,6 +38,7 @@ export interface ProviderDefinition {
   hosts: readonly string[];
   color: string;
   custom: boolean;
+  logo?: ProviderLogoSelection;
 }
 export interface ProviderTabs {
   open: ProviderId[];
@@ -201,6 +214,12 @@ export interface DesktopBridge {
     provider?: ProviderId;
     overflow?: ProviderId[];
   }): Promise<void>;
+  getProviderLogo(provider: ProviderId, revision: number): Promise<string | null>;
+  setProviderLogo(
+    provider: ProviderId,
+    change: ProviderLogoChange,
+  ): Promise<ProviderLogoResult>;
+  onProviderLogoEditor(callback: (provider: ProviderId) => void): () => void;
   pinProvider(id: ProviderId): Promise<void>;
   closeProvider(id: ProviderId): Promise<AccountResult>;
   addProvider(name: string, url: string): Promise<ProviderResult>;

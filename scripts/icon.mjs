@@ -38,3 +38,28 @@ const header = Buffer.alloc(8);
 header.write("icns");
 header.writeUInt32BE(8 + chunks.reduce((n, b) => n + b.length, 0), 4);
 await writeFile("assets/app.icns", Buffer.concat([header, ...chunks]));
+
+const icoSizes = [16, 24, 32, 48, 64, 128, 256];
+const icoImages = await Promise.all(
+  icoSizes.map((size) => sharp(Buffer.from(svg)).resize(size).png().toBuffer()),
+);
+const icoHeader = Buffer.alloc(6);
+icoHeader.writeUInt16LE(1, 2);
+icoHeader.writeUInt16LE(icoImages.length, 4);
+let imageOffset = icoHeader.length + 16 * icoImages.length;
+const icoEntries = icoImages.map((image, index) => {
+  const entry = Buffer.alloc(16);
+  const size = icoSizes[index];
+  entry.writeUInt8(size === 256 ? 0 : size, 0);
+  entry.writeUInt8(size === 256 ? 0 : size, 1);
+  entry.writeUInt16LE(1, 4);
+  entry.writeUInt16LE(32, 6);
+  entry.writeUInt32LE(image.length, 8);
+  entry.writeUInt32LE(imageOffset, 12);
+  imageOffset += image.length;
+  return entry;
+});
+await writeFile(
+  "assets/app.ico",
+  Buffer.concat([icoHeader, ...icoEntries, ...icoImages]),
+);

@@ -1,10 +1,13 @@
 import { build } from "esbuild";
 import { mkdir, copyFile, cp, readFile } from "node:fs/promises";
 const automaticUpdatesSupported = Boolean(
-  process.env.GOM_MACOS_SIGNING_IDENTITY?.trim() &&
+  (process.platform === "win32" &&
+    process.env.npm_lifecycle_event === "build:win") ||
+  (process.platform === "darwin" &&
+    process.env.GOM_MACOS_SIGNING_IDENTITY?.trim() &&
     process.env.GOM_APPLE_ID?.trim() &&
     process.env.GOM_APPLE_APP_SPECIFIC_PASSWORD &&
-    process.env.GOM_APPLE_TEAM_ID?.trim(),
+    process.env.GOM_APPLE_TEAM_ID?.trim()),
 );
 await mkdir("dist", { recursive: true });
 await cp("src/renderer/logos", "dist/logos", { recursive: true });

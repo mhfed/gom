@@ -1,4 +1,6 @@
-# Phân phối Gom bằng DMG và cập nhật thủ công
+# Phân phối Gom cho macOS và Windows
+
+Source đang chuẩn bị phiên bản **0.7.7**. Bản public hiện tại vẫn là **0.7.6** cho macOS arm64; chưa chạy build Windows hoặc tạo release 0.7.7. Chỉ cập nhật số phiên bản source không có nghĩa là gói mới đã được phát hành.
 
 Bản 0.7.6 tạo bộ cài **macOS Apple Silicon (arm64)**. Chưa có bản Intel hoặc Universal. Ứng dụng ký ad-hoc để chạy trên máy Mac, chưa ký bằng Apple Developer ID và chưa notarize. DMG không làm thay đổi giới hạn này.
 
@@ -35,6 +37,14 @@ Mã nguồn có nhánh Electron `autoUpdater` để tải ZIP trong app, hiện 
 
 Chữ ký xác nhận nhà phát hành và tính toàn vẹn của app; không cấp cho app quyền đọc thêm tài khoản hoặc nội dung chat. Khi chuyển từ app ad-hoc sang Developer ID lần đầu, macOS có thể hỏi quyền Keychain lại. Bundle ID, tên Keychain hiện dùng (`Tin Nhan`), thư mục `TinNhanDesktop` và partition phiên đăng nhập vẫn được giữ nguyên.
 
+### Windows 0.7.7
+
+Bản Windows dự kiến hỗ trợ x64 và cài theo tài khoản hiện tại bằng Squirrel.Windows, không yêu cầu quyền quản trị viên. `Gom-win32-x64-0.7.7-Setup.exe` là bộ cài ban đầu; sau đó Gom kiểm tra cùng GitHub Releases, tải gói Squirrel trong app và chỉ cài khi bạn chọn khởi động lại. Bộ kiểm tra chỉ nhận một release có đủ Setup, gói `.nupkg` đầy đủ và tệp `RELEASES`.
+
+Bản Windows chưa ký Authenticode. SmartScreen có thể cảnh báo tệp tải từ Internet; Smart App Control hoặc chính sách của tổ chức có thể chặn app. SHA-256 của Setup và gói `.nupkg` sẽ nằm trong `SHA256SUMS-Gom-0.7.7-windows.txt` để kiểm tra tính toàn vẹn.
+
+Nhập phiên Chrome trên Windows hỗ trợ Zalo, Messenger, Instagram và Slack qua SQLite chỉ đọc, DPAPI của tài khoản Windows hiện tại và AES-GCM cho cookie `v10` không App-Bound. Cookie App-Bound `v20` không được giải mã; Gom sẽ giữ nguyên phiên đích và hướng dẫn đăng nhập trực tiếp. Tinder dùng cầu nối DevTools một lần, mở Console bằng `Ctrl+Shift+J`. Gmail, Telegram và Discord vẫn đăng nhập trực tiếp.
+
 Để nâng cấp, lưu hoặc sao chép bản nháp quan trọng, thoát app đang dùng bằng **⌘Q**, rồi kéo **Gom.app** vào Applications. Nếu đã có Gom, chọn thay thế. Khi nâng cấp lần đầu, macOS có thể giữ app cũ riêng vì tên đã đổi; sau khi kiểm tra Gom, có thể gỡ app cũ khỏi Applications. Giữ nguyên thư mục `~/Library/Application Support/TinNhanDesktop`. App mới dùng lại dữ liệu cũ; phiên đăng nhập vẫn phụ thuộc thời hạn và chính sách của từng nền tảng. Bản nháp giữ nguyên khi chuyển tab trong app, còn khôi phục sau thoát phụ thuộc Zalo, Telegram hoặc Messenger.
 
 Bản 0.7.0 đọc catalog cũ và lưu catalog v2 khi thay đổi tài khoản hoặc thêm website. Các bản 0.6.x không đọc được catalog v2, kể cả bản backup sau khi lưu. Sau khi nâng cấp nên tiếp tục dùng 0.7.x hoặc mới hơn; không xóa thư mục dữ liệu để hạ phiên bản.
@@ -45,7 +55,7 @@ Nếu trước đây bật chạy cùng máy cho bản cũ, kiểm tra **System 
 
 Việc cập nhật phiên bản không đồng bộ cookie hoặc tài khoản giữa các máy. Mỗi người dùng giữ dữ liệu của mình trên máy của họ.
 
-## Tạo gói phát hành
+## Tạo gói phát hành macOS 0.7.6
 
 Chạy trên macOS Apple Silicon với Node.js 24+:
 
@@ -83,9 +93,17 @@ Bản 0.7.6 dùng tag `v0.7.6` trong đúng repository `mhfed/gom`, kèm ghi ch�
 - `Gom-macOS-arm64-0.7.6.dmg`
 - `Gom-macOS-arm64-0.7.6.zip`
 - `SHA256SUMS-Gom-0.7.6.txt`
-Checksum của 0.7.6 chỉ bao gồm DMG và ZIP phát hành dưới tên Gom.
+  Checksum của 0.7.6 chỉ bao gồm DMG và ZIP phát hành dưới tên Gom.
+
+Windows 0.7.7 sẽ dùng workflow `.github/workflows/windows-release.yml`, chỉ chạy bằng `workflow_dispatch` sau khi có bản nháp `v0.7.7`. Workflow kiểm tra typecheck, tạo Setup/`.nupkg`/`RELEASES`, tạo manifest riêng cho Windows rồi tải các asset lên bản nháp. Bản nháp chỉ được phát hành sau khi có cả gói macOS, Windows và checksum tương ứng.
 
 Tag phải khớp version trong `package.json`; tên gói cần chứa version và kiến trúc. Chỉ đăng bản ổn định sau khi có đủ gói đã kiểm chứng. Bộ kiểm tra bỏ qua draft/prerelease; bản cài mới hơn bản public sẽ thông báo rõ tình trạng đó. Các bản sau tăng version và lặp lại quy trình. Sau lần nâng cấp trực tiếp lên 0.6.2 hoặc mới hơn, chức năng kiểm tra dùng repository mới.
+
+### Gom 0.7.7 cho macOS và Windows
+
+Khi được duyệt build, trên Mac Apple Silicon chạy `npm ci`, `npm run typecheck`, rồi `npm run make`. Lấy DMG và ZIP arm64 trong `out-release/make/`, sao chép thành `Gom-macOS-arm64-0.7.7.dmg` và `Gom-macOS-arm64-0.7.7.zip`, rồi tạo `SHA256SUMS-Gom-0.7.7-macos.txt` cho hai file đó. Tạo draft `v0.7.7` trong `mhfed/gom` và tải ba asset Mac lên draft.
+
+Sau khi draft tồn tại, chạy workflow **Windows release assets** bằng `workflow_dispatch` với tag `v0.7.7`. Runner Windows kiểm tra phiên bản, typecheck, đóng gói Squirrel và tải Setup, `.nupkg`, `RELEASES` cùng `SHA256SUMS-Gom-0.7.7-windows.txt` lên chính draft đó. Kiểm tra đủ hai bộ asset và checksum trước khi xuất bản draft. Workflow Windows không tự chạy theo push/tag và không tự chuyển draft thành release public.
 
 ## Công cụ đóng gói
 
