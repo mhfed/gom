@@ -28,14 +28,17 @@ for (const entry of entries) {
     `Unexpected packaged path: ${entry}`,
   );
   const relative = entry.replace(/^\//, "");
-  const metadata = asar.statFile(archive, relative, false);
+  // ASAR's traversal splits on the host path separator, while the packaging
+  // allowlist above deliberately uses portable slash-separated names.
+  const nativeRelative = join(...relative.split("/"));
+  const metadata = asar.statFile(archive, nativeRelative, false);
   assert.ok(
     !metadata.link && !metadata.unpacked,
     `Unexpected link/unpacked content: ${entry}`,
   );
   if (metadata.files) continue;
   files++;
-  const contents = asar.extractFile(archive, relative);
+  const contents = asar.extractFile(archive, nativeRelative);
   if (relative.startsWith("dist/")) {
     assert.deepEqual(
       contents,
@@ -66,12 +69,12 @@ assert.equal(packedPackage.version, sourcePackage.version);
 assert.equal(packedPackage.main, "dist/main.cjs");
 assert.ok(
   asar
-    .extractFile(archive, "dist/main.cjs")
+    .extractFile(archive, join("dist", "main.cjs"))
     .includes(Buffer.from("private-space.json")),
 );
 assert.ok(
   asar
-    .extractFile(archive, "dist/index.html")
+    .extractFile(archive, join("dist", "index.html"))
     .includes(Buffer.from('id="private-space-toggle"')),
 );
 console.log(

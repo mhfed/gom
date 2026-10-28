@@ -27,6 +27,16 @@ jobs:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
 
+      # Product sources stay on the release tag. Verification-only tools may
+      # receive portability fixes without rewriting that immutable tag.
+      - name: Load verification tools from the workflow revision
+        shell: pwsh
+        env:
+          WORKFLOW_REVISION: ${{ github.sha }}
+        run: |
+          git restore --source=$env:WORKFLOW_REVISION -- scripts/verify-release-package.mjs scripts/private-space-check.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Could not load release verification tools." }
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
