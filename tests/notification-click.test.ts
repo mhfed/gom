@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runInNewContext } from "node:vm";
-import { installNotificationClickBridge } from "../src/main/notification-click.ts";
+import {
+  installNotificationClickBridge,
+  closePageNotifications,
+} from "../src/main/notification-click.ts";
 test("native Notification wrapper creates exactly one real notification, preserves static permission and forwards only clicks", () => {
   let created = 0,
     clicked = 0;
@@ -34,4 +37,24 @@ test("native Notification wrapper creates exactly one real notification, preserv
   n.dispatchEvent(new Event("click"));
   assert.equal(clicked, 1);
   n.close();
+});
+test("private transition closes tracked page notifications without forwarding their content", () => {
+  let closed = 0;
+  class Native extends EventTarget {
+    close() {
+      closed++;
+      this.dispatchEvent(new Event("close"));
+    }
+  }
+  const window = { Notification: Native };
+  runInNewContext(`(${installNotificationClickBridge.toString()})()`, {
+    window,
+    Set,
+  });
+  new window.Notification();
+  new window.Notification();
+  runInNewContext(`(${closePageNotifications.toString()})()`, { window });
+  assert.equal(closed, 2);
+  runInNewContext(`(${closePageNotifications.toString()})()`, { window });
+  assert.equal(closed, 2);
 });

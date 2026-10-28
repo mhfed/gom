@@ -155,7 +155,9 @@ export function createProviderNavigation(options: {
                 Math.max(
                   96 + unreadSpace,
                   (canvas?.measureText(provider.label).width ||
-                    provider.label.length * 7) + 62 + unreadSpace,
+                    provider.label.length * 7) +
+                    62 +
+                    unreadSpace,
                 ),
               ),
             );
@@ -384,11 +386,7 @@ export function createProviderNavigation(options: {
         ".provider-library-status",
       )!;
       const isOpen = state.providerTabs.open.includes(id);
-      prop(
-        status,
-        "textContent",
-        isOpen ? "Đang mở" : "",
-      );
+      prop(status, "textContent", isOpen ? "Đang mở" : "");
       prop(status, "hidden", !isOpen);
     }
     const busy =
@@ -466,6 +464,18 @@ export function createProviderNavigation(options: {
   };
   new ResizeObserver(fit).observe($("provider-tab-area"));
   return {
+    reset() {
+      headerSignature = "";
+      librarySignature = "";
+      visible = [];
+      hidden = [];
+      ordered = [];
+      widths.clear();
+      search.value = "";
+      form.reset();
+      list.replaceChildren();
+      tabs.replaceChildren();
+    },
     sync(state: AppState) {
       syncHeader(state);
       const library = state.panel === "providers";

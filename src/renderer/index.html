@@ -197,6 +197,15 @@
         <span class="tool-divider" aria-hidden="true"></span>
         <div class="tools">
           <button
+            id="private-space-toggle"
+            class="icon-button"
+            type="button"
+            aria-label="Không gian kín"
+            title="Không gian kín"
+          >
+            <svg aria-hidden="true"><use href="#i-lock" /></svg>
+          </button>
+          <button
             id="quick-switch"
             class="icon-button"
             aria-label="Chuyển nhanh tài khoản"
@@ -239,15 +248,23 @@
               <p class="eyebrow">GOM · KHÔNG GIAN CỦA BẠN</p>
               <h1 id="welcome-title">Chào mừng đến với Gom.</h1>
               <p>
-                Các cuộc trò chuyện quen thuộc, trong một cửa sổ. Chọn tài
-                khoản để tiếp tục hoặc mở thêm nền tảng.
+                Các cuộc trò chuyện quen thuộc, trong một cửa sổ. Chọn tài khoản
+                để tiếp tục hoặc mở thêm nền tảng.
               </p>
               <div class="welcome-actions">
-                <button id="welcome-open-providers" class="primary" type="button">
+                <button
+                  id="welcome-open-providers"
+                  class="primary"
+                  type="button"
+                >
                   <svg aria-hidden="true"><use href="#i-plus" /></svg>
                   Mở nền tảng
                 </button>
-                <button id="welcome-add-account" class="secondary" type="button">
+                <button
+                  id="welcome-add-account"
+                  class="secondary"
+                  type="button"
+                >
                   Thêm tài khoản
                 </button>
               </div>
@@ -256,10 +273,15 @@
               <span class="welcome-orbit welcome-orbit-one"></span>
               <span class="welcome-orbit welcome-orbit-two"></span>
               <img src="app.png" alt="" draggable="false" />
-              <span class="welcome-emblem-caption">Trò chuyện, gọn một nơi.</span>
+              <span class="welcome-emblem-caption"
+                >Trò chuyện, gọn một nơi.</span
+              >
             </div>
           </section>
-          <section class="welcome-continue" aria-labelledby="welcome-continue-title">
+          <section
+            class="welcome-continue"
+            aria-labelledby="welcome-continue-title"
+          >
             <div class="welcome-section-heading">
               <div>
                 <p class="eyebrow">QUAY LẠI NHANH</p>
@@ -490,6 +512,30 @@
               </div>
               <div id="archived-accounts"></div>
               <p id="account-feedback" class="hint" role="status"></p>
+              <div class="private-space-card">
+                <div>
+                  <strong>Không gian kín</strong>
+                  <p id="private-space-status" class="hint"></p>
+                </div>
+                <div class="private-space-actions">
+                  <button
+                    id="private-space-open"
+                    type="button"
+                    class="secondary"
+                  >
+                    Thiết lập không gian kín
+                  </button>
+                  <button
+                    id="private-space-change"
+                    type="button"
+                    class="secondary"
+                    hidden
+                  >
+                    Đổi mật khẩu
+                  </button>
+                </div>
+                <p id="private-space-feedback" class="hint" role="status"></p>
+              </div>
               <div class="privacy-note">
                 <span class="note-icon"
                   ><svg aria-hidden="true"><use href="#i-lock" /></svg
@@ -547,9 +593,8 @@
                   <p class="hint">
                     Gom chỉ nhập dữ liệu xác thực cần thiết của đúng nền tảng.
                     Tinder cần bạn chạy lệnh một lần trong Console của tab
-                    Chrome đã đăng nhập; Gom chỉ nhận dữ liệu Tinder qua kết
-                    nối nội bộ. Gmail, Discord và Telegram chưa nhập phiên
-                    Chrome.
+                    Chrome đã đăng nhập; Gom chỉ nhận dữ liệu Tinder qua kết nối
+                    nội bộ. Gmail, Discord và Telegram chưa nhập phiên Chrome.
                     Phiên tài khoản đích được giữ nếu nhập thất bại.
                   </p>
                 </div>
@@ -784,8 +829,8 @@
                   Chọn “Tải và cài đặt” để Gom tải bản mới trong app, rồi khởi
                   động lại để áp dụng. Nếu tự cập nhật không dùng được, nút sẽ
                   mở trang tải thủ công; kéo Gom vào Applications và chọn thay
-                  thế để cài. Hãy lưu nội dung đang soạn trước khi khởi động lại.
-                  Nếu đang dùng Tin Nhan, thoát app cũ trước khi mở Gom.
+                  thế để cài. Hãy lưu nội dung đang soạn trước khi khởi động
+                  lại. Nếu đang dùng Tin Nhan, thoát app cũ trước khi mở Gom.
                 </p>
               </div>
             </div>
@@ -890,21 +935,107 @@
     <dialog id="provider-logo-editor" aria-labelledby="provider-logo-title">
       <form id="provider-logo-form" aria-describedby="provider-logo-error">
         <h2 id="provider-logo-title">Đổi logo nền tảng</h2>
-        <p class="hint">Chọn logo có sẵn hoặc tải ảnh PNG/JPG lên. Gom lưu ảnh trên máy này.</p>
+        <p class="hint">
+          Chọn logo có sẵn hoặc tải ảnh PNG/JPG lên. Gom lưu ảnh trên máy này.
+        </p>
         <div class="provider-logo-preview-area">
           <span id="provider-logo-preview" aria-hidden="true"></span>
           <span id="provider-logo-preview-label">Logo đang dùng</span>
         </div>
         <h3>Thư viện logo</h3>
-        <div id="provider-logo-gallery" role="group" aria-label="Logo có sẵn"></div>
-        <label class="field-label" for="provider-logo-file">Hoặc tải ảnh lên</label>
-        <input id="provider-logo-file" type="file" accept="image/png,image/jpeg" />
-        <p class="hint">Ảnh được cắt vuông và thu nhỏ về 64 × 64. Dung lượng tối đa 10 MB.</p>
+        <div
+          id="provider-logo-gallery"
+          role="group"
+          aria-label="Logo có sẵn"
+        ></div>
+        <label class="field-label" for="provider-logo-file"
+          >Hoặc tải ảnh lên</label
+        >
+        <input
+          id="provider-logo-file"
+          type="file"
+          accept="image/png,image/jpeg"
+        />
+        <p class="hint">
+          Ảnh được cắt vuông và thu nhỏ về 64 × 64. Dung lượng tối đa 10 MB.
+        </p>
         <p id="provider-logo-error" class="form-error" role="alert"></p>
         <div class="dialog-actions">
-          <button id="provider-logo-reset" type="button" class="secondary">Dùng logo mặc định</button>
-          <button id="provider-logo-cancel" type="button" class="secondary">Hủy</button>
-          <button id="provider-logo-save" type="submit" class="primary">Lưu logo</button>
+          <button id="provider-logo-reset" type="button" class="secondary">
+            Dùng logo mặc định
+          </button>
+          <button id="provider-logo-cancel" type="button" class="secondary">
+            Hủy
+          </button>
+          <button id="provider-logo-save" type="submit" class="primary">
+            Lưu logo
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="private-space-dialog" aria-labelledby="private-space-title">
+      <form
+        id="private-space-form"
+        aria-describedby="private-space-boundary private-space-error"
+      >
+        <h2 id="private-space-title">Mở không gian kín</h2>
+        <p id="private-space-boundary" class="hint">
+          Mật khẩu bảo vệ việc mở tài khoản trong Gom. Dữ liệu phiên trên máy
+          vẫn dùng cách lưu hiện tại, chưa được mã hóa bằng mật khẩu này.
+        </p>
+        <label
+          id="private-password-label"
+          class="field-label"
+          for="private-password"
+          >Mật khẩu</label
+        >
+        <input
+          id="private-password"
+          type="password"
+          required
+          minlength="8"
+          maxlength="256"
+          autocomplete="current-password"
+          spellcheck="false"
+        />
+        <div id="private-new-password-field" hidden>
+          <label class="field-label" for="private-new-password"
+            >Mật khẩu mới · ít nhất 8 ký tự</label
+          >
+          <input
+            id="private-new-password"
+            type="password"
+            minlength="8"
+            maxlength="256"
+            autocomplete="new-password"
+            spellcheck="false"
+          />
+        </div>
+        <div id="private-confirm-field" hidden>
+          <label class="field-label" for="private-password-confirm"
+            >Nhập lại mật khẩu · ít nhất 8 ký tự</label
+          >
+          <input
+            id="private-password-confirm"
+            type="password"
+            minlength="8"
+            maxlength="256"
+            autocomplete="new-password"
+            spellcheck="false"
+          />
+        </div>
+        <p class="hint">
+          Không có cách đặt lại để mở tài khoản khi quên mật khẩu. Hãy lưu mật
+          khẩu ở nơi an toàn.
+        </p>
+        <p id="private-space-error" class="form-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button id="private-space-cancel" type="button" class="secondary">
+            Hủy
+          </button>
+          <button id="private-space-submit" type="submit" class="primary">
+            Mở không gian kín
+          </button>
         </div>
       </form>
     </dialog>

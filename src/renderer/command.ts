@@ -223,6 +223,15 @@ export function createCommandPalette(options: PaletteOptions) {
       void close();
   };
   return {
+    reset() {
+      entries = [];
+      selection = 0;
+      signature = "";
+      search.value = "";
+      search.removeAttribute("aria-activedescendant");
+      results.replaceChildren();
+      if (dialog.open) dialog.close();
+    },
     sync(state: AppState) {
       const next = JSON.stringify([
         state.accounts,

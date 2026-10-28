@@ -8,7 +8,7 @@ on:
         required: true
         type: choice
         options:
-          - v0.7.7
+          - v0.7.8
 
 permissions:
   contents: write
@@ -20,6 +20,7 @@ concurrency:
 jobs:
   build-and-upload:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,9 +38,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          if ($env:RELEASE_TAG -ne "v0.7.7") { throw "Only v0.7.7 is supported by this workflow." }
+          if ($env:RELEASE_TAG -ne "v0.7.8") { throw "Only v0.7.8 is supported by this workflow." }
           $version = node -p "require('./package.json').version"
-          if ($version -ne "0.7.7") { throw "Expected package version 0.7.7; found $version." }
+          if ($version -ne "0.7.8") { throw "Expected package version 0.7.8; found $version." }
           $draft = gh release view $env:RELEASE_TAG --repo mhfed/gom --json isDraft --jq .isDraft
           if ($LASTEXITCODE -ne 0 -or $draft -ne "true") { throw "The target GitHub release must already exist as a draft." }
 
@@ -49,23 +50,49 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Private-space and release regression tests
+        run: node --test --experimental-strip-types tests/private-space.test.ts tests/private-state.test.ts tests/notification-click.test.ts tests/update-check.test.ts tests/provider-tabs.test.ts
+
       - name: Create Windows x64 Squirrel packages
         run: npm run make:win
+
+      - name: Verify bundled code and Squirrel metadata
+        run: node scripts/verify-release-package.mjs out-release/Gom-win32-x64/resources/app.asar out-release/make/squirrel.windows/x64
+
+      - name: Exercise private space from packaged ASAR with isolated sessions
+        shell: pwsh
+        run: |
+          $env:GOM_SMOKE_APP_ASAR = (Resolve-Path "out-release/Gom-win32-x64/resources/app.asar").Path
+          node scripts/private-space-check.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Packaged private-space smoke failed." }
 
       - name: Verify package assets and create checksums
         shell: pwsh
         run: |
           $output = Join-Path $PWD "out-release/make/squirrel.windows/x64"
           $files = @(
-            (Join-Path $output "Gom-win32-x64-0.7.7-Setup.exe"),
-            (Join-Path $output "Gom_win32_x64-0.7.7-full.nupkg"),
+            (Join-Path $output "Gom-win32-x64-0.7.8-Setup.exe"),
+            (Join-Path $output "Gom_win32_x64-0.7.8-full.nupkg"),
             (Join-Path $output "RELEASES")
           )
           foreach ($file in $files) {
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing Squirrel release asset: $file" }
           }
-          $checksumFile = Join-Path $output "SHA256SUMS-Gom-0.7.7-windows.txt"
-          $checksumLines = foreach ($file in $files[0..1]) {
+          # Verify the update payload contains the same ASAR that passed the smoke.
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($files[1])
+          try {
+            $entry = $archive.GetEntry("lib/net45/resources/app.asar")
+            if ($null -eq $entry) { throw "The update package is missing app.asar." }
+            $stream = $entry.Open()
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            try { $payloadHash = [Convert]::ToHexString($sha.ComputeHash($stream)).ToLowerInvariant() }
+            finally { $stream.Dispose(); $sha.Dispose() }
+            $bundleHash = (Get-FileHash "out-release/Gom-win32-x64/resources/app.asar" -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($payloadHash -ne $bundleHash) { throw "The update package ASAR differs from the verified bundle." }
+          } finally { $archive.Dispose() }
+          $checksumFile = Join-Path $output "SHA256SUMS-Gom-0.7.8-windows.txt"
+          $checksumLines = foreach ($file in $files) {
             $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $(Split-Path -Leaf $file)"
           }
@@ -79,8 +106,8 @@ jobs:
         run: |
           $output = Join-Path $PWD "out-release/make/squirrel.windows/x64"
           gh release upload $env:RELEASE_TAG `
-            (Join-Path $output "Gom-win32-x64-0.7.7-Setup.exe") `
-            (Join-Path $output "Gom_win32_x64-0.7.7-full.nupkg") `
+            (Join-Path $output "Gom-win32-x64-0.7.8-Setup.exe") `
+            (Join-Path $output "Gom_win32_x64-0.7.8-full.nupkg") `
             (Join-Path $output "RELEASES") `
-            (Join-Path $output "SHA256SUMS-Gom-0.7.7-windows.txt") `
+            (Join-Path $output "SHA256SUMS-Gom-0.7.8-windows.txt") `
             --repo mhfed/gom --clobber

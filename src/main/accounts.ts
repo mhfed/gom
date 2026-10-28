@@ -90,6 +90,7 @@ function readCatalog(raw: unknown): {
       !clean(a.name, 40) ||
       typeof a.avatar !== "string" ||
       typeof a.archived !== "boolean" ||
+      (a.private !== undefined && typeof a.private !== "boolean") ||
       ids.has(a.id)
     )
       throw Error("invalid-catalog");
@@ -101,6 +102,7 @@ function readCatalog(raw: unknown): {
       name: clean(a.name, 40),
       avatar: clean(a.avatar, 8) || initials(clean(a.name, 40)),
       archived: a.archived,
+      ...(a.private === undefined ? {} : { private: a.private }),
     };
   });
   // Add newly introduced built-ins to existing catalogs without changing the
@@ -111,8 +113,7 @@ function readCatalog(raw: unknown): {
       ids.add(account.id);
     }
   }
-  if (!accounts.some((a) => !a.archived))
-    throw Error("invalid-catalog");
+  if (!accounts.some((a) => !a.archived)) throw Error("invalid-catalog");
   return { accounts, providers };
 }
 export function createAccount(
@@ -202,7 +203,7 @@ export class AccountCatalogStore {
     this.writer = new SettingsWriter(path);
     this.backup = new SettingsWriter(path + ".backup");
   }
-  async load(): Promise<{
+  async load(protectMissingCatalog = false): Promise<{
     accounts: Account[];
     providers: ProviderDefinition[];
     writable: boolean;
@@ -232,6 +233,7 @@ export class AccountCatalogStore {
         this.providers = catalog.providers;
       } catch (backupError) {
         if (
+          !protectMissingCatalog &&
           missing &&
           (backupError as NodeJS.ErrnoException).code === "ENOENT"
         ) {
@@ -249,12 +251,20 @@ export class AccountCatalogStore {
           } catch {}
         }
       }
+      // With evidence of private space use, an older backup cannot prove a
+      // session is public. Ordinary installations retain read-only recovery.
+      const protectRecovered =
+        protectMissingCatalog ||
+        this.snapshot.some((account) => account.private);
       return {
-        accounts: this.snapshot,
+        accounts: protectRecovered
+          ? this.snapshot.map((account) => ({ ...account, private: true }))
+          : this.snapshot,
         providers: this.providers,
         writable: false,
-        warning:
-          "Chưa đọc/ghi được danh sách tài khoản. App mở các phiên nhận diện được ở chế độ bảo vệ; dữ liệu đăng nhập không bị xóa. Tạm khóa thêm/sửa/gỡ để tránh ghi đè danh sách.",
+        warning: protectRecovered
+          ? "Chưa đọc/ghi được danh sách tài khoản. Các phiên được khóa để tránh lộ tài khoản kín từ bản sao cũ; dữ liệu đăng nhập không bị xóa. Tạm khóa thêm/sửa/gỡ để tránh ghi đè danh sách."
+          : "Chưa đọc/ghi được danh sách tài khoản. App mở các phiên nhận diện được ở chế độ bảo vệ; dữ liệu đăng nhập không bị xóa. Tạm khóa thêm/sửa/gỡ để tránh ghi đè danh sách.",
       };
     }
   }

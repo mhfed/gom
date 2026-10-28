@@ -1,3 +1,5 @@
+import { PrivateSpaceStore } from "./private-space.ts";
+import { privateState } from "./private-state.ts";
 import {
   defaultAccounts,
   accountPartition,
@@ -67,7 +69,7 @@ import {
 } from "electron";
 import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { readFile, copyFile } from "node:fs/promises";
+import { readFile, copyFile, access, rm } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { constants } from "node:fs";
 import {
@@ -214,8 +216,7 @@ const MESSENGER_CHROME_CSS = `
   }
 `;
 type CopyShortcutTarget =
-  | { kind: "image"; x: number; y: number }
-  | { kind: "text" | "none" };
+  { kind: "image"; x: number; y: number } | { kind: "text" | "none" };
 const COPY_SHORTCUT_TARGET_SCRIPT = `(() => {
   const active = document.activeElement;
   const textInput = active instanceof HTMLInputElement &&
@@ -314,6 +315,203 @@ const catalogStore = new AccountCatalogStore(
 const providerLogoStore = new ProviderLogoStore(
   join(app.getPath("userData"), "provider-logos.json"),
 );
+const privateStore = new PrivateSpaceStore(
+  join(app.getPath("userData"), "private-space.json"),
+);
+const membershipJournalPath = join(
+  app.getPath("userData"),
+  "private-membership.json",
+);
+const membershipJournal = new SettingsWriter(membershipJournalPath);
+let privateUnlocked = false;
+let privacyGeneration = 0;
+let privacyDialogs = new AbortController();
+const privacyMenus = new Set<Menu>();
+function privacyMessageBox(options: Electron.MessageBoxOptions) {
+  return dialog.showMessageBox(win, {
+    ...options,
+    signal: privacyDialogs.signal,
+  });
+}
+function privacyMenu(menu: Menu, options: Electron.PopupOptions) {
+  const generation = privacyGeneration;
+  for (const item of menu.items) {
+    const click = item.click;
+    if (!item.role)
+      item.click = (...args: unknown[]) => {
+        if (generation === privacyGeneration) click(...args);
+      };
+  }
+  privacyMenus.add(menu);
+  menu.popup({
+    ...options,
+    callback: () => {
+      privacyMenus.delete(menu);
+      options.callback?.();
+    },
+  });
+}
+function accessible(id: unknown, archived = false): boolean {
+  const account = findAccount(id, archived);
+  return !!account && (!account.private || privateUnlocked);
+}
+function publicAccount(id: unknown): boolean {
+  const account = findAccount(id);
+  return !!account && !account.private;
+}
+function visibleState(): AppState {
+  state.privateSpace = {
+    ...privateStore.status(),
+    unlocked: privateUnlocked,
+    lockVersion: privacyGeneration,
+  };
+  return privateState(state, privateUnlocked);
+}
+function accessibleProvider(id: unknown): id is ProviderId {
+  return knownProvider(id) && visibleState().providers.some((p) => p.id === id);
+}
+function lockPrivateSpace() {
+  const wasPrivate =
+    privateUnlocked || findAccount(state.active, true)?.private;
+  privacyGeneration++;
+  privacyDialogs.abort();
+  privacyDialogs = new AbortController();
+  for (const menu of privacyMenus) menu.closePopup();
+  privacyMenus.clear();
+  privateUnlocked = false;
+  accountEditorOpen = false;
+  state.commandOpen = false;
+  for (const account of state.accounts.filter((a) => a.private)) {
+    epochs.set(account.id, (epochs.get(account.id) ?? 0) + 1);
+    const view = views.peek(account.id);
+    if (view && !view.webContents.isDestroyed()) {
+      view.setVisible(false);
+      view.webContents.setAudioMuted(true);
+      view.webContents.send("gom-private-notifications");
+    }
+    testAlerts.get(account.id)?.close();
+    testAlerts.delete(account.id);
+  }
+  for (const popup of popups) {
+    if (popup.isDestroyed()) continue;
+    if (findAccount(popupProviders.get(popup.webContents), true)?.private) {
+      popup.webContents.setAudioMuted(true);
+      popup.webContents.send("gom-private-notifications");
+      popup.hide();
+    }
+  }
+  if (!accessible(state.active)) {
+    state.active =
+      state.accounts.find((a) => !a.archived && !a.private)?.id || "";
+  }
+  if (wasPrivate) state.panel = "welcome";
+  state.notice = "";
+  layout();
+  publish(true);
+  scheduleSave();
+}
+async function privateSpaceCommand(arg: unknown): Promise<AccountResult> {
+  const request = arg as {
+    action?: unknown;
+    data?: Record<string, unknown>;
+  } | null;
+  if (!request || typeof request !== "object") return { ok: false };
+  const data =
+    request.data && typeof request.data === "object" ? request.data : {};
+  if (request.action === "lock") {
+    lockPrivateSpace();
+    return { ok: true };
+  }
+  const generation = privacyGeneration;
+  if (request.action === "setup" || request.action === "unlock") {
+    const result = await (request.action === "setup"
+      ? privateStore.setup(data.password)
+      : privateStore.verify(data.password));
+    if (generation !== privacyGeneration || closing)
+      return { ok: false, message: "Không gian đã khóa. Hãy mở lại." };
+    if (result.ok) privateUnlocked = true;
+    else if (privateStore.status().unavailable) lockPrivateSpace();
+    publish(true);
+    return result;
+  }
+  if (!privateUnlocked)
+    return { ok: false, message: "Mở khóa không gian kín trước." };
+  if (request.action === "change-password") {
+    const result = await privateStore.changePassword(
+      data.password,
+      data.newPassword,
+    );
+    if (privateStore.status().unavailable) lockPrivateSpace();
+    publish(true);
+    return result;
+  }
+  if (
+    request.action !== "membership" ||
+    typeof data.accountId !== "string" ||
+    typeof data.private !== "boolean"
+  )
+    return { ok: false };
+  if (state.accountBusy || state.importing || state.catalogWarning)
+    return {
+      ok: false,
+      message: "Đợi thao tác tài khoản hoàn tất rồi thử lại.",
+    };
+  return (
+    (await accountOps.run(async () => {
+      state.accountBusy = true;
+      publish();
+      const before = state.accounts;
+      try {
+        if (!findAccount(data.accountId, true)) return { ok: false };
+        const next = before.map((a) =>
+          a.id === data.accountId
+            ? { ...a, private: data.private as boolean }
+            : a,
+        );
+        // A durable marker prevents a failed rollback/crash from revealing an
+        // outbound private account on the next launch.
+        await membershipJournal.write({ accountId: data.accountId });
+        if (generation !== privacyGeneration || closing) {
+          await rm(membershipJournalPath, { force: true });
+          return { ok: false, message: "Không gian đã khóa. Thay đổi đã hủy." };
+        }
+        await catalogStore.commit(next);
+        if (generation !== privacyGeneration || closing) {
+          // A lock during persistence must never make an account public.
+          await catalogStore.commit(before);
+          await rm(membershipJournalPath, { force: true });
+          return { ok: false, message: "Không gian đã khóa. Thay đổi đã hủy." };
+        }
+        // Commit to memory synchronously after checking the generation. A later
+        // lock sees the completed, explicitly requested membership change.
+        state.accounts = next;
+        publish(true);
+        await rm(membershipJournalPath, { force: true });
+        const id = data.accountId as string;
+        if (data.private) {
+          testAlerts.get(id)?.close();
+          testAlerts.delete(id);
+          views.peek(id)?.webContents.send("gom-private-notifications");
+          for (const popup of popups)
+            if (
+              !popup.isDestroyed() &&
+              popupProviders.get(popup.webContents) === id
+            )
+              popup.webContents.send("gom-private-notifications");
+        }
+        await persist();
+        return { ok: true };
+      } catch {
+        state.catalogWarning =
+          "Chưa lưu được thay đổi riêng tư. Giữ tài khoản ở trạng thái được bảo vệ; hãy thử lại sau khi mở lại Gom.";
+        return { ok: false, message: state.catalogWarning };
+      } finally {
+        state.accountBusy = false;
+        publish(true);
+      }
+    })) ?? { ok: false, message: "App đang xử lý tài khoản." }
+  );
+}
 const views = new ViewRegistry<WebContentsView, AccountId>(createView);
 function findAccount(
   id: unknown,
@@ -375,12 +573,14 @@ const statePublisher = new StatePublisher(
       !!active &&
       !active.webContents.isDestroyed() &&
       active.webContents.navigationHistory.canGoBack();
-    return state;
+    return visibleState();
   },
   (snapshot) => {
     win.webContents.send("state", snapshot);
     const badge = hasUnread(
-      state.accounts.filter((a) => !a.archived).map((a) => state.unread[a.id]),
+      state.accounts
+        .filter((a) => !a.archived && !a.private)
+        .map((a) => state.unread[a.id]),
     )
       ? "•"
       : "";
@@ -406,8 +606,9 @@ function status(id: AccountId, value: ProviderStatus) {
   publish();
 }
 async function external(url: string) {
+  const generation = privacyGeneration;
   if (!/^https?:\/\//.test(url)) return;
-  const answer = await dialog.showMessageBox(win, {
+  const answer = await privacyMessageBox({
     type: "question",
     message: "Mở liên kết trong trình duyệt?",
     detail: new URL(url).origin,
@@ -415,7 +616,8 @@ async function external(url: string) {
     defaultId: 0,
     cancelId: 0,
   });
-  if (answer.response === 1) await shell.openExternal(url);
+  if (answer.response === 1 && generation === privacyGeneration)
+    await shell.openExternal(url);
 }
 function setupSession(ses: Session, id: AccountId) {
   if (configured.has(ses)) return;
@@ -437,8 +639,9 @@ function setupSession(ses: Session, id: AccountId) {
           ) === "internal",
       ));
   ses.setPermissionRequestHandler((contents, permission, callback, details) => {
+    const generation = privacyGeneration;
     const valid =
-      !!findAccount(id) &&
+      accessible(id) &&
       validNotificationFrame(
         providerFor(id),
         details.requestingUrl,
@@ -460,6 +663,10 @@ function setupSession(ses: Session, id: AccountId) {
       return;
     }
     if (permission === "notifications") {
+      if (!publicAccount(id)) {
+        callback(false);
+        return;
+      }
       if (
         state.preferences.paused ||
         state.preferences.notifications[id] === "mute"
@@ -486,19 +693,19 @@ function setupSession(ses: Session, id: AccountId) {
         : permission === "geolocation"
           ? "truy cập vị trí của bạn"
           : "gửi thông báo";
-    void dialog
-      .showMessageBox(win, {
-        type: "question",
-        message: `Cho phép ${accountLabel(id)} ${requestedAccess}?`,
-        buttons: ["Không cho phép", "Cho phép"],
-        defaultId: 0,
-        cancelId: 0,
-      })
+    void privacyMessageBox({
+      type: "question",
+      message: `Cho phép ${accountLabel(id)} ${requestedAccess}?`,
+      buttons: ["Không cho phép", "Cho phép"],
+      defaultId: 0,
+      cancelId: 0,
+    })
       .then(async (r) => {
         if (
           permission === "notifications" &&
           !closing &&
-          findAccount(id) &&
+          accessible(id) &&
+          generation === privacyGeneration &&
           owned(contents)
         ) {
           state.preferences.notifications[id] =
@@ -509,17 +716,20 @@ function setupSession(ses: Session, id: AccountId) {
           permission === "geolocation" &&
           r.response === 1 &&
           !closing &&
-          findAccount(id) &&
+          accessible(id) &&
+          generation === privacyGeneration &&
           owned(contents)
         )
           locationPermissionGrants.add(id);
         callback(
           !closing &&
-            !!findAccount(id) &&
+            accessible(id) &&
+            generation === privacyGeneration &&
             owned(contents) &&
             r.response === 1 &&
             (permission !== "notifications" ||
-              notificationAllowed(state.preferences, id)),
+              (publicAccount(id) &&
+                notificationAllowed(state.preferences, id))),
         );
       })
       .catch(() => callback(false))
@@ -527,29 +737,31 @@ function setupSession(ses: Session, id: AccountId) {
         if (lockPrompt) permissionPrompts.delete(id);
       });
   });
-  ses.setPermissionCheckHandler(
-    (contents, permission, origin, details) => {
-      const valid =
-        !closing &&
-        !!findAccount(id) &&
-        validNotificationFrame(
-          providerFor(id),
-          details.requestingUrl || origin,
-          details.isMainFrame,
-          owned(contents),
-          state.providers,
-        );
-      if (!valid) return false;
-      if (permission === "notifications")
-        return notificationAllowed(state.preferences, id);
-      return (
-        permission === "geolocation" &&
-        providerFor(id) === "tinder" &&
-        locationPermissionGrants.has(id)
+  ses.setPermissionCheckHandler((contents, permission, origin, details) => {
+    const valid =
+      !closing &&
+      accessible(id) &&
+      validNotificationFrame(
+        providerFor(id),
+        details.requestingUrl || origin,
+        details.isMainFrame,
+        owned(contents),
+        state.providers,
       );
-    },
-  );
-  ses.on("will-download", (_event, item) => {
+    if (!valid) return false;
+    if (permission === "notifications")
+      return publicAccount(id) && notificationAllowed(state.preferences, id);
+    return (
+      permission === "geolocation" &&
+      providerFor(id) === "tinder" &&
+      locationPermissionGrants.has(id)
+    );
+  });
+  ses.on("will-download", (event, item) => {
+    if (!accessible(id)) {
+      event.preventDefault();
+      return;
+    }
     item.setSaveDialogOptions({
       title: "Lưu tệp từ " + providerDefinition(providerFor(id)).label,
     });
@@ -577,30 +789,24 @@ function guard(contents: WebContents, id: AccountId) {
       !input.shift &&
       !input.isComposing &&
       !input.isAutoRepeat;
-    if (
-      !copyShortcut ||
-      closing ||
-      contents.isDestroyed() ||
-      !findAccount(id)
-    )
+    if (!copyShortcut || closing || contents.isDestroyed() || !accessible(id))
       return;
 
     event.preventDefault();
     void contents
       .executeJavaScript(COPY_SHORTCUT_TARGET_SCRIPT)
       .then((target: CopyShortcutTarget) => {
-        if (closing || contents.isDestroyed() || !findAccount(id)) return;
-        if (target?.kind === "image")
-          contents.copyImageAt(target.x, target.y);
+        if (closing || contents.isDestroyed() || !accessible(id)) return;
+        if (target?.kind === "image") contents.copyImageAt(target.x, target.y);
         else contents.copy();
       })
       .catch(() => {
-        if (!closing && !contents.isDestroyed() && findAccount(id))
+        if (!closing && !contents.isDestroyed() && accessible(id))
           contents.copy();
       });
   });
   contents.on("context-menu", (event, params) => {
-    if (closing || contents.isDestroyed() || !findAccount(id)) return;
+    if (closing || contents.isDestroyed() || !accessible(id)) return;
 
     const items: Electron.MenuItemConstructorOptions[] = [];
     const selectedText = !!params.selectionText.trim();
@@ -632,7 +838,7 @@ function guard(contents: WebContents, id: AccountId) {
       items.push({
         label: "Sao chép ảnh",
         click: () => {
-          if (!closing && !contents.isDestroyed() && findAccount(id))
+          if (!closing && !contents.isDestroyed() && accessible(id))
             contents.copyImageAt(params.x, params.y);
         },
       });
@@ -640,7 +846,7 @@ function guard(contents: WebContents, id: AccountId) {
         items.push({
           label: "Sao chép địa chỉ ảnh",
           click: () => {
-            if (!closing && !contents.isDestroyed() && findAccount(id))
+            if (!closing && !contents.isDestroyed() && accessible(id))
               clipboard.writeText(params.srcURL);
           },
         });
@@ -648,7 +854,7 @@ function guard(contents: WebContents, id: AccountId) {
         items.push({
           label: "Lưu ảnh thành…",
           click: () => {
-            if (!closing && !contents.isDestroyed() && findAccount(id))
+            if (!closing && !contents.isDestroyed() && accessible(id))
               contents.downloadURL(imageUrl);
           },
         });
@@ -658,7 +864,7 @@ function guard(contents: WebContents, id: AccountId) {
       items.push({
         label: "Sao chép liên kết",
         click: () => {
-          if (!closing && !contents.isDestroyed() && findAccount(id))
+          if (!closing && !contents.isDestroyed() && accessible(id))
             clipboard.writeText(params.linkURL);
         },
       });
@@ -667,7 +873,7 @@ function guard(contents: WebContents, id: AccountId) {
       items.push({
         label: "Tải lại trang",
         click: () => {
-          if (!closing && !contents.isDestroyed() && findAccount(id))
+          if (!closing && !contents.isDestroyed() && accessible(id))
             contents.reload();
         },
       });
@@ -675,9 +881,13 @@ function guard(contents: WebContents, id: AccountId) {
     const owner = BrowserWindow.fromWebContents(contents);
     if (!owner || owner.isDestroyed()) return;
     event.preventDefault();
-    Menu.buildFromTemplate(items).popup({ window: owner });
+    privacyMenu(Menu.buildFromTemplate(items), { window: owner });
   });
   contents.on("will-navigate", (event, url) => {
+    if (!accessible(id)) {
+      event.preventDefault();
+      return;
+    }
     const policy = navigationPolicy(providerFor(id), url, state.providers);
     if (policy !== "internal") {
       event.preventDefault();
@@ -697,6 +907,7 @@ function guard(contents: WebContents, id: AccountId) {
     }
   });
   contents.setWindowOpenHandler(({ url }) => {
+    if (!accessible(id)) return { action: "deny" };
     const policy = navigationPolicy(providerFor(id), url, state.providers);
     if (policy === "internal")
       return {
@@ -721,6 +932,13 @@ function guard(contents: WebContents, id: AccountId) {
     const popupContents = popup.webContents;
     popupProviders.set(popupContents, id);
     guard(popup.webContents, id);
+    if (!accessible(id)) {
+      popup.webContents.setAudioMuted(true);
+      popup.hide();
+    }
+    popup.on("show", () => {
+      if (!accessible(id)) popup.hide();
+    });
     popup.on("closed", () => {
       popupProviders.delete(popupContents);
       popups.delete(popup);
@@ -728,7 +946,7 @@ function guard(contents: WebContents, id: AccountId) {
   });
 }
 function createView(id: AccountId) {
-  if (!findAccount(id)) throw Error("unknown-account");
+  if (!accessible(id)) throw Error("unknown-account");
   state.statuses[id] = "loading";
   const ses = partition(id);
   setupSession(ses, id);
@@ -807,7 +1025,8 @@ function layout() {
     width,
     height,
     state.active,
-    state.commandOpen ||
+    !accessible(state.active) ||
+      state.commandOpen ||
       (state.panel === "service" && state.connections[state.active].reason)
       ? "settings"
       : state.panel,
@@ -816,7 +1035,13 @@ function layout() {
 function activate(id: AccountId, focusPage = true) {
   if (accountEditorOpen) return;
   const account = findAccount(id);
-  if (!account || closing || closingProviders.has(account.provider)) return;
+  if (
+    !account ||
+    !accessible(id) ||
+    closing ||
+    closingProviders.has(account.provider)
+  )
+    return;
   const opened = !state.providerTabs.open.includes(account.provider);
   state.providerTabs = openProviderTab(state.providerTabs, account.provider);
   const selectionChanged =
@@ -826,6 +1051,12 @@ function activate(id: AccountId, focusPage = true) {
   state.commandOpen = false;
   state.panel = "service";
   const view = views.activate(id);
+  view.webContents.setAudioMuted(false);
+  for (const popup of popups)
+    if (!popup.isDestroyed() && popupProviders.get(popup.webContents) === id) {
+      popup.webContents.setAudioMuted(false);
+      popup.show();
+    }
   if (!win.contentView.children.includes(view))
     win.contentView.addChildView(view);
   layout();
@@ -934,7 +1165,7 @@ function fail(id: AccountId, reason: FailureReason) {
   layout();
 }
 function reloadProvider(id: AccountId, manual = false, home = false) {
-  if (closing || state.importing || !findAccount(id)) return;
+  if (closing || state.importing || !accessible(id)) return;
   if (
     manual &&
     (state.panel !== "service" ||
@@ -963,10 +1194,13 @@ function reloadProvider(id: AccountId, manual = false, home = false) {
 function goBack() {
   if (
     closing ||
+    !accessible(state.active) ||
     state.panel !== "service" ||
     state.commandOpen ||
     accountEditorOpen ||
-    !state.providerTabs.open.includes(providerFor(state.active))
+    !state.providerTabs.open.includes(
+      findAccount(state.active, true)?.provider || "zalo",
+    )
   )
     return;
   const contents = views.peek(state.active)?.webContents;
@@ -1005,7 +1239,8 @@ function showWindow() {
   if (
     !state.commandOpen &&
     state.panel === "service" &&
-    !state.connections[state.active].reason
+    !state.connections[state.active]?.reason &&
+    accessible(state.active)
   )
     views.activate(state.active).webContents.focus();
   else win.webContents.focus();
@@ -1055,14 +1290,14 @@ function toggleWindow() {
 }
 function updateTray() {
   if (!tray || tray.isDestroyed()) return;
-  const signature = `${state.preferences.paused}:${hasUnread(state.accounts.filter((a) => !a.archived).map((a) => state.unread[a.id]))}:${JSON.stringify(state.accounts)}`;
+  const signature = `${state.preferences.paused}:${hasUnread(state.accounts.filter((a) => !a.archived && !a.private).map((a) => state.unread[a.id]))}:${JSON.stringify(visibleState().accounts)}`;
   if (signature === traySignature) return;
   traySignature = signature;
   tray.setToolTip(
     "Gom" +
       (hasUnread(
         state.accounts
-          .filter((a) => !a.archived)
+          .filter((a) => !a.archived && !a.private)
           .map((a) => state.unread[a.id]),
       )
         ? " · Có mục chưa đọc"
@@ -1072,7 +1307,7 @@ function updateTray() {
     Menu.buildFromTemplate([
       { label: "Mở Gom", click: showWindow },
       ...state.accounts
-        .filter((a) => !a.archived)
+        .filter((a) => !a.archived && accessible(a.id))
         .map(({ id }) => ({
           label: accountLabel(id),
           click: () => {
@@ -1126,7 +1361,10 @@ function scheduleSave() {
   saveTimer = setTimeout(() => void persist(), 500);
 }
 function testNotification(id: AccountId) {
-  if (!findAccount(id) || !notificationAllowed(state.preferences, id)) {
+  if (
+    !findAccount(id) ||
+    !(publicAccount(id) && notificationAllowed(state.preferences, id))
+  ) {
     state.notificationStatus =
       "Bạn chọn Cho phép và bỏ tạm dừng trước khi thử thông báo.";
     publish();
@@ -1146,7 +1384,7 @@ function testNotification(id: AccountId) {
   });
   testAlerts.set(id, notification);
   notification.on("click", () => {
-    if (!closing && findAccount(id)) {
+    if (!closing && publicAccount(id)) {
       activate(id);
       showWindow();
     }
@@ -1278,9 +1516,7 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
     for (const cookie of cookies) await stageSession.cookies.set(cookie);
     if (!(await verifyMessenger(stage.webContents)))
       throw new ImportFailure("verification-failed");
-    verified = (
-      await stageSession.cookies.get({ domain: "facebook.com" })
-    )
+    verified = (await stageSession.cookies.get({ domain: "facebook.com" }))
       .filter(
         (c) =>
           ["c_user", "xs"].includes(c.name) &&
@@ -1386,7 +1622,10 @@ async function providerDestination(targetId: AccountId, provider: ProviderId) {
   if (auth === "authenticated") return "already-connected";
   return auth === "needs-login" ? undefined : "target-not-ready";
 }
-async function importTinderChromeSession(sourceId: string, targetId: AccountId) {
+async function importTinderChromeSession(
+  sourceId: string,
+  targetId: AccountId,
+) {
   if (!findAccount(targetId) || providerFor(targetId) !== "tinder")
     return { status: "invalid-account" };
   if (state.importing) return { status: "busy" };
@@ -1564,8 +1803,7 @@ async function importProviderSession(
     }
     const finalDestination = await providerDestination(targetId, provider);
     if (finalDestination) {
-      state.notice =
-        `${label} hiện có phiên. Phiên đang dùng được giữ nguyên.`;
+      state.notice = `${label} hiện có phiên. Phiên đang dùng được giữ nguyên.`;
       return { status: finalDestination };
     }
     const target = views.activate(targetId);
@@ -1601,14 +1839,11 @@ async function importProviderSession(
           ? "Không thể mở khóa dữ liệu phiên Chrome bằng tài khoản Windows hiện tại. Bạn có thể đăng nhập trực tiếp trong app."
           : "macOS chưa cho phép Gom đọc Chrome Safe Storage. Bạn có thể đăng nhập trực tiếp trong app.",
       "source-busy": "Chrome đang bận. Bạn đợi một chút rồi thử lại.",
-      "verification-failed":
-        `Không xác minh được phiên ${label}. Phiên đích vẫn được giữ; hãy đăng nhập trực tiếp trong Gom.`,
+      "verification-failed": `Không xác minh được phiên ${label}. Phiên đích vẫn được giữ; hãy đăng nhập trực tiếp trong Gom.`,
       "source-unavailable": "Không đọc được profile Chrome đã chọn.",
-      "unsupported-session":
-        `${label} lưu phiên trong vùng dữ liệu không thể nhập an toàn bằng cookie. Hãy đăng nhập trực tiếp trong Gom${provider === "telegram" || provider === "zalo" ? " hoặc quét QR" : ""}.`,
+      "unsupported-session": `${label} lưu phiên trong vùng dữ liệu không thể nhập an toàn bằng cookie. Hãy đăng nhập trực tiếp trong Gom${provider === "telegram" || provider === "zalo" ? " hoặc quét QR" : ""}.`,
       "app-bound": `Chrome bảo vệ phiên ${label} bằng App-Bound Encryption (v20), định dạng Gom không thể nhập. Hãy đăng nhập trực tiếp trong Gom.`,
-      "rollback-failed":
-        `Chưa khôi phục được cookie ${label}. Hãy mở lại tài khoản để kiểm tra phiên.`,
+      "rollback-failed": `Chưa khôi phục được cookie ${label}. Hãy mở lại tài khoản để kiểm tra phiên.`,
       unsupported: "Định dạng cookie Chrome này chưa được hỗ trợ.",
     };
     state.notice =
@@ -1628,8 +1863,12 @@ function accountForProvider(provider: ProviderId) {
   const last = lastAccounts.get(provider);
   const recent = last ? findAccount(last) : undefined;
   return (
-    (recent?.provider === provider ? recent : undefined) ||
-    state.accounts.find((a) => a.provider === provider && !a.archived)
+    (recent?.provider === provider && accessible(recent.id)
+      ? recent
+      : undefined) ||
+    state.accounts.find(
+      (a) => a.provider === provider && !a.archived && accessible(a.id),
+    )
   );
 }
 function activateProvider(provider: ProviderId, focusPage = true) {
@@ -1716,7 +1955,7 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
         message: "Chưa lưu xong phiên website. Bạn thử đóng tab lại sau.",
       };
     if (closing) return { ok: false, message: "App đang thoát." };
-    const active = providerFor(state.active);
+    const active = findAccount(state.active, true)?.provider || "zalo";
     const result = closeProviderTab(state.providerTabs, provider, active);
     state.providerTabs = result.tabs;
     if (custom) {
@@ -1786,7 +2025,7 @@ async function showProviderMenu(request: unknown) {
     panel = state.panel;
   let selected: (() => void | Promise<unknown>) | undefined;
   const items: Electron.MenuItemConstructorOptions[] = [];
-  if ("provider" in request && knownProvider(request.provider)) {
+  if ("provider" in request && accessibleProvider(request.provider)) {
     const id = request.provider;
     if (!state.providerTabs.open.includes(id)) return;
     items.push(
@@ -1832,7 +2071,7 @@ async function showProviderMenu(request: unknown) {
       ...new Set(
         request.overflow.filter(
           (id): id is ProviderId =>
-            knownProvider(id) && state.providerTabs.open.includes(id),
+            accessibleProvider(id) && state.providerTabs.open.includes(id),
         ),
       ),
     ];
@@ -1841,7 +2080,7 @@ async function showProviderMenu(request: unknown) {
         id: "provider-" + id,
         label: providerDefinition(id).label,
         type: "radio",
-        checked: providerFor(state.active) === id,
+        checked: (findAccount(state.active, true)?.provider || "zalo") === id,
         click: () => {
           selected = () => {
             if (state.providerTabs.open.includes(id)) activateProvider(id);
@@ -1860,7 +2099,7 @@ async function showProviderMenu(request: unknown) {
   const nativeMenu = Menu.buildFromTemplate(items);
   const [width, height] = win.getContentSize();
   await new Promise<void>((resolve) =>
-    nativeMenu.popup({
+    privacyMenu(nativeMenu, {
       window: win,
       x: Math.max(0, Math.min(width - 1, Math.round(request.x as number))),
       y: Math.max(0, Math.min(height - 1, Math.round(request.y as number))),
@@ -1899,38 +2138,41 @@ function showNavigationMenu() {
     !state.commandOpen &&
     !contents.isDestroyed() &&
     isCurrent(id, contents);
-  Menu.buildFromTemplate([
-    {
-      label: "Quay lại",
-      accelerator: "CmdOrCtrl+[",
-      enabled: contents.navigationHistory.canGoBack(),
-      click: () => {
-        if (current() && contents.navigationHistory.canGoBack())
-          contents.navigationHistory.goBack();
+  privacyMenu(
+    Menu.buildFromTemplate([
+      {
+        label: "Quay lại",
+        accelerator: "CmdOrCtrl+[",
+        enabled: contents.navigationHistory.canGoBack(),
+        click: () => {
+          if (current() && contents.navigationHistory.canGoBack())
+            contents.navigationHistory.goBack();
+        },
       },
-    },
-    {
-      label: "Trang đầu nền tảng",
-      click: () => {
-        if (current()) reloadProvider(id, true, true);
+      {
+        label: "Trang đầu nền tảng",
+        click: () => {
+          if (current()) reloadProvider(id, true, true);
+        },
       },
-    },
-    {
-      label: "Tải lại nền tảng",
-      accelerator: "CmdOrCtrl+R",
-      click: () => {
-        if (current()) reloadProvider(id, true);
+      {
+        label: "Tải lại nền tảng",
+        accelerator: "CmdOrCtrl+R",
+        click: () => {
+          if (current()) reloadProvider(id, true);
+        },
       },
-    },
-    { type: "separator" },
-    {
-      label: "Mở trong trình duyệt",
-      click: () => {
-        if (current())
-          void external(providerDefinition(account.provider).entry);
+      { type: "separator" },
+      {
+        label: "Mở trong trình duyệt",
+        click: () => {
+          if (current())
+            void external(providerDefinition(account.provider).entry);
+        },
       },
-    },
-  ]).popup({ window: win });
+    ]),
+    { window: win },
+  );
 }
 async function showAccountMenu(anchor: unknown) {
   if (closing || accountEditorOpen || state.commandOpen) return;
@@ -1949,7 +2191,10 @@ async function showAccountMenu(anchor: unknown) {
   if (!active) return;
   const panel = state.panel;
   const peers = state.accounts.filter(
-    (account) => account.provider === active.provider && !account.archived,
+    (account) =>
+      account.provider === active.provider &&
+      !account.archived &&
+      accessible(account.id),
   );
   const [width, height] = win.getContentSize();
   const x = Math.max(0, Math.min(width - 1, Math.round(anchor.x)));
@@ -1967,7 +2212,7 @@ async function showAccountMenu(anchor: unknown) {
     })),
   );
   await new Promise<void>((resolve) => {
-    menu.popup({
+    privacyMenu(menu, {
       window: win,
       x,
       y,
@@ -2010,6 +2255,9 @@ async function changeAccount(
         let next = state.accounts.slice();
         let added: Account | undefined;
         const id = typeof data.id === "string" ? data.id : "";
+        if (command !== "account-add" && !accessible(id, true))
+          return { ok: false, message: "Mở khóa không gian kín trước." };
+        const generation = privacyGeneration;
         if (command === "account-add") {
           if (
             !knownProvider(data.provider) ||
@@ -2029,7 +2277,7 @@ async function changeAccount(
           next = moveCatalogAccount(next, id, data.direction);
         } else if (command === "account-archive") {
           next = archiveCatalogAccount(next, id);
-          const answer = await dialog.showMessageBox(win, {
+          const answer = await privacyMessageBox({
             type: "question",
             message: `Gỡ ${accountLabel(id)} khỏi danh sách?`,
             detail:
@@ -2046,7 +2294,8 @@ async function changeAccount(
         } else if (command === "account-restore")
           next = restoreCatalogAccount(next, id);
         else throw Error("invalid-command");
-        if (closing) return { ok: false, message: "App đang thoát." };
+        if (closing || generation !== privacyGeneration)
+          return { ok: false, message: "Thao tác đã hủy." };
         await catalogStore.commit(next);
         state.accounts = next;
         for (const a of next) initializeAccount(a);
@@ -2075,30 +2324,42 @@ async function changeAccount(
             kind: unreadKind(providerFor(id)),
           });
           if (state.active === id) {
-            state.active = (next.find(
-              (a) => !a.archived && a.provider === providerFor(id),
-            ) ||
-              next.find(
-                (a) =>
-                  !a.archived && state.providerTabs.open.includes(a.provider),
-              ) ||
-              next.find((a) => !a.archived))!.id;
+            state.active =
+              (
+                next.find(
+                  (a) =>
+                    !a.archived &&
+                    accessible(a.id) &&
+                    a.provider === providerFor(id),
+                ) ||
+                next.find(
+                  (a) =>
+                    !a.archived &&
+                    accessible(a.id) &&
+                    state.providerTabs.open.includes(a.provider),
+                ) ||
+                next.find((a) => !a.archived && accessible(a.id))
+              )?.id || "";
             if (state.panel === "service") {
               state.providerTabs = openProviderTab(
                 state.providerTabs,
-                providerFor(state.active),
+                findAccount(state.active, true)?.provider || "zalo",
               );
             }
             if (
+              accessible(state.active) &&
               !views.peek(state.active) &&
               (state.panel === "service" ||
-                !providerDefinition(providerFor(state.active)).custom)
+                !providerDefinition(
+                  findAccount(state.active, true)?.provider || "zalo",
+                ).custom)
             )
               win.contentView.addChildView(views.activate(state.active));
           }
         }
         if (
           command === "account-restore" &&
+          accessible(id) &&
           !providerDefinition(providerFor(id)).custom
         ) {
           const view = views.activate(id);
@@ -2123,7 +2384,7 @@ async function changeAccount(
 async function save() {
   if (!win || win.isDestroyed()) return;
   await settingsWriter.write({
-    active: providerFor(state.active),
+    active: findAccount(state.active, true)?.provider || "zalo",
     activeAccount: state.active,
     lastAccounts: Object.fromEntries(lastAccounts),
     collapsed: state.collapsed,
@@ -2195,7 +2456,7 @@ async function quit(installUpdate = false) {
   await save().catch(() => {});
   const ok = await flushBeforeClose([...configured]);
   if (!ok) {
-    await dialog.showMessageBox(win, {
+    await privacyMessageBox({
       type: "warning",
       message: "Chưa ghi xong dữ liệu phiên.",
       detail:
@@ -2291,9 +2552,41 @@ else {
     );
     if (typeof stored.collapsed === "boolean")
       state.collapsed = stored.collapsed;
-    const catalog = await catalogStore.load();
+    const hadPrivateConfig = await access(
+      join(app.getPath("userData"), "private-space.json"),
+    ).then(
+      () => true,
+      () => false,
+    );
+    const catalog = await catalogStore.load(hadPrivateConfig);
+    try {
+      const raw = await readFile(membershipJournalPath, "utf8");
+      const marker = raw.length <= 4096 ? JSON.parse(raw) : null;
+      const target =
+        typeof marker?.accountId === "string" &&
+        catalog.accounts.some((a) => a.id === marker.accountId)
+          ? marker.accountId
+          : null;
+      catalog.accounts = catalog.accounts.map((a) =>
+        !target || a.id === target ? { ...a, private: true } : a,
+      );
+      if (!target) throw new Error("invalid-privacy-journal");
+      await catalogStore.commit(catalog.accounts, catalog.providers);
+      await rm(membershipJournalPath, { force: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        catalog.accounts = catalog.accounts.map((a) => ({
+          ...a,
+          private: true,
+        }));
+        catalog.warning =
+          "Chưa khôi phục xong thay đổi riêng tư. Các tài khoản vẫn được khóa để bảo vệ phiên.";
+      }
+    }
     state.accounts = catalog.accounts;
-    const knownProviderIds = new Set(catalog.providers.map((provider) => provider.id));
+    const knownProviderIds = new Set(
+      catalog.providers.map((provider) => provider.id),
+    );
     const providerLogos = await providerLogoStore.load(knownProviderIds);
     state.providers = catalog.providers.map((provider) => {
       const logo = providerLogos[provider.id];
@@ -2327,12 +2620,15 @@ else {
       stored.preferences,
       state.accounts.map((a) => a.id),
     );
+    await privateStore.load(state.accounts.some((a) => a.private));
     for (const a of state.accounts) initializeAccount(a);
     const selected =
       findAccount(stored.activeAccount) ||
       findAccount(stored.active) ||
       state.accounts.find((a) => !a.archived)!;
-    state.active = selected.id;
+    state.active = accessible(selected.id)
+      ? selected.id
+      : state.accounts.find((a) => !a.archived && !a.private)?.id || "";
     if (stored.lastAccounts && typeof stored.lastAccounts === "object")
       for (const { id: provider } of state.providers) {
         const id = (stored.lastAccounts as Record<string, unknown>)[provider];
@@ -2394,6 +2690,7 @@ else {
           true,
           state.providers,
         ) ||
+        !publicAccount(provider) ||
         !notificationAllowed(state.preferences, provider) ||
         Date.now() - (lastNotificationClicks.get(provider) ?? 0) < 1000
       )
@@ -2413,9 +2710,45 @@ else {
       )
         throw new Error("untrusted");
       if (closing && command !== "state") return;
+      // All account-addressed IPC is authorized here, even if a stale renderer
+      // still holds IDs from an earlier unlocked snapshot.
+      const accountId = [
+        "activate",
+        "pin-account",
+        "test-notification",
+      ].includes(command)
+        ? arg
+        : [
+              "account-edit",
+              "account-move",
+              "account-archive",
+              "account-restore",
+              "notification",
+            ].includes(command)
+          ? arg?.id
+          : command === "import"
+            ? arg?.accountId || "messenger"
+            : undefined;
+      if (accountId !== undefined && !accessible(accountId, true))
+        return { ok: false, message: "Mở khóa không gian kín trước." };
+      const providerId = ["provider-pin", "provider-close"].includes(command)
+        ? arg
+        : [
+              "activate-provider",
+              "provider-logo-get",
+              "provider-logo-set",
+              "account-add",
+              "provider-menu",
+            ].includes(command)
+          ? arg?.provider
+          : undefined;
+      if (providerId !== undefined && !accessibleProvider(providerId))
+        return { ok: false };
       switch (command) {
+        case "private-space":
+          return privateSpaceCommand(arg);
         case "state":
-          return structuredClone(state);
+          return structuredClone(visibleState());
         case "activate":
           if (findAccount(arg)) activate(arg);
           return;
@@ -2438,7 +2771,8 @@ else {
           if (typeof arg !== "boolean" || accountEditorOpen) return;
           if (arg) showProviderLibrary();
           else {
-            const provider = providerFor(state.active);
+            const provider =
+              findAccount(state.active, true)?.provider || "zalo";
             const target =
               (state.providerTabs.open.includes(provider) &&
                 accountForProvider(provider)) ||
@@ -2552,7 +2886,8 @@ else {
           if (
             !state.commandOpen &&
             state.panel === "service" &&
-            !state.connections[state.active].reason
+            !state.connections[state.active]?.reason &&
+            accessible(state.active)
           )
             views.peek(state.active)?.webContents.focus();
           return;
@@ -2643,7 +2978,11 @@ else {
           );
           return;
         case "browser":
-          return external(providerDefinition(providerFor(state.active)).entry);
+          return external(
+            providerDefinition(
+              findAccount(state.active, true)?.provider || "zalo",
+            ).entry,
+          );
         case "account-add":
         case "account-edit":
         case "account-move":
@@ -2662,6 +3001,7 @@ else {
             typeof sourceId === "string" &&
             sourceId.length < 100 &&
             target &&
+            !target.private &&
             isBuiltinProviderId(targetProvider) &&
             !state.accountBusy
           )
@@ -2714,6 +3054,11 @@ else {
               accelerator: "CmdOrCtrl+K",
               click: () => win.webContents.send("command-toggle"),
             },
+            {
+              label: "Khóa không gian kín",
+              accelerator: "CmdOrCtrl+Shift+L",
+              click: lockPrivateSpace,
+            },
             ...PROVIDER_ORDER.map((id, i) => ({
               label: PROVIDERS[id].label,
               accelerator: "CmdOrCtrl+" + (i + 1),
@@ -2756,6 +3101,9 @@ else {
       scheduleSave();
     });
     win.on("move", scheduleSave);
+    win.on("hide", lockPrivateSpace);
+    win.on("minimize", lockPrivateSpace);
+    powerMonitor.on("lock-screen", lockPrivateSpace);
     win.on("close", (event) => {
       if (!closed) {
         event.preventDefault();
@@ -2764,7 +3112,11 @@ else {
       }
     });
     await win.loadFile(join(__dirname, "index.html"));
-    if (state.providerTabs.open.includes(providerFor(state.active)))
+    if (
+      state.providerTabs.open.includes(
+        findAccount(state.active, true)?.provider || "zalo",
+      )
+    )
       activate(state.active);
     else if (state.providerTabs.open.length)
       activateProvider(state.providerTabs.open[0]);
@@ -2775,7 +3127,8 @@ else {
     // Keep built-in messaging sessions warm for notifications. Custom websites
     // are created only when selected, regardless of library/catalog size.
     for (const { id } of state.accounts.filter(
-      (a) => !a.archived && !providerDefinition(a.provider).custom,
+      (a) =>
+        !a.archived && !a.private && !providerDefinition(a.provider).custom,
     )) {
       if (!views.ids().includes(id))
         win.contentView.addChildView(views.activate(id));
@@ -2790,6 +3143,7 @@ else {
     configureShortcut(state.preferences.shortcut);
     powerMonitor.on("suspend", () => {
       sleeping = true;
+      lockPrivateSpace();
       updateSchedule.suspend();
     });
     powerMonitor.on("resume", () => {

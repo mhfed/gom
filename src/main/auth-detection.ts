@@ -25,7 +25,7 @@ export const authScript = `(()=>{
     return signedIn?'authenticated':'ready';
   }
   if(location.hostname==='tinder.com'||location.hostname==='www.tinder.com'){
-    if(/^\/app\/login(?:\/|$)/.test(location.pathname))return 'needs-login';
+    if(/^\\/app\\/login(?:\\/|$)/.test(location.pathname))return 'needs-login';
     return localStorage.getItem('TinderWeb/APIToken')?'authenticated':'ready';
   }
   if(location.hostname==='web.telegram.org'){
