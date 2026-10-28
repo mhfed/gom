@@ -1,174 +1,187 @@
-> **Gom 0.7.7 đã phát hành** cho macOS arm64 và Windows x64. Bản này thêm đổi logo nền tảng, bộ cài Windows Squirrel và tự cập nhật trên Windows.
->
-> Kiểm tra giao diện hiện hành: `npm run test:providers`, `npm run test:shell` và `npm run test:settings` (fixture cách ly, không dùng phiên cá nhân). Connector chat thống nhất đã dừng theo yêu cầu; mã nghiên cứu không được đóng gói. Các mô tả sidebar/prototype bên dưới là lịch sử phiên bản trước.
+<p align="center">
+  <img src="assets/app.iconset/icon_128x128@2x.png" width="96" height="96" alt="Logo Gom" />
+</p>
 
-# Gom — macOS và Windows
+<h1 align="center">Gom</h1>
 
-**Trò chuyện, gọn một nơi.** Gom bọc giao diện web chính thức của Zalo, Messenger, Telegram, Gmail, Instagram, Discord, Slack và Tinder Web. Bumble chưa có trải nghiệm web để tích hợp. Mỗi tài khoản giữ phiên riêng và trang đang mở khi chuyển qua lại.
+<p align="center">
+  <strong>Trò chuyện, gọn một nơi.</strong><br />
+  Các nền tảng quen thuộc và nhiều tài khoản, trong một cửa sổ trên Mac hoặc Windows.
+</p>
 
-## Tải app
+<p align="center">
+  <a href="#tải-gom">Tải Gom</a> ·
+  <a href="#cài-đặt">Cài đặt</a> ·
+  <a href="#bắt-đầu-sử-dụng">Bắt đầu sử dụng</a> ·
+  <a href="#câu-hỏi-thường-gặp">Câu hỏi thường gặp</a> ·
+  <a href="https://github.com/mhfed/gom/issues">Báo lỗi</a>
+</p>
 
-Bản mới nhất: **Gom 0.7.7**, phát hành ngày 28/10/2026 cho Mac Apple Silicon (arm64) và Windows x64.
+Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Discord, Slack và Tinder**. Bạn có thể thêm nhiều tài khoản cho cùng một nền tảng, đặt tên để phân biệt và chuyển qua lại bằng tab. Gom cũng hỗ trợ thêm website riêng.
 
-- [Tải DMG cho Mac](https://github.com/mhfed/gom/releases/download/v0.7.7/Gom-macOS-arm64-0.7.7.dmg)
-- [Tải ZIP cho Mac](https://github.com/mhfed/gom/releases/download/v0.7.7/Gom-macOS-arm64-0.7.7.zip)
-- [Tải bộ cài cho Windows](https://github.com/mhfed/gom/releases/download/v0.7.7/Gom-win32-x64-0.7.7-Setup.exe)
-- [Release và checksum](https://github.com/mhfed/gom/releases/tag/v0.7.7)
+## Tải Gom
 
-Màn chào mừng mở ra khi khởi động; chọn tài khoản để tiếp tục hoặc bấm logo Gom để quay lại. Nút **+** mở thư viện nền tảng theo nhóm hoặc thêm website riêng. Có thể đổi logo từng nền tảng từ menu chuột phải trên tab. Dữ liệu tài khoản và định danh khóa mã hóa được giữ nguyên khi nâng cấp. [Hướng dẫn cài và phát hành](docs/distribution.md) · [Ghi chú 0.7.7](docs/release-0.7.7.md).
+Phiên bản hiện tại: **0.7.7**, phát hành ngày **28/10/2026**. Chọn bộ cài phù hợp với máy của bạn:
 
-## Windows 0.7.7
+| Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
+| -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.7.7/Gom-macOS-arm64-0.7.7.dmg)         |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.7.7/Gom-win32-x64-0.7.7-Setup.exe) |
 
-Bản Windows x64 cài theo tài khoản người dùng bằng [Gom-win32-x64-0.7.7-Setup.exe](https://github.com/mhfed/gom/releases/download/v0.7.7/Gom-win32-x64-0.7.7-Setup.exe); khi có phiên bản mới, Gom tải qua Squirrel và cài sau khi bạn chọn khởi động lại.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.7.7/Gom-macOS-arm64-0.7.7.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Windows sẽ nhập phiên Chrome cho Zalo, Messenger, Instagram và Slack bằng SQLite chỉ đọc cùng DPAPI của người dùng hiện tại; Tinder dùng quy trình DevTools một lần. Cookie Chrome App-Bound (`v20`) không nhập được, khi gặp định dạng này Gom sẽ hướng dẫn đăng nhập trực tiếp. Gmail, Telegram và Discord tiếp tục đăng nhập trực tiếp vì bản Mac hiện tại cũng chưa có luồng nhập cookie cho các dịch vụ đó.
+Xem [nội dung bản 0.7.7](https://github.com/mhfed/gom/releases/tag/v0.7.7) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
-Bản Windows đầu chưa ký Authenticode. Windows SmartScreen có thể cảnh báo, và chính sách Smart App Control của một số máy có thể chặn app chưa ký. Tự cập nhật Windows sẽ dùng Squirrel.Windows; bản macOS vẫn cần cài thủ công khi gói không có Developer ID/notarization.
+<details>
+<summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
 
-Lưu bản nháp quan trọng, thoát app đang dùng bằng ⌘Q, mở DMG và kéo `Gom.app` vào Applications. Khi nâng cấp lần đầu, macOS có thể giữ app cũ riêng vì tên đã đổi; sau khi kiểm tra Gom, có thể gỡ app cũ khỏi Applications. Giữ nguyên thư mục dữ liệu `TinNhanDesktop`. Bản ký ad-hoc, chưa có Developer ID / notarization; lần đầu mở có thể bị macOS chặn. Nếu đã tin cậy nguồn tải, có thể bấm đúp `Mo-Gom.command` trong DMG hoặc dùng Open Anyway theo [hướng dẫn cài](docs/distribution.md).
+- **`.dmg` hoặc `.exe`**: bộ cài bạn cần để bắt đầu sử dụng
+- **`.zip`**: gói Gom.app cho Mac, dùng thay cho DMG nếu muốn
+- **`.nupkg` và `RELEASES`**: các tệp phục vụ cập nhật Windows; bạn không cần mở chúng khi cài lần đầu
+- **`SHA256SUMS-…txt`**: mã kiểm tra tính toàn vẹn của tệp tải về; đây không phải bộ cài hoặc chữ ký nhà phát hành
 
-Repository đã chuyển sang `mhfed/gom`. Các bản 0.6.0 trở về trước cần tải DMG trực tiếp để nâng cấp lần này vì bộ kiểm tra cập nhật vẫn trỏ tới địa chỉ cũ. Bản 0.6.2 đã sửa nguồn cập nhật.
+</details>
 
-Catalog tài khoản được nâng lên v2 khi lưu thay đổi. Bản 0.6.x không đọc được catalog mới; sau khi dùng 0.7.7 nên tiếp tục dùng 0.7.x hoặc mới hơn và giữ nguyên thư mục dữ liệu.
+## Cài đặt
 
-## Chạy và đóng gói
+### Trên Mac
 
-Yêu cầu macOS Apple Silicon, Node.js 24+ và npm. Electron được tải từ bản phát hành chính thức.
+1. Tải và mở tệp **Gom-macOS-arm64-0.7.7.dmg**.
+2. Kéo **Gom.app** vào **Applications**.
+3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 
-```sh
-npm ci
-npm run typecheck
-npm test
-npm run build
-npm start
-npm run make
-```
+Bản Mac hiện chưa có chữ ký Apple Developer ID và chưa được Apple notarize, nên macOS có thể chặn lần mở đầu tiên. Nếu bạn đã tải đúng từ GitHub của dự án, mở **System Settings → Privacy & Security → Open Anyway**, rồi xác nhận mở Gom. Xem [hướng dẫn của Apple](https://support.apple.com/en-us/102445).
 
-Bản app nằm trong `out-release/Gom-darwin-arm64/`; DMG và ZIP trong `out-release/make/`. Bản này dùng chữ ký ad-hoc, chưa có Developer ID / notarization; người nhận có thể cần cho phép mở trong Cài đặt hệ thống. Xem [hướng dẫn phân phối](docs/distribution.md).
+DMG cũng kèm **Mo-Gom.command**. Sau khi kéo app vào Applications, bạn có thể dùng tệp này để gỡ cờ cách ly riêng của Gom rồi mở app. Chỉ chạy khi bạn tin cậy nguồn tải.
 
-## Tài khoản
+### Trên Windows
 
-- **Website riêng:** dùng URL đầy đủ `https://…` hoặc `http://…`; hỗ trợ địa chỉ nội bộ và cổng riêng. Website mới có tài khoản Cá nhân với phiên đăng nhập riêng, biểu tượng từ chữ đầu tên; có thể thêm tài khoản khác trong Cài đặt. Tên và địa chỉ được lưu cục bộ cùng danh sách tài khoản. Trạng thái tab mở/ghim được lưu riêng, không thay đổi ghim tài khoản cũ.
-- **Đóng tab:** không gỡ nền tảng hoặc xóa dữ liệu đăng nhập. Tab cuối đóng sẽ mở thư viện. Website riêng chỉ tải khi được chọn, đóng tab sẽ lưu phiên và giải phóng trang; dữ liệu chưa gửi trên trang phụ thuộc website. Ba nền tảng nhắn tin có sẵn vẫn giữ hoạt động nền theo cơ chế cũ.
-- Website riêng chỉ điều hướng trong cùng origin đã cấu hình; liên kết ra ngoài mở trình duyệt sau xác nhận. Luồng đăng nhập SSO chuyển sang origin khác có thể cần đăng nhập trực tiếp trên website hoặc được hỗ trợ thêm. Gom không suy diễn số tin chưa đọc cho website riêng.
+1. Tải **Gom-win32-x64-0.7.7-Setup.exe**.
+2. Chạy tệp Setup và đợi quá trình cài đặt hoàn tất.
+3. Mở **Gom** từ Start menu nếu app chưa tự mở.
 
-- **Dùng phiên Chrome:** trong Tài khoản & cài đặt, chọn tài khoản đích và hồ sơ Chrome. Trên Mac, cookie xác thực được cho phép của Messenger, Instagram, Slack và Zalo được đọc bằng SQLite chỉ đọc rồi giải mã qua Chrome Safe Storage trong Keychain. Windows 0.7.7 dùng SQLite chỉ đọc và DPAPI cho định dạng Chrome cũ; App-Bound (`v20`) cần đăng nhập trực tiếp. Chỉ chuyển cookie sau khi trang dịch vụ xác minh đăng nhập; không chép cả profile hoặc cookie của dịch vụ khác. Nếu kiểm tra thất bại, cookie xác thực đích được khôi phục.
-- **Tinder trong source chưa đóng gói:** chọn profile Chrome, mở Tinder đã đăng nhập ở profile đó, rồi chạy lệnh một lần mà Gom chép vào clipboard trong DevTools Console. Lệnh gửi API token, device UUID và MFA record của Tinder qua kết nối loopback trong máy; không đọc kho dữ liệu Chrome khác và không gửi phiên lên máy chủ ngoài. Gom giữ phiên đích nếu đã có dữ liệu, và khôi phục nếu Tinder không xác nhận đăng nhập.
-- Gmail, Discord và Telegram chưa hỗ trợ nhập phiên Chrome; đăng nhập trực tiếp trong Gom (Zalo/Telegram có thể dùng QR). Nếu nền tảng thu hồi hoặc hết hạn phiên, phải đăng nhập lại.
-- Dữ liệu của app lưu tại `~/Library/Application Support/TinNhanDesktop`. Không sao chép toàn bộ Chrome profile; không xuất token ra log hoặc renderer.
-- Cmd+W hoặc nút đóng cửa sổ chỉ ẩn cửa sổ; app vẫn chạy và giữ các trang đang mở. Bấm icon Dock để mở lại. Cmd+Q mới thoát app sau khi ghi dữ liệu. Chuyển tab hoặc tài khoản giữ nguyên view và bản nháp đang mở; khôi phục bản nháp sau thoát phụ thuộc chính nền tảng.
+Gom cài cho tài khoản Windows hiện tại, không yêu cầu quyền quản trị viên. Bản Windows chưa có chữ ký Authenticode nên SmartScreen có thể cảnh báo. Một số máy có thể chặn app bằng Smart App Control hoặc chính sách của tổ chức; xem [giải thích của Microsoft về Smart App Control](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions).
 
-## Kiểm thử
+## Bắt đầu sử dụng
 
-```sh
-npm test
-npm run test:persistence
-npm run test:desktop
-npm run test:multi-account
-npm run test:shell
-npm run test:settings
-npm run test:providers
-npm run test:updates
-```
+Bạn thêm nền tảng và đăng nhập trực tiếp trong Gom:
 
-`test:persistence` tạo thư mục tạm riêng cho mỗi lần chạy và dọn sau khi kết thúc, chạy hai tiến trình Electron để kiểm tra cookie bền vững, localStorage, IndexedDB, cách ly ba partition và tái sử dụng view. Ảnh kiểm thử giao diện được lưu trong `outputs/<tên-kiểm-thử>/` của repository; thư mục này không được theo dõi bởi Git hoặc đóng gói vào app.
+1. Mở Gom, chọn **Mở nền tảng** trên màn chào mừng hoặc bấm nút **+** cạnh các tab.
+2. Chọn nền tảng bạn muốn dùng.
+3. Nếu Gom yêu cầu thêm tài khoản, đặt tên như **Cá nhân** hoặc **Công việc**, rồi chọn **Thêm tài khoản**.
+4. Đăng nhập trên trang của nền tảng. Dùng mã QR nếu trang đăng nhập có hỗ trợ.
+5. Muốn dùng thêm tài khoản, bấm nút **Thêm tài khoản** cạnh tên tài khoản đang chọn hoặc vào **Cài đặt → Tài khoản**.
 
-Đo hiệu năng bằng Electron native, với hồ sơ tạm và trang giả cố định:
+Mỗi tài khoản có phiên đăng nhập riêng. Bấm tên tài khoản trên thanh công cụ để chuyển tài khoản trong cùng nền tảng. Bấm logo **Gom** để trở về màn chào mừng.
 
-```sh
-npm run build
-npm run test:performance -- --label after
-# So sánh hai bản đã đo bằng cùng cấu hình:
-npm run test:performance -- --compare outputs/performance-comparison/before.json outputs/performance-comparison/after.json
-```
+### Sắp xếp không gian của bạn
 
-Mặc định đo hai lượt cho 3/6/12 tài khoản và ba trang chờ đăng nhập; mỗi ca chờ 32 giây rồi đo 20,4 giây khi ẩn cửa sổ. `--dist <thư-mục-build>` chọn bản trước/sau; `--only-activity` đo riêng fixture đăng nhập có hoạt ảnh. Bộ đo kiểm tra bản nháp, trạng thái trang và dữ liệu phiên giữ nguyên qua chuyển tài khoản/ẩn/hiện. Tổng working set có thể đếm trùng bộ nhớ dùng chung; fixture không đại diện CPU, RAM hay pin của nền tảng thật. Xem `--help` để điều chỉnh thời lượng.
+Bạn có thể tùy chỉnh cách các nền tảng xuất hiện:
 
-`npm run test:renderer-performance` kiểm tra DOM thật bằng Chromium riêng; cần browser của Playwright hoặc đặt `TIN_NHAN_CHROMIUM` tới executable Chromium/Chrome đã cài. Test này không mở profile cá nhân.
+- **Ghim tab**: nhấp chuột phải vào tab, chọn **Ghim tab** để thu gọn thành biểu tượng
+- **Đóng tab**: chọn **Đóng tab** trong menu chuột phải; mở lại nền tảng từ nút **+** khi cần
+- **Đổi logo**: nhấp chuột phải vào tab, chọn **Đổi logo**, chọn logo có sẵn hoặc tải ảnh PNG/JPG, rồi bấm **Lưu logo**
+- **Thêm website**: bấm **+**, điền **Tên hiển thị** và **Địa chỉ website** trong mục **Thêm website riêng**
+- **Đổi giao diện**: vào **Cài đặt → Giao diện** để chọn sáng, tối, theo hệ điều hành hoặc theo nền tảng
 
-Các nền tảng nhắn tin có sẵn giữ trang tài khoản để bảo toàn bản nháp và hoạt động nền; website riêng chỉ tạo trang khi được chọn và đóng trang sau khi ghi dữ liệu phiên khi người dùng đóng tab. App bỏ phát trạng thái trùng, gộp kiểm tra trang, lấy màu cho tài khoản đang chọn khi cần và kết thúc giai đoạn miễn throttling sau tối đa 30 giây (sớm hơn nếu nhận diện đăng nhập). Không xóa hoặc chuyển partition khi đóng/mở tab. Bản cài mới nhất là **Gom 0.7.7**, bổ sung đổi logo nền tảng và phát hành cho Windows; Mac DMG cùng checksum có tại link release ở đầu tài liệu. Sao chép bản nháp quan trọng trước khi thoát app để nâng cấp vì phục hồi bản nháp sau thoát phụ thuộc nền tảng.
+Logo mới áp dụng cho toàn bộ nền tảng đó và được lưu trên máy. Trong hộp đổi logo, chọn **Dùng logo mặc định** rồi **Lưu logo** để khôi phục.
 
-Chi tiết thay đổi, phương pháp và kết quả đối chiếu: [báo cáo hiệu năng 26/10/2026](docs/performance-2026-10-26.md).
+Đóng tab giữ lại dữ liệu đăng nhập. Với website riêng, hãy lưu nội dung đang soạn trước khi đóng tab vì khả năng khôi phục bản nháp phụ thuộc website.
 
-Sửa lỗi EVKey dùng chế độ tương thích focus chỉ cho macOS với Electron 45.0.0 / Chromium 156.0.8078.48; vẫn bảo vệ ô mật khẩu đang dùng. `npm run build && npm run test:ime` kiểm tra Secure Input bằng Electron native và hồ sơ tạm, gồm chuyển cửa sổ, ẩn/thu nhỏ, iframe và popup. Chạy riêng, không đồng thời với các kiểm thử GUI khác; cần macOS, Python 3 và không có ứng dụng khác đang giữ Secure Input. Luôn chạy lại khi cập nhật Electron. Chi tiết: [điều tra EVKey](docs/evkey-2026-10-26.md).
+### Dùng phiên đăng nhập có sẵn trên Chrome
 
-Theo yêu cầu xem thiết kế trước, giao diện chat thống nhất nằm riêng tại `outputs/unified-chat-design/index.html`, dùng dữ liệu mẫu và không gửi tin thật. [Đề xuất thiết kế](docs/superpowers/specs/2026-10-26-unified-chat-design.md) nêu giới hạn tích hợp cho tài khoản cá nhân. Giao diện này chưa được đưa vào bản cài đặt.
+Nếu bạn đã đăng nhập trên Chrome ở cùng máy, mở **Cài đặt → Tài khoản → Dùng phiên có sẵn**. Chọn **Tài khoản đích**, chọn **Profile Chrome**, rồi bấm **Dùng phiên có sẵn**.
 
-`npm run test:live` là harness phát triển riêng, không nằm trong các kiểm tra cách ly ở trên và không được đóng gói vào app. Nó mở bản app đã đóng gói trên phiên cá nhân thật; chỉ chạy trong phạm vi người dùng đã đồng ý. Lệnh stdin: `status`, `activate zalo`, `activate messenger`, `activate telegram`, `settings`, `import Default`, `resize 1024x720`, `screenshot`, `quit`, `launch`. `import` chỉ dùng khi chủ tài khoản yêu cầu. Không gửi tin nhắn trong các kiểm thử.
+| Nền tảng                          | Cách kết nối từ Chrome                                                                                           |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Zalo, Messenger, Instagram, Slack | Gom kiểm tra phiên trong profile bạn đã chọn và nhập khi định dạng được hỗ trợ                                   |
+| Tinder                            | Làm theo hướng dẫn trong app để chạy lệnh một lần trong Console của tab Tinder đã đăng nhập; không cần extension |
+| Gmail, Telegram, Discord          | Đăng nhập trực tiếp trong Gom                                                                                    |
 
-Remote views có sandbox, context isolation và tắt Node. Preload riêng của nền tảng chỉ thêm sự kiện bấm vào thông báo gốc; không nhận nội dung thông báo và không cấp API đọc file/tài khoản. IPC điều khiển app chỉ nhận từ main frame của shell cục bộ; kênh bấm thông báo chỉ nhận từ main frame của view/popup đã đăng ký đúng nền tảng và chỉ mở lại nền tảng đó; popup nội bộ giữ đúng session; link HTTP(S) bên ngoài yêu cầu xác nhận trước khi mở trình duyệt.
+Đây là thao tác nhập phiên một lần, không phải đồng bộ liên tục với Chrome. Trên Mac, hệ thống có thể hỏi quyền truy cập **Chrome Safe Storage**. Trên Windows, phiên được Chrome bảo vệ bằng **App-Bound Encryption (`v20`)** chưa nhập được; hãy đăng nhập trực tiếp trong Gom nếu gặp thông báo này.
 
-## Sidebar và số chưa đọc 0.2.0
+Gom bảo vệ tài khoản đích đã đăng nhập khỏi ghi đè. Khi nền tảng yêu cầu xác minh hoặc phiên hết hạn, bạn cần hoàn tất đăng nhập lại.
 
-Nút bên trái tiêu đề thu gọn/mở rộng sidebar; lựa chọn được lưu khi thoát. Logo gốc được đóng gói cục bộ, xem src/renderer/logos/SOURCES.md. Ba nền tảng được mở nền để cập nhật chỉ báo mỗi4giây.
+## Thông báo và số chưa đọc
 
-Badge theo số nền tảng cung cấp: Telegram đọc mục Unread/Chưa đọc; Zalo đọc chỉ báo trên thanh điều hướng tin nhắn; Messenger ưu tiên số trên tiêu đề/tab và chỉ báo hội thoại chưa đọc. Số có + là cận dưới trong phần danh sách đã tải hoặc số đã được nền tảng rút gọn. Ký hiệu — nghĩa là chưa có số đáng tin cậy; số0 được ẩn. Hiện phiên Messenger khảo sát không cung cấp tổng số qua các chỉ báo hỗ trợ, nên hiển thị —. Bộ thu chỉ trả về số, không chuyển nội dung tin nhắn về shell.
+Để nhận thông báo, hãy kiểm tra quyền ở cả Gom, nền tảng và hệ điều hành:
 
-## Đồng bộ màu nền tảng 0.2.2
+1. Vào **Cài đặt → Thông báo**, cho phép thông báo với tài khoản bạn muốn nhận.
+2. Bật thông báo trong trang của nền tảng nếu có tùy chọn này.
+3. Cho phép Gom gửi thông báo trong cài đặt macOS hoặc Windows.
+4. Kiểm tra chế độ **Tập trung / Không làm phiền** và mục tạm dừng thông báo trong Gom.
 
-Sidebar và thanh trên tự lấy màu nền trung tính từ giao diện của nền tảng đang chọn. Chữ, đường viền, nút và trang cài đặt theo cùng tông sáng/tối; logo giữ màu gốc. Màu được kiểm tra khi tải trang, chuyển nền tảng và mỗi 4 giây. Khi chưa nhận diện được màu, shell theo chế độ sáng/tối của macOS. Bộ nhận diện chỉ đọc màu CSS, không lấy nội dung tin nhắn. Một số giao diện tùy biến hoặc thay đổi cấu trúc nền tảng có thể cần điều chỉnh bộ nhận diện.
+Nút **Gửi thử** kiểm tra thông báo từ Gom. Việc nhận thông báo tin nhắn còn phụ thuộc nền tảng có phát thông báo hay không.
 
-## Bản 0.3.0 — ổn định, macOS và thông báo
+Số trên tab dựa vào chỉ báo mà nền tảng cung cấp. Số có dấu **+** là số ước lượng hoặc số từ phần danh sách đã tải. Dấu **—** nghĩa là Gom chưa lấy được số đáng tin cậy, không có nghĩa là đã đọc hết. Website riêng chưa có bộ đếm chưa đọc.
 
-- Mất mạng được phân biệt với yêu cầu đăng nhập lại. Chỉ trang tải lỗi/crash được thử lại tối đa3 lần với khoảng chờ tối thiểu1/3/10 giây (kiểm tra theo nhịp4 giây); không tự reload các trang đang hoạt động khi wake/có mạng lại. Liên kết bị chặn không được tự retry. Lỗi vẫn còn sẽ có nút thử lại riêng nền tảng. Trang tải lại có thể mất bản nháp trong chính trang đó; app không xóa phiên.
-- Menu bar: mở app, chọn nền tảng, tạm dừng thông báo và thoát. Cmd+W ẩn, Cmd+Q ghi phiên rồi thoát; Cmd+1/2/3 chuyển nền tảng, Cmd+[ quay lại, Cmd+R tải lại nền tảng đang chọn. Nút Trang đầu chỉ tác động nền tảng hiện tại.
-- Cài đặt có phím tắt hiện/ẩn Cmd+Shift+Space (mặc định tắt, báo khi bị app khác chiếm), chạy cùng macOS (chỉ bản đóng gói, mặc định không tự bật). Cửa sổ nhớ vị trí/kích thước và nằm trong màn hình còn kết nối khi mở lại.
-- Quyền thông báo riêng: Hỏi lần đầu / Cho phép / Tắt; có tạm dừng chung, nút thử và liên kết quyền macOS. Thông báo gốc vẫn do nền tảng tạo, không suy diễn tin mới từ số unread. Chọn Cho phép trong app và bật thông báo trong chính nền tảng nếu nó không chủ động hỏi quyền. macOS/Focus quyết định hiển thị; nút thử không chứng minh nền tảng đã phát thông báo tin nhắn thật.
-- Bấm thông báo được tạo bằng `window.Notification` mở đúng nền tảng khi app còn chạy. Thông báo service worker và thông báo cũ sau khi thoát hẳn app giữ cách xử lý của nền tảng, chưa có cam kết định tuyến. Nội dung thông báo ở luồng gốc của nền tảng/macOS, không chuyển vào shell hoặc log. Tắt thông báo không tắt âm thanh/cuộc gọi của trang web; thông báo đã hiển thị trước đó không bị xóa.
-- Badge Dock chỉ là dấu chấm khi có số unread dương được hỗ trợ; không cộng số tin nhắn và số hội thoại thành tổng sai. Unknown không được coi là0.
+## Cập nhật Gom
 
-Kiểm tra hồi quy bổ sung (Electron mở fixture cách ly; không gửi tin nhắn thật):
+Mở **Cài đặt → Cập nhật → Kiểm tra cập nhật** để xem phiên bản mới:
 
-```sh
-npm run test:desktop
-node scripts/window-lifecycle-check.mjs
-node scripts/theme-check.mjs
-```
+- **Windows**: khi có bản tương thích, tải trong app và chọn khởi động lại để cài
+- **Mac**: bản 0.7.7 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
 
-`test:desktop` kiểm tra quyền thực trong renderer, khung lạ bị từ chối, phím tắt/xung đột (mock OS), thông báo/click (mock delivery), mất mạng/wake giữ bản nháp trang khác, crash renderer thật trong fixture, retry và lưu lựa chọn sau mở lại. Kiểm tra thông báo thật cần bản app ký trên macOS, cấp quyền rồi thử nhận tin từ thiết bị khác. Không tự thay đổi mục đăng nhập macOS trong các fixture.
+Lưu hoặc sao chép bản nháp quan trọng trước khi thoát app để cập nhật. Gom dùng lại dữ liệu tài khoản đang có; việc duy trì đăng nhập và khôi phục bản nháp còn phụ thuộc từng nền tảng.
 
-## Multi-account 0.4.0
+## Phím tắt
 
-Sidebar nhóm tài khoản theo Zalo, Messenger và Telegram. Bấm dấu + ở nhóm hoặc **Thêm tài khoản** để tạo phiên riêng; đặt tên và chữ/emoji để phân biệt. Trong Cài đặt có Mở, Đổi tên, sắp xếp ↑/↓, Gỡ khỏi sidebar và Khôi phục. Avatar là ký hiệu cục bộ, không tự lấy ảnh hồ sơ từ nội dung chat.
+Các phím sau hoạt động trong Gom:
 
-Ba tài khoản có sẵn được giữ nguyên ID và partition `persist:zalo`, `persist:messenger`, `persist:telegram` tại userData cũ. Không sao chép hoặc xóa cookie để nâng cấp. Tài khoản mới dùng ID UUID cố định và partition mới riêng; đổi tên/sắp xếp không đổi partition. App tự giữ một bản sao **cài đặt cửa sổ** trước nâng cấp (`window.json.pre-0.4`), không tạo bản xuất dữ liệu đăng nhập.
+| Thao tác                       | Mac             | Windows            |
+| ------------------------------ | --------------- | ------------------ |
+| Tìm và chuyển nhanh tài khoản  | `⌘ K`           | `Ctrl K`           |
+| Mở cài đặt                     | `⌘ ,`           | `Ctrl ,`           |
+| Tải lại nền tảng đang mở       | `⌘ R`           | `Ctrl R`           |
+| Quay lại trang trước           | `⌘ [`           | `Ctrl [`           |
+| Thoát Gom                      | `⌘ Q`           | `Ctrl Q`           |
+| Hiện / ẩn Gom từ ứng dụng khác | `⌘ Shift Space` | `Ctrl Shift Space` |
 
-Danh sách nằm trong `accounts.json` (chỉ ID/nền tảng/tên/ký hiệu/trạng thái ẩn), ghi nguyên tử và có bản metadata trước đó ở `accounts.json.backup`. Nếu danh sách lỗi, app dùng danh sách nhận diện được ở chế độ bảo vệ và khóa các thay đổi metadata để tránh ghi đè; dữ liệu phiên không bị xóa. Không chỉnh ID/nền tảng bằng tay vì đây là khóa liên kết tới phiên cũ.
+Phím tắt hiện / ẩn toàn cục cần được bật trong **Cài đặt → macOS / Windows**. Bạn cũng có thể bật **Chạy cùng macOS / Windows** tại đây.
 
-**Gỡ khỏi sidebar không đăng xuất:** trang của tài khoản sẽ đóng, dữ liệu đăng nhập/localStorage/IndexedDB vẫn giữ trên máy và có thể Khôi phục với cùng ID. Việc giữ bản nháp qua đóng trang tùy nền tảng. Không cho gỡ tài khoản đang dùng cuối cùng. Các tài khoản còn lại giữ nguyên trang/bản nháp đang mở.
+Nút đóng cửa sổ chỉ ẩn Gom; app vẫn chạy nền. Mở lại từ Dock, Start menu hoặc biểu tượng Gom ở thanh menu / khay hệ thống. Để thoát hẳn, chọn **Thoát Gom** hoặc dùng phím tắt tương ứng.
 
-Mỗi tài khoản có unread, màu giao diện, quyền thông báo và phục hồi lỗi riêng. Bấm thông báo mở đúng tài khoản phát ra, không nhảy về tài khoản mặc định cùng nền tảng. Các giới hạn thông báo gốc/service worker ở0.3 vẫn áp dụng. Cmd+1/2/3 trở về tài khoản vừa chọn gần nhất của nền tảng tương ứng; menu bar liệt kê tên từng tài khoản.
+## Câu hỏi thường gặp
 
-Zalo/Telegram thêm bằng QR trong phiên mới. Dùng phiên Chrome cho Messenger, Instagram, Slack hoặc Zalo bằng cách chọn rõ tài khoản đích và profile nguồn trong Cài đặt. Tài khoản đích được giữ cố định suốt giao dịch; app kiểm tra trạng thái đăng nhập cả trước lẫn sau xác minh nguồn. Cookie xác thực đang có hoặc trùng cookie nguồn sẽ không bị ghi đè; lỗi xác minh sẽ khôi phục cookie được phép. App không cho gỡ/sửa tài khoản khi đang nhập. Phiên còn hiệu lực phụ thuộc chính sách/expiry của nền tảng.
+<details>
+<summary>Đóng tab hoặc gỡ tài khoản khỏi danh sách có đăng xuất không?</summary>
 
-Mọi tài khoản chưa gỡ được mở nền khi khởi động để duy trì thông báo và unread; số tài khoản tăng sẽ dùng thêm RAM. Chưa có chế độ ngủ tài khoản trong0.4.
+Đóng tab giữ dữ liệu đăng nhập. **Gỡ khỏi danh sách** trong phần Tài khoản cũng giữ dữ liệu phiên trên máy; dùng **Khôi phục** để đưa tài khoản trở lại. Nội dung chưa gửi có thể mất khi trang đóng, tùy nền tảng.
 
-```sh
-npm run test:multi-account
-```
+</details>
 
-Fixture cách ly seeding dữ liệu kiểu0.3 rồi chạy0.4, kiểm tra6 tài khoản/2 mỗi nền tảng, cookie/localStorage/IndexedDB riêng, giữ dữ liệu cũ, nhập Messenger đúng đích khi chuyển tài khoản trong lúc chờ, unread/quyền thông báo/click riêng, gỡ/khôi phục, nhãn an toàn và thoát/mở lại. Chrome/Keychain/thông báo trong fixture dùng dữ liệu giả; không gửi tin nhắn thật. Đăng nhập đồng thời hai tài khoản thật của từng nền tảng cần kiểm tra thêm bằng tài khoản phụ của chủ máy.
+<details>
+<summary>Vì sao Chrome đã đăng nhập nhưng Gom vẫn yêu cầu đăng nhập?</summary>
 
-## Sidebar 0.4.1
+Gom có phiên riêng với Chrome. Bạn cần đăng nhập trực tiếp hoặc dùng **Dùng phiên có sẵn** với đúng tài khoản đích và profile Chrome. Một số định dạng phiên chưa được hỗ trợ; nền tảng cũng có thể yêu cầu xác minh lại.
 
-Sidebar mở rộng224px, thu gọn72px; hàng tài khoản44px. Giảm khoảng trống phía trên, giữ các nút Thêm tài khoản/Cài đặt cố định bên dưới; chỉ danh sách tài khoản cuộn khi thiếu chiều cao. Tên dài được rút gọn trong hàng, badge không co avatar. Kích thước nội dung nền tảng dùng cùng mốc với sidebar.
+</details>
 
-Kiểm tra bố cục cách ly: `node scripts/sidebar-layout-check.mjs` sau `npm run build` (940×640,1024×720,1280×840; sáu tài khoản, cả hai chế độ).
+<details>
+<summary>Muốn sao chép ảnh, văn bản hoặc liên kết thì làm thế nào?</summary>
 
-## Giao diện 0.5.0
+Nhấp chuột phải vào nội dung và chọn mục phù hợp như **Sao chép**, **Sao chép ảnh**, **Sao chép liên kết** hoặc **Lưu ảnh thành…**. Các mục xuất hiện tùy nội dung bạn đang chọn và cách trang web hiển thị nội dung đó.
 
-Giao diện theo prototype đã duyệt: nền sáng Ivory/tối Graphite, sidebar gọn, tài khoản ghim, bảng chuyển nhanh và cài đặt chia theo mục. Nội dung chat tiếp tục là web chính thức của từng nền tảng.
+</details>
 
-- **⌘K** tìm tài khoản hoặc thao tác, hỗ trợ gõ không dấu; ↑/↓ chọn, Enter mở, Escape quay lại. Mở từ trang chat vẫn dùng được; bảng chuyển nhanh không chồng lên hộp thêm/đổi tên tài khoản.
-- Kéo đường phân cách sidebar trong khoảng **200–300px**, nhấp đúp về **224px**. Khi đường phân cách có focus: ←/→ thay đổi, Home/End chọn giới hạn. Thu gọn còn **72px**.
-- **Tài khoản**: lọc theo nền tảng, ghim/bỏ ghim, đổi tên; menu **…** sắp xếp và gỡ khỏi sidebar. Khôi phục vẫn dùng đúng phiên cũ.
-- **Giao diện**: chọn Sáng/Tối, Theo macOS hoặc Theo nền tảng (mặc định, giữ khả năng đồng bộ màu cũ). Lựa chọn áp dụng cho khung app; từng nền tảng tự quản lý giao diện chat.
-- **Thông báo** và **macOS** có mục riêng; giữ quyền thông báo từng tài khoản, tạm dừng, Cmd+W, phím tắt và chạy cùng máy.
+<details>
+<summary>Website riêng không đăng nhập được hoặc mở liên kết ra trình duyệt?</summary>
 
-Nâng cấp không đổi `TinNhanDesktop`, `accounts.json` hay ID/partition của tài khoản. Màu, chiều rộng và tài khoản ghim được lưu thêm trong `window.json`. Không nhập lại cookie hoặc yêu cầu quét QR chỉ vì nâng cấp giao diện.
+Một số website chuyển sang tên miền khác trong quá trình đăng nhập hoặc chặn trình duyệt nhúng. Thử đăng nhập trực tiếp trong Gom. Nếu vẫn lỗi, dùng trình duyệt cho website đó và gửi báo lỗi kèm địa chỉ trang, không gửi dữ liệu đăng nhập.
 
-```sh
-npm run test:shell
-```
+</details>
 
-Kiểm tra cách ly gồm12 tổ hợp màn hình/sáng-tối/sidebar, bàn phím và focus native, không chồng hộp thoại, giữ view/bản nháp, tên an toàn, kéo kích thước, lưu giao diện và ID tài khoản qua thoát/mở lại. Các fixture không dùng phiên cá nhân. Phần này ghi lại giao diện 0.5.0; bản hiện hành và link tải ở đầu tài liệu.
+<details>
+<summary>Tài khoản có đồng bộ sang máy khác không?</summary>
+
+Gom lưu phiên đăng nhập và tùy chỉnh cục bộ trên từng máy. Khi chuyển máy, hãy cài Gom và đăng nhập lại các tài khoản. Việc đồng bộ tin nhắn do chính nền tảng thực hiện.
+
+</details>
+
+## Báo lỗi và góp ý
+
+[Tạo báo lỗi trên GitHub Issues](https://github.com/mhfed/gom/issues/new) và ghi rõ phiên bản Gom, hệ điều hành, nền tảng gặp lỗi cùng các bước để tái hiện. Nếu gửi ảnh chụp, che nội dung riêng tư trước khi tải lên.
+
+Không gửi mật khẩu, mã OTP, cookie, token hoặc toàn bộ hồ sơ trình duyệt.
+
+Gom là ứng dụng độc lập, không thuộc các nền tảng được tích hợp. Giao diện, khả năng đăng nhập và thông báo có thể thay đổi theo chính sách của từng dịch vụ.
