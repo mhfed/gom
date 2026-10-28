@@ -1,6 +1,6 @@
 # Không gian kín — Gom 0.7.8
 
-Không gian kín có từ Gom 0.7.8. Bản 0.7.8 đang được chuẩn bị phát hành; tính năng chưa có trong các bộ cài 0.7.7 trở về trước.
+Không gian kín có từ [Gom 0.7.8](https://github.com/mhfed/gom/releases/tag/v0.7.8), phát hành ngày **28/10/2026**. Tính năng chưa có trong các bộ cài 0.7.7 trở về trước.
 
 1. Bấm biểu tượng ổ khóa trên thanh công cụ để đặt mật khẩu (8–256 ký tự).
 2. Trong **Cài đặt → Tài khoản**, mở menu thao tác của tài khoản và chọn **Đưa vào không gian kín**.
