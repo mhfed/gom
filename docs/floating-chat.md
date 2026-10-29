@@ -12,4 +12,4 @@ Mỗi lúc có một tab nổi. Tách tab khác trả tab trước về Gom. B�
 
 Trang bên trong là giao diện web của nền tảng, nên bố cục ở cửa sổ nhỏ tùy từng nền tảng. Có thể kéo rộng cửa sổ nếu nội dung chật. Không tạo bản sao tài khoản hoặc tải lại trang khi thu/mở bong bóng.
 
-Bản **0.8.0 đang chuẩn bị phát hành** cho Mac Apple Silicon và Windows x64. Bản Mac đã được build và cài thử tại máy; gói Windows và checksum bản phát hành đang được kiểm chứng. [Ghi chú bản 0.8.0](release-0.8.0.md).
+[Gom 0.8.0](https://github.com/mhfed/gom/releases/tag/v0.8.0) đã phát hành ngày **29/10/2026** cho Mac Apple Silicon và Windows x64. Cả hai bộ gói và checksum đã được kiểm chứng; bản Mac đã được cài và mở tại máy. [Ghi chú bản 0.8.0](release-0.8.0.md).

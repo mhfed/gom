@@ -21,7 +21,7 @@ Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Di
 
 ## Tải Gom
 
-Phiên bản **0.8.0 đang chuẩn bị phát hành** cho Mac Apple Silicon và Windows x64. Các liên kết tải dưới đây có hiệu lực sau khi bản phát hành được công bố:
+Phiên bản hiện tại: **0.8.0**, phát hành ngày **29/10/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
 | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |

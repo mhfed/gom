@@ -1,6 +1,6 @@
 # Kiểm chứng chat nổi — Gom 0.8.0
 
-Bản **0.8.0 đang chuẩn bị phát hành** cho Mac Apple Silicon và Windows x64, ngày 29/10/2026. Các kết quả dưới đây thuộc bản build Mac triển khai theo mock đã được người dùng duyệt.
+[Gom 0.8.0](https://github.com/mhfed/gom/releases/tag/v0.8.0) đã phát hành cho Mac Apple Silicon và Windows x64 ngày **29/10/2026**, lúc `2026-10-29T03:28:04Z`. Các kết quả Mac dưới đây thuộc bản build triển khai theo mock đã được người dùng duyệt.
 
 - Typecheck đạt; toàn bộ 178 unit test đạt.
 - 12 nhóm Electron chat nổi đạt trên ASAR đóng gói: giữ nguyên native view, session và bản nháp; thu/mở; ghim; kéo/bám góc; đưa về Gom; ẩn main thường; khóa và IPC cũ; gỡ tài khoản/đóng tab; phím tải lại/quay lại đúng cửa sổ; thoát sạch.
@@ -15,10 +15,10 @@ Fixture dùng profile tạm, mock Keychain và trang giả; không đọc tài k
 
 Bộ cài Mac đã kiểm chứng và biên bản cài máy ở `outputs/builds/0.8.0/`. Gói phát hành và checksum tập hợp ở `outputs/releases/0.8.0/`; các thư mục kết quả không đưa vào Git hoặc gói app.
 
-## Đang kiểm chứng trước khi công bố
+## Windows và bản phát hành
 
-- Build Windows x64, typecheck, unit test, bộ kiểm tra ASAR/Squirrel và kiểm thử chat nổi/không gian kín trên gói Windows.
-- Đủ bảy asset Mac/Windows trong draft GitHub Release 0.8.0.
-- SHA-256 của các asset khớp manifest trên từng nền tảng và metadata GitHub.
-
-Chỉ ghi nhận phát hành sau khi các bước này hoàn tất.
+- [Windows CI 40811729695](https://github.com/mhfed/gom/actions/runs/40811729695), job `123243359867`: build thành công, typecheck và **79 test** đạt.
+- Bộ kiểm tra ASAR xác nhận **23 file runtime** khớp bản build. Squirrel `RELEASES`, hash và dung lượng gói `.nupkg` được kiểm tra.
+- **12 nhóm chat nổi** và **17 nhóm không gian kín** đạt trên ASAR đóng gói Windows bằng session giả.
+- Đủ **bảy asset** Mac/Windows trong GitHub Release 0.8.0 đã công bố: DMG, ZIP, manifest Mac, Setup, `.nupkg`, `RELEASES` và manifest Windows.
+- SHA-256 của cả bảy asset khớp manifest trên từng nền tảng và metadata GitHub; các tệp có sẵn tại máy được đối chiếu thêm với byte cục bộ.
