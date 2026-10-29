@@ -1211,6 +1211,7 @@ async function floatChat(): Promise<AccountResult> {
       message: "Mở một tab tài khoản trước khi tách chat nổi.",
     };
   const id = state.active;
+  const alreadyFloating = floating.accountId === id;
   const view = views.peek(id);
   if (!view || view.webContents.isDestroyed())
     return { ok: false, message: "Tab chưa sẵn sàng. Hãy mở lại tài khoản." };
@@ -1226,6 +1227,10 @@ async function floatChat(): Promise<AccountResult> {
         message: "Không gian đã thay đổi. Chat nổi đã được thu hồi.",
       };
     }
+    // Some provider pages choose their compact layout only during startup.
+    // Reload after reparenting/layout, once per fresh detach; expanding an
+    // existing popup or bubble must keep its current document and draft.
+    if (opened && !alreadyFloating) reloadProvider(id);
     return opened
       ? { ok: true, accountId: id }
       : { ok: false, message: "Chưa mở được chat nổi. Bạn thử lại nhé." };

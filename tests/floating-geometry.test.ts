@@ -31,11 +31,11 @@ test("bubble snaps to either bottom corner without entering the menu bar or dock
   const work = { x: -1600, y: -100, width: 1600, height: 900 };
   assert.deepEqual(
     snapBubbleBounds({ x: -1500, y: -90, width: 72, height: 72 }, work),
-    { x: -1588, y: 716, width: 72, height: 72 },
+    { x: -1588, y: 740, width: 48, height: 48 },
   );
   assert.deepEqual(
     snapBubbleBounds({ x: -50, y: 200, width: 72, height: 72 }, work),
-    { x: -84, y: 716, width: 72, height: 72 },
+    { x: -60, y: 740, width: 48, height: 48 },
   );
 });
 
