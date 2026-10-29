@@ -53,6 +53,7 @@ let logoDialogProvider: ProviderDefinition | null = null;
 let logoDialogSelection: ProviderLogoChange | undefined;
 let logoDialogBusy = false;
 let privacyGeneration = 0;
+let floatingBusy = false;
 const settingsSections: Record<string, { title: string; description: string }> =
   {
     accounts: {
@@ -826,6 +827,15 @@ const providerNavigation = createProviderNavigation({
 });
 function renderToolbar(state: AppState, active: Account | undefined) {
   providerNavigation.sync(state);
+  const float = $<HTMLButtonElement>("float-chat");
+  float.disabled =
+    !active ||
+    state.panel !== "service" ||
+    state.accountBusy ||
+    state.importing ||
+    state.commandOpen ||
+    floatingBusy;
+  float.classList.toggle("active", state.floating?.detached === true);
   const select = $<HTMLButtonElement>("account-select");
   select.disabled = !active;
   if (!active) {
@@ -973,6 +983,39 @@ $("account-select").onkeydown = (event) => {
   }
 };
 $("navigation-menu").onclick = () => void window.desktop.navigationMenu();
+$("float-chat").onclick = async () => {
+  if (floatingBusy) return;
+  const generation = privacyGeneration;
+  floatingBusy = true;
+  $<HTMLButtonElement>("float-chat").disabled = true;
+  try {
+    const result = await window.desktop.floatChat();
+    if (generation !== privacyGeneration || result.ok) return;
+    await window.desktop.settings();
+    if (generation !== privacyGeneration) return;
+    showTab("accounts");
+    $("account-feedback").textContent =
+      result.message || "Chưa mở được chat nổi. Bạn thử lại nhé.";
+  } catch {
+    if (generation !== privacyGeneration) return;
+    await window.desktop.settings();
+    if (generation !== privacyGeneration) return;
+    showTab("accounts");
+    $("account-feedback").textContent =
+      "Chưa mở được chat nổi. Bạn thử lại nhé.";
+  } finally {
+    floatingBusy = false;
+    if (current)
+      renderToolbar(
+        current,
+        current.accounts.find((a) => a.id === current.active),
+      );
+  }
+};
+$("floating-show").onclick = () => $("float-chat").click();
+$("floating-bring-back").onclick = () => {
+  if (current?.active) void window.desktop.activate(current.active);
+};
 function render(state: AppState) {
   const previous = current;
   const active = state.accounts.find((a) => a.id === state.active);
@@ -988,6 +1031,17 @@ function render(state: AppState) {
   const settings = state.panel === "settings";
   const library = state.panel === "providers";
   const welcome = state.panel === "welcome";
+  const floatingHere =
+    state.panel === "service" &&
+    !state.commandOpen &&
+    state.floating?.detached === true &&
+    state.floating.accountId === state.active;
+  setProperty($("floating-placeholder"), "hidden", !floatingHere);
+  setProperty(
+    $("floating-placeholder-source"),
+    "textContent",
+    floatingHere && active ? nameOf(active) : "",
+  );
   const refreshSettings = settings || !previous || rebuilt;
   const root = document.documentElement,
     choice = state.presentation.theme;
@@ -1097,7 +1151,11 @@ function render(state: AppState) {
           ? "Kết nối gián đoạn · Thử lại riêng tài khoản này"
           : labels[state.statuses[state.active]],
   );
-  const failed = state.panel === "service" && !state.commandOpen && !!c.reason;
+  const failed =
+    state.panel === "service" &&
+    !state.commandOpen &&
+    !floatingHere &&
+    !!c.reason;
   setProperty($("connection-panel"), "hidden", !failed);
   if (failed) {
     setProperty(
@@ -1201,7 +1259,12 @@ function render(state: AppState) {
   setProperty(
     $("service-loading"),
     "hidden",
-    settings || library || welcome || failed || state.commandOpen,
+    settings ||
+      library ||
+      welcome ||
+      failed ||
+      floatingHere ||
+      state.commandOpen,
   );
   setProperty($("catalog-warning"), "textContent", state.catalogWarning);
   setProperty($("catalog-warning"), "hidden", !state.catalogWarning);

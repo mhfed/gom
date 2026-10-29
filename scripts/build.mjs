@@ -48,7 +48,22 @@ await Promise.all([
     platform: "browser",
     format: "iife",
   }),
-  ...["index.html", "shell.css"].map((file) =>
+  build({
+    entryPoints: ["src/main/floating-preload.ts"],
+    outfile: "dist/floating-preload.cjs",
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    external: ["electron"],
+  }),
+  build({
+    entryPoints: ["src/renderer/floating.ts"],
+    outfile: "dist/floating.js",
+    bundle: true,
+    platform: "browser",
+    format: "iife",
+  }),
+  ...["index.html", "shell.css", "floating.html", "floating.css"].map((file) =>
     copyFile("src/renderer/" + file, "dist/" + file),
   ),
   copyFile("assets/gom-mark.svg", "dist/gom-mark.svg"),

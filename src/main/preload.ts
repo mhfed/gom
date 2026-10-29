@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge, AppState, ProviderId } from "../shared.ts";
 const bridge: DesktopBridge = {
+  floatChat: () => ipcRenderer.invoke("desktop", "float-chat"),
   privateSpace: (action, data) =>
     ipcRenderer.invoke("desktop", "private-space", { action, data }),
   state: () => ipcRenderer.invoke("desktop", "state"),

@@ -19,6 +19,11 @@ const applied = new WeakMap<
     bounds: ReturnType<typeof providerBounds>;
   }
 >();
+// A detached native view was laid out by another window. Its cached main
+// geometry is no longer the native view's current geometry.
+export function resetViewLayout(view: HostedView): void {
+  applied.delete(view);
+}
 export function layoutViews(
   views: Iterable<readonly [string, HostedView]>,
   width: number,

@@ -121,6 +121,11 @@
           <circle cx="12" cy="12" r="9" />
           <path d="M12 11v6m0-10v.01" />
         </symbol>
+        <symbol id="i-float" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <rect x="11" y="10" width="8" height="7" rx="1" />
+          <path d="M6 7h4" />
+        </symbol>
       </defs>
     </svg>
 
@@ -194,6 +199,16 @@
             <svg aria-hidden="true"><use href="#i-plus" /></svg>
           </button>
         </div>
+        <button
+          id="float-chat"
+          class="icon-button"
+          type="button"
+          title="Tách tab thành chat nổi"
+          aria-label="Tách tab thành chat nổi"
+          disabled
+        >
+          <svg aria-hidden="true"><use href="#i-float" /></svg>
+        </button>
         <span class="tool-divider" aria-hidden="true"></span>
         <div class="tools">
           <button
@@ -242,6 +257,27 @@
         </div>
         <p id="subtitle" class="sr-only" role="status">Đang kết nối…</p>
       </header>
+      <section
+        id="floating-placeholder"
+        aria-labelledby="floating-placeholder-title"
+        hidden
+      >
+        <div class="connection-card">
+          <img class="hero-brand-icon" src="app.png" alt="" draggable="false" />
+          <h2 id="floating-placeholder-title">
+            Tab này đang mở trong cửa sổ nổi
+          </h2>
+          <p id="floating-placeholder-source"></p>
+          <div class="connection-actions">
+            <button id="floating-show" class="primary" type="button">
+              Mở chat nổi
+            </button>
+            <button id="floating-bring-back" class="secondary" type="button">
+              Đưa về Gom
+            </button>
+          </div>
+        </div>
+      </section>
       <section id="welcome-panel" hidden aria-labelledby="welcome-title">
         <div class="welcome-content">
           <section class="welcome-hero">
