@@ -26,13 +26,10 @@ test("legacy migration keeps exact partition names; new same-platform accounts h
     "persist:messenger",
     "persist:telegram",
   ]);
-  assert.deepEqual(legacy.slice(3).map((account) => account.id), [
-    "gmail",
-    "instagram",
-    "discord",
-    "slack",
-    "tinder",
-  ]);
+  assert.deepEqual(
+    legacy.slice(3).map((account) => account.id),
+    ["gmail", "instagram", "discord", "slack", "tinder"],
+  );
   const added = createAccount("zalo", "Công việc", "💼", uuid);
   assert.equal(added.id, "acc_" + uuid);
   assert.equal(accountPartition(added), "persist:tn-account-acc_" + uuid);
@@ -100,6 +97,17 @@ test("reordering stays within provider and keeps all account IDs/other-platform 
     defaultAccounts()
       .filter((a) => a.provider !== "zalo")
       .map((a) => a.id),
+  );
+});
+test("reordering a private account never swaps a normal account of the same provider", () => {
+  const first = { ...createAccount("zalo", "Private A"), private: true };
+  const second = { ...createAccount("zalo", "Private B"), private: true };
+  const normal = defaultAccounts()[0];
+  const accounts = [first, normal, second];
+  const moved = moveAccount(accounts, second.id, -1);
+  assert.deepEqual(
+    moved.map((a) => a.id),
+    [second.id, normal.id, first.id],
   );
 });
 test("per-account preferences preserve old choices and reject unknown account IDs", () => {
@@ -237,8 +245,9 @@ test("legacy catalog upgrades on a successful atomic website/account commit and 
     assert.equal(saved.providers.length, 1);
     assert.equal(saved.providers[0].id, websiteId);
     assert.equal(
-      saved.accounts.find((account: Account) => account.id === websiteAccount.id)
-        ?.provider,
+      saved.accounts.find(
+        (account: Account) => account.id === websiteAccount.id,
+      )?.provider,
       websiteId,
     );
     const reopened = new AccountCatalogStore(path);

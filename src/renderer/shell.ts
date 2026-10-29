@@ -711,15 +711,12 @@ function rebuildAccounts(state: AppState) {
         "Gỡ " + nameOf(a) + " khỏi danh sách",
         () => void accountAction(window.desktop.archiveAccount(a.id)),
       );
-      hide.dataset.last = String(
-        state.accounts.filter((a) => !a.archived).length === 1,
-      );
       for (const [i, b] of [up, down, hide].entries())
         b.dataset.focus = "account-" + a.id + "-" + i;
       const privacy = action(
-        a.private ? "Đưa ra ngoài không gian kín" : "Đưa vào không gian kín",
+        a.private ? "Chuyển sang không gian thường" : "Đưa vào không gian kín",
         a.private
-          ? "Đưa tài khoản ra ngoài không gian kín"
+          ? "Chuyển tài khoản sang không gian thường"
           : "Đưa tài khoản vào không gian kín",
         () => privateSpaceUI.move(a),
       );
@@ -865,6 +862,26 @@ function renderToolbar(state: AppState, active: Account | undefined) {
   );
 }
 function renderWelcome(state: AppState) {
+  const privateWorkspace = state.privateSpace?.unlocked === true;
+  setProperty(
+    $("welcome-title"),
+    "textContent",
+    privateWorkspace ? "Không gian kín của bạn." : "Chào mừng đến với Gom.",
+  );
+  setProperty(
+    $("welcome-description"),
+    "textContent",
+    privateWorkspace
+      ? "Tài khoản, tab và phiên đăng nhập ở đây được giữ riêng. Thêm nền tảng hoặc chọn tài khoản để tiếp tục."
+      : "Các cuộc trò chuyện quen thuộc, trong một cửa sổ. Chọn tài khoản để tiếp tục hoặc mở thêm nền tảng.",
+  );
+  setProperty(
+    $("welcome-empty-description"),
+    "textContent",
+    privateWorkspace
+      ? "Không gian kín chưa có tài khoản. Chọn nền tảng để thêm tài khoản riêng."
+      : "Chưa có tài khoản nào để tiếp tục.",
+  );
   const accounts = state.accounts.filter((account) => !account.archived);
   const ordered: Account[] = [];
   const included = new Set<AccountId>();
@@ -959,12 +976,12 @@ $("navigation-menu").onclick = () => void window.desktop.navigationMenu();
 function render(state: AppState) {
   const previous = current;
   const active = state.accounts.find((a) => a.id === state.active);
-  const justLocked =
+  const spaceChanged =
     previous &&
-    ((previous.privateSpace?.unlocked && !state.privateSpace?.unlocked) ||
+    (!!previous.privateSpace?.unlocked !== !!state.privateSpace?.unlocked ||
       (state.privateSpace?.lockVersion !== undefined &&
         state.privateSpace.lockVersion !== previous.privateSpace?.lockVersion));
-  if (justLocked) scrubPrivateUI();
+  if (spaceChanged) scrubPrivateUI();
   current = state;
   privateSpaceUI.sync(state);
   const rebuilt = rebuildAccounts(state);
@@ -1203,11 +1220,12 @@ function render(state: AppState) {
         state.accountBusy ||
           state.importing ||
           !!state.catalogWarning ||
-          b.dataset.boundary === "true" ||
-          b.dataset.last === "true",
+          b.dataset.boundary === "true",
       );
   lastPanel = state.panel;
-  command.sync(state);
+  command.sync(
+    privateSpaceUI.isOpen() ? { ...state, commandOpen: false } : state,
+  );
   if (!previous) showTab(activeTab);
 }
 $("settings").onclick = () => {
@@ -1416,7 +1434,6 @@ const command = createCommandPalette({
 });
 const privateSpaceUI = createPrivateSpaceUI({
   getState: () => current,
-  showAccounts: () => showTab("accounts"),
 });
 function scrubPrivateUI() {
   privacyGeneration++;

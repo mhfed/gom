@@ -10,7 +10,9 @@ import electronExecutable from "electron";
 
 const project = fileURLToPath(new URL("..", import.meta.url));
 const appArchive = process.env.GOM_SMOKE_APP_ASAR;
-const entry = appArchive ? join(appArchive, "dist/main.cjs") : join(project, "dist/main.cjs");
+const entry = appArchive
+  ? join(appArchive, "dist/main.cjs")
+  : join(project, "dist/main.cjs");
 await access(appArchive || entry);
 const root = await mkdtemp(join(tmpdir(), "gom-private-space-"));
 const bootstrap = join(root, "bootstrap.cjs");
@@ -36,6 +38,17 @@ e.app.setPath('appData', root);
 process.env.LOCALAPPDATA = root;
 require('node:os').homedir = () => root;
 globalThis.privateFixture = {sessions: new Map(), tray: [], notifications: [], menus: []};
+const fixtureFs = require('node:fs/promises');
+const fixtureWriteFile = fixtureFs.writeFile.bind(fixtureFs);
+fixtureFs.writeFile = async (path, ...args) => {
+  const pause = globalThis.privateFixture.catalogPause;
+  if (pause?.armed && require('node:path').basename(String(path)) === 'accounts.json.tmp') {
+    pause.armed = false;
+    pause.entered = true;
+    await new Promise((resolve) => { pause.release = resolve; });
+  }
+  return fixtureWriteFile(path, ...args);
+};
 e.shell.openExternal = async () => { throw Error('Fixture attempted external navigation'); };
 e.dialog.showMessageBox = async () => ({response: 1});
 e.Notification.isSupported = () => true;
@@ -73,12 +86,12 @@ const command = (action, data) =>
     ({ action, data }) => window.desktop.privateSpace(action, data),
     { action, data },
   );
-async function unlock() {
+async function unlock(data = {}) {
   const current = await state();
   const delay = (current.privateSpace?.retryAt || 0) - Date.now();
   if (delay > 0)
     await new Promise((resolve) => setTimeout(resolve, delay + 30));
-  assert.equal((await command("unlock", { password })).ok, true);
+  assert.equal((await command("unlock", { password, ...data })).ok, true);
 }
 async function launch() {
   client = await _electron.launch({
@@ -143,80 +156,272 @@ async function run(label, work) {
   console.log(`PASS ${label}`);
 }
 
+async function inPartition(partition, expression) {
+  return client.evaluate(
+    async ({ webContents }, { partition, expression }) => {
+      const contents = webContents
+        .getAllWebContents()
+        .find(
+          (contents) =>
+            globalThis.privateFixture.sessions.get(contents.session) ===
+              partition && !contents.getURL().includes("fixture-popup"),
+        );
+      if (!contents) throw Error("Missing fixture partition: " + partition);
+      return contents.executeJavaScript(expression, true);
+    },
+    { partition, expression },
+  );
+}
+async function popupState(marker) {
+  return client.evaluate(({ BrowserWindow }, marker) => {
+    const popup = BrowserWindow.getAllWindows().find((win) =>
+      win.webContents.getURL().includes(marker),
+    );
+    return popup
+      ? { visible: popup.isVisible(), muted: popup.webContents.isAudioMuted() }
+      : null;
+  }, marker);
+}
+async function addAccount(provider, name) {
+  const result = await page.evaluate(
+    ({ provider, name }) => window.desktop.addAccount(provider, name, "PF"),
+    { provider, name },
+  );
+  assert.equal(result.ok, true, result.message);
+  assert.ok(result.accountId?.startsWith("acc_"));
+  await page.evaluate((id) => window.desktop.activate(id), result.accountId);
+  const partition = "persist:tn-account-" + result.accountId;
+  await eventually("fixture account page", async () =>
+    (await views()).some(
+      (view) => view.partition === partition && view.document?.token,
+    ),
+  );
+  return { id: result.accountId, partition };
+}
+function accountPartition(account) {
+  return account.id.startsWith("acc_")
+    ? "persist:tn-account-" + account.id
+    : "persist:" + account.id;
+}
+async function assertNormalAudioRestored() {
+  const current = await state();
+  assert.equal(current.privateSpace.unlocked, false);
+  const partitions = new Set(current.accounts.map(accountPartition));
+  for (const view of await views())
+    if (partitions.has(view.partition))
+      assert.equal(
+        view.muted,
+        false,
+        `normal session ${view.partition} must regain audio`,
+      );
+}
+
 try {
   await launch();
+  let normalNavigation;
+  let publicBefore;
+  let privateAccount;
+  let privateBefore;
+  let privateTabs;
+
   await run(
     "ordinary hide/show keeps current chat before private setup",
     async () => {
+      await page.evaluate(() => window.desktop.activate("zalo"));
+      await eventually("public fixture page", async () =>
+        (await views()).some(
+          (view) => view.partition === "persist:zalo" && view.document?.token,
+        ),
+      );
+      await inPartition(
+        "persist:zalo",
+        `document.querySelector('#draft').value = 'normal fixture draft'; localStorage.setItem('workspace', 'normal'); true`,
+      );
+      publicBefore = (await views()).find(
+        (view) => view.partition === "persist:zalo",
+      );
       await page.evaluate(() => window.desktop.activate("telegram"));
+      await eventually("public Telegram fixture", async () =>
+        (await views()).some(
+          (view) =>
+            view.partition === "persist:telegram" && view.document?.token,
+        ),
+      );
+      await inPartition(
+        "persist:telegram",
+        `window.open('https://web.telegram.org/normal-fixture-popup'); true`,
+      );
+      await eventually(
+        "public popup",
+        async () => !!(await popupState("normal-fixture-popup")),
+      );
       await client.evaluate(({ BrowserWindow }) => {
-        const w = BrowserWindow.getAllWindows().find((w) =>
-          w.webContents.getURL().startsWith("file:"),
+        const win = BrowserWindow.getAllWindows().find((win) =>
+          win.webContents.getURL().startsWith("file:"),
         );
-        w.hide();
-        w.show();
+        win.hide();
+        win.show();
       });
-      assert.equal((await state()).panel, "service");
-      assert.equal((await state()).active, "telegram");
+      const current = await state();
+      assert.equal(current.panel, "service");
+      assert.equal(current.active, "telegram");
+      normalNavigation = {
+        active: current.active,
+        panel: current.panel,
+        tabs: current.providerTabs,
+      };
     },
   );
-  await run("setup dialog creates password and clears inputs", async () => {
-    await page.locator("#private-space-toggle").click();
-    await page.locator("#private-space-dialog").waitFor({ state: "visible" });
-    await page.locator("#private-password").fill(password);
-    await page.locator("#private-password-confirm").fill(password);
-    await page.locator("#private-space-submit").click();
-    await eventually(
-      "setup unlocked",
-      async () => (await state()).privateSpace.unlocked,
-    );
-    await page.locator("#private-space-dialog").waitFor({ state: "hidden" });
-    assert.equal(await page.locator("#private-password").inputValue(), "");
-  });
-
-  let before;
-  await run("private account keeps its native page and draft", async () => {
-    assert.equal(
-      (
-        await page.evaluate(
-          (name) => window.desktop.editAccount("zalo", name, "PF"),
-          privateName,
-        )
-      ).ok,
-      true,
-    );
-    await page.evaluate(() => window.desktop.activate("zalo"));
-    await eventually("fixture Zalo page", async () =>
-      (await views()).some(
-        (v) => v.partition === "persist:zalo" && v.document?.token,
-      ),
-    );
-    await client.evaluate(async ({ webContents }) => {
-      const contents = webContents
-        .getAllWebContents()
-        .find((c) => c.getURL() === "https://chat.zalo.me/");
-      await contents.executeJavaScript(
-        "document.querySelector('#draft').value = 'private fixture draft'",
-      );
-    });
-    before = (await views()).find((v) => v.partition === "persist:zalo");
-    assert.equal(
-      (await command("membership", { accountId: "zalo", private: true })).ok,
-      true,
-    );
-    assert.equal(
-      (await state()).accounts.find((a) => a.id === "zalo").private,
-      true,
-    );
-    assert.equal(
-      (await views()).find((v) => v.partition === "persist:zalo").document
-        .permission,
-      "denied",
-    );
-  });
 
   await run(
-    "locked snapshot, DOM, menus, notification and IPC do not expose private account",
+    "password setup enters an empty private workspace and clears inputs",
+    async () => {
+      await page.locator("#private-space-toggle").click();
+      await page.locator("#private-space-dialog").waitFor({ state: "visible" });
+      await page.locator("#private-password").fill(password);
+      await page.locator("#private-password-confirm").fill(password);
+      await page.locator("#private-space-submit").click();
+      await eventually(
+        "setup unlocked",
+        async () => (await state()).privateSpace.unlocked,
+      );
+      await page.locator("#private-space-dialog").waitFor({ state: "hidden" });
+      assert.equal(await page.locator("#private-password").inputValue(), "");
+      const current = await state();
+      assert.deepEqual(
+        current.accounts,
+        [],
+        "a newly opened private space must be empty",
+      );
+      assert.deepEqual(current.providerTabs, { open: [], pinned: [] });
+      assert.equal(current.active, "");
+      assert.notEqual(current.panel, "service");
+      for (const view of await views()) {
+        assert.equal(
+          view.visible,
+          false,
+          "normal view remains hidden inside private space",
+        );
+        assert.equal(
+          view.muted,
+          true,
+          "normal view remains muted inside private space",
+        );
+      }
+      assert.deepEqual(await popupState("normal-fixture-popup"), {
+        visible: false,
+        muted: true,
+      });
+    },
+  );
+
+  await run(
+    "new private account has its own session, draft and account IPC boundary",
+    async () => {
+      privateAccount = await addAccount("zalo", privateName);
+      const current = await state();
+      assert.deepEqual(
+        current.accounts.map((account) => account.id),
+        [privateAccount.id],
+      );
+      assert.equal(current.accounts[0].private, true);
+      assert.notEqual(privateAccount.partition, "persist:zalo");
+      assert.equal(
+        await inPartition(
+          privateAccount.partition,
+          "localStorage.getItem('workspace')",
+        ),
+        null,
+      );
+      await inPartition(
+        privateAccount.partition,
+        `document.querySelector('#draft').value = 'private fixture draft'; localStorage.setItem('workspace', 'private'); true`,
+      );
+      privateBefore = (await views()).find(
+        (view) => view.partition === privateAccount.partition,
+      );
+      assert.equal(privateBefore.document.permission, "denied");
+      assert.equal(
+        await inPartition("persist:zalo", "localStorage.getItem('workspace')"),
+        "normal",
+      );
+      await page.evaluate(async () => {
+        await window.desktop.activate("zalo");
+        await window.desktop.pinAccount("zalo");
+        await window.desktop.testNotification("zalo");
+      });
+      assert.equal((await state()).active, privateAccount.id);
+      assert.equal(
+        (
+          await page.evaluate(() =>
+            window.desktop.editAccount("zalo", "BYPASS", "B"),
+          )
+        )?.ok,
+        false,
+      );
+      assert.equal(
+        (await page.evaluate(() => window.desktop.archiveAccount("zalo")))?.ok,
+        false,
+      );
+      assert.equal((await state()).presentation.pinned.includes("zalo"), false);
+      assert.equal(
+        (await views()).find((view) => view.partition === "persist:zalo")
+          .visible,
+        false,
+      );
+    },
+  );
+
+  await run(
+    "provider tab pins and closing stay within their workspace",
+    async () => {
+      await page.evaluate(() => window.desktop.pinProvider("zalo"));
+      const privateTelegram = await addAccount("telegram", "Private Telegram");
+      assert.equal(
+        (await state()).accounts.find(
+          (account) => account.id === privateTelegram.id,
+        ).private,
+        true,
+      );
+      assert.equal(
+        (await page.evaluate(() => window.desktop.closeProvider("telegram")))
+          .ok,
+        true,
+      );
+      const current = await state();
+      assert.deepEqual(current.providerTabs, {
+        open: ["zalo"],
+        pinned: ["zalo"],
+      });
+      privateTabs = current.providerTabs;
+      assert.equal(current.active, privateAccount.id);
+      await command("lock");
+      const normal = await state();
+      assert.equal(normal.active, normalNavigation.active);
+      assert.equal(normal.panel, normalNavigation.panel);
+      assert.deepEqual(normal.providerTabs, normalNavigation.tabs);
+      assert.ok(normal.accounts.every((account) => !account.private));
+      await assertNormalAudioRestored();
+      const publicAfter = (await views()).find(
+        (view) => view.partition === "persist:zalo",
+      );
+      assert.equal(publicAfter.id, publicBefore.id);
+      assert.equal(publicAfter.document.token, publicBefore.document.token);
+      assert.equal(publicAfter.document.draft, publicBefore.document.draft);
+      await unlock();
+      assert.equal((await state()).active, privateAccount.id);
+      assert.deepEqual((await state()).providerTabs, privateTabs);
+      const after = (await views()).find(
+        (view) => view.partition === privateAccount.partition,
+      );
+      assert.equal(after.id, privateBefore.id);
+      assert.equal(after.document.token, privateBefore.document.token);
+      assert.equal(after.document.draft, privateBefore.document.draft);
+    },
+  );
+
+  await run(
+    "locked snapshot, DOM, menus, notification and IPC exclude private accounts",
     async () => {
       await page.evaluate(() => window.desktop.settings());
       await eventually("private label rendered", async () =>
@@ -230,34 +435,38 @@ try {
       );
       assert.equal(JSON.stringify(await state()).includes(privateName), false);
       assert.equal(
-        (await state()).accounts.some((a) => a.id === "zalo"),
+        (await state()).accounts.some(
+          (account) => account.id === privateAccount.id,
+        ),
         false,
       );
       const hidden = (await views()).find(
-        (v) => v.partition === "persist:zalo",
+        (view) => view.partition === privateAccount.partition,
       );
       assert.equal(hidden.visible, false);
       assert.equal(hidden.muted, true);
-      await page.evaluate(async () => {
-        await window.desktop.activate("zalo");
-        await window.desktop.activateProvider("zalo");
-        await window.desktop.testNotification("zalo");
-      });
-      assert.equal((await state()).active === "zalo", false);
-      assert.equal(
-        (await views()).find((v) => v.partition === "persist:zalo").visible,
-        false,
-      );
+      await page.evaluate(async (id) => {
+        await window.desktop.activate(id);
+        await window.desktop.testNotification(id);
+        await window.desktop.pinAccount(id);
+      }, privateAccount.id);
+      assert.equal((await state()).active, normalNavigation.active);
       assert.equal(
         (
-          await page.evaluate(() =>
-            window.desktop.editAccount("zalo", "BYPASS", "B"),
+          await page.evaluate(
+            (id) => window.desktop.editAccount(id, "BYPASS", "B"),
+            privateAccount.id,
           )
         )?.ok,
         false,
       );
       assert.equal(
-        (await command("membership", { accountId: "zalo", private: false })).ok,
+        (
+          await command("membership", {
+            accountId: privateAccount.id,
+            private: false,
+          })
+        ).ok,
         false,
       );
       assert.equal(
@@ -282,47 +491,37 @@ try {
       );
       assert.equal((await state()).privateSpace.unlocked, false);
       await unlock();
-      await page.evaluate(() => window.desktop.activate("zalo"));
-      const after = (await views()).find((v) => v.partition === "persist:zalo");
-      assert.equal(after.id, before.id);
-      assert.equal(after.document.token, before.document.token);
-      assert.equal(after.document.draft, before.document.draft);
+      await page.evaluate(
+        (id) => window.desktop.activate(id),
+        privateAccount.id,
+      );
+      const after = (await views()).find(
+        (view) => view.partition === privateAccount.partition,
+      );
+      assert.equal(after.id, privateBefore.id);
+      assert.equal(after.document.token, privateBefore.document.token);
+      assert.equal(after.document.draft, privateBefore.document.draft);
     },
   );
 
-  await run("private popup is hidden and muted on lock", async () => {
-    await client.evaluate(async ({ webContents }) => {
-      const contents = webContents
-        .getAllWebContents()
-        .find((c) => c.getURL() === "https://chat.zalo.me/");
-      await contents.executeJavaScript(
-        "window.open('https://chat.zalo.me/private-fixture-popup'); true",
-        true,
+  await run(
+    "private popup is hidden and muted on return to normal space",
+    async () => {
+      await inPartition(
+        privateAccount.partition,
+        `window.open('https://chat.zalo.me/private-fixture-popup'); true`,
       );
-    });
-    await eventually("owned private popup", async () =>
-      client.evaluate(({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows().some((w) =>
-          w.webContents.getURL().includes("private-fixture-popup"),
-        ),
-      ),
-    );
-    await command("lock");
-    assert.deepEqual(
-      await client.evaluate(({ BrowserWindow }) => {
-        const popup = BrowserWindow.getAllWindows().find((w) =>
-          w.webContents.getURL().includes("private-fixture-popup"),
-        );
-        return popup
-          ? {
-              visible: popup.isVisible(),
-              muted: popup.webContents.isAudioMuted(),
-            }
-          : { visible: false, muted: true };
-      }),
-      { visible: false, muted: true },
-    );
-  });
+      await eventually(
+        "owned private popup",
+        async () => !!(await popupState("private-fixture-popup")),
+      );
+      await command("lock");
+      assert.deepEqual(await popupState("private-fixture-popup"), {
+        visible: false,
+        muted: true,
+      });
+    },
+  );
 
   await run(
     "new lock wins over an in-flight password verification",
@@ -338,13 +537,28 @@ try {
   );
 
   await run(
-    "hide, minimize and OS lock all lock the private space",
+    "hide, minimize and OS lock all restore normal workspace",
     async () => {
       for (const trigger of ["hide", "minimize", "lock-screen"]) {
+        await client.evaluate(({ BrowserWindow }) => {
+          const win = BrowserWindow.getAllWindows().find((win) =>
+            win.webContents.getURL().startsWith("file:"),
+          );
+          win.restore();
+          win.show();
+        });
+        await eventually("visible main window before auto-lock", async () =>
+          client.evaluate(({ BrowserWindow }) => {
+            const win = BrowserWindow.getAllWindows().find((win) =>
+              win.webContents.getURL().startsWith("file:"),
+            );
+            return win.isVisible() && !win.isMinimized();
+          }),
+        );
         await unlock();
         await client.evaluate(({ BrowserWindow, powerMonitor }, trigger) => {
-          const win = BrowserWindow.getAllWindows().find((w) =>
-            w.webContents.getURL().startsWith("file:"),
+          const win = BrowserWindow.getAllWindows().find((win) =>
+            win.webContents.getURL().startsWith("file:"),
           );
           if (trigger === "lock-screen") powerMonitor.emit("lock-screen");
           else win[trigger]();
@@ -353,9 +567,11 @@ try {
           `${trigger} locks`,
           async () => !(await state()).privateSpace.unlocked,
         );
+        assert.equal((await state()).active, normalNavigation.active);
+        assert.deepEqual((await state()).providerTabs, normalNavigation.tabs);
         await client.evaluate(({ BrowserWindow }) => {
-          const win = BrowserWindow.getAllWindows().find((w) =>
-            w.webContents.getURL().startsWith("file:"),
+          const win = BrowserWindow.getAllWindows().find((win) =>
+            win.webContents.getURL().startsWith("file:"),
           );
           win.restore();
           win.show();
@@ -364,67 +580,358 @@ try {
     },
   );
 
-  await run("all-private catalog has a safe empty public state", async () => {
-    await unlock();
-    const accounts = (await state()).accounts;
-    for (const account of accounts)
+  await run(
+    "restart starts normal and preserves independent workspace navigation",
+    async () => {
+      await unlock();
+      await page.evaluate(
+        (id) => window.desktop.activate(id),
+        privateAccount.id,
+      );
+      await stop();
+      await launch();
+      assert.equal((await state()).privateSpace.unlocked, false);
+      assert.equal((await state()).active, normalNavigation.active);
+      assert.deepEqual((await state()).providerTabs, normalNavigation.tabs);
       assert.equal(
-        (await command("membership", { accountId: account.id, private: true }))
-          .ok,
+        (await views()).some(
+          (view) => view.partition === privateAccount.partition,
+        ),
+        false,
+      );
+      await unlock();
+      assert.equal((await state()).active, privateAccount.id);
+      assert.deepEqual((await state()).providerTabs, privateTabs);
+      assert.ok((await state()).accounts.every((account) => account.private));
+      await command("lock");
+    },
+  );
+
+  await run(
+    "authenticated membership moves an existing account between exclusive spaces",
+    async () => {
+      await unlock({ accountId: "zalo", private: true });
+      assert.equal(
+        (await state()).accounts.find((account) => account.id === "zalo")
+          ?.private,
         true,
       );
-    await command("lock");
-    assert.deepEqual((await state()).accounts, []);
-    assert.equal((await state()).active, "");
-    await page.evaluate(() => window.desktop.settings());
-    assert.equal((await state()).panel, "settings");
-    await page.evaluate(() => window.desktop.providerLibrary(true));
-    assert.equal((await state()).panel, "providers");
-    await page.evaluate(async () => {
-      await window.desktop.providerLibrary(false);
-      await window.desktop.back();
-      await window.desktop.reload();
-      await window.desktop.settings();
-      await window.desktop.welcome();
-    });
-    assert.equal((await state()).privateSpace.unlocked, false);
-  });
+      await command("lock");
+      assert.equal(
+        (await state()).accounts.some((account) => account.id === "zalo"),
+        false,
+      );
+      await unlock();
+      assert.equal(
+        (await command("membership", { accountId: "zalo", private: false })).ok,
+        true,
+      );
+      assert.equal(
+        (await state()).accounts.some((account) => account.id === "zalo"),
+        false,
+      );
+      await command("lock");
+      assert.equal(
+        (await state()).accounts.find((account) => account.id === "zalo")
+          ?.private,
+        false,
+      );
+    },
+  );
 
-  await run("restart begins locked without loading private pages", async () => {
-    await stop();
-    await launch();
-    assert.equal((await state()).privateSpace.unlocked, false);
-    assert.deepEqual((await state()).accounts, []);
-    assert.deepEqual(await views(), []);
-    await unlock();
-    assert.ok((await state()).accounts.some((a) => a.name === privateName));
-  });
+  for (const kind of ["account", "provider"]) {
+    await run(
+      `lock during ${kind} persistence never exposes or activates its private account`,
+      async () => {
+        await unlock();
+        await client.evaluate(() => {
+          globalThis.privateFixture.catalogPause = {
+            armed: true,
+            entered: false,
+          };
+        });
+        const pending = page.evaluate(
+          (kind) =>
+            kind === "account"
+              ? window.desktop.addAccount("gmail", "PRIVATE_RACE_ACCOUNT", "RA")
+              : window.desktop.addProvider(
+                  "PRIVATE_RACE_PROVIDER",
+                  "https://private-race.test/",
+                ),
+          kind,
+        );
+        let normal;
+        try {
+          await eventually("catalog persistence paused", async () =>
+            client.evaluate(
+              () => globalThis.privateFixture.catalogPause?.entered === true,
+            ),
+          );
+          await command("lock");
+          normal = await state();
+          assert.equal(normal.privateSpace.unlocked, false);
+        } finally {
+          await client.evaluate(() =>
+            globalThis.privateFixture.catalogPause?.release?.(),
+          );
+        }
+        const result = await pending;
+        assert.equal(result.ok, true, result.message);
+        const current = await state();
+        assert.equal(current.privateSpace.unlocked, false);
+        assert.equal(current.active, normal.active);
+        assert.deepEqual(current.providerTabs, normal.providerTabs);
+        assert.equal(
+          current.accounts.some((account) => account.id === result.accountId),
+          false,
+        );
+        if (result.providerId)
+          assert.equal(
+            current.providers.some(
+              (provider) => provider.id === result.providerId,
+            ),
+            false,
+          );
+        assert.equal(
+          (await views()).some(
+            (view) =>
+              view.partition === "persist:tn-account-" + result.accountId,
+          ),
+          false,
+        );
+        const catalog = JSON.parse(
+          await readFile(join(root, "TinNhanDesktop", "accounts.json"), "utf8"),
+        );
+        assert.equal(
+          catalog.accounts.find((account) => account.id === result.accountId)
+            ?.private,
+          true,
+        );
+        await unlock();
+        assert.equal(
+          (await state()).accounts.find(
+            (account) => account.id === result.accountId,
+          )?.private,
+          true,
+        );
+        if (result.providerId)
+          assert.ok(
+            (await state()).providers.some(
+              (provider) => provider.id === result.providerId,
+            ),
+          );
+        await command("lock");
+      },
+    );
+  }
+
+  await run(
+    "closing a shared custom-provider tab preserves the other workspace page and popup",
+    async () => {
+      const shared = await page.evaluate(() =>
+        window.desktop.addProvider(
+          "Shared fixture",
+          "https://shared-workspace.test/",
+        ),
+      );
+      assert.equal(shared.ok, true, shared.message);
+      const normalPartition = "persist:tn-account-" + shared.accountId;
+      await eventually("shared normal page", async () =>
+        (await views()).some(
+          (view) => view.partition === normalPartition && view.document?.token,
+        ),
+      );
+      await inPartition(
+        normalPartition,
+        `document.querySelector('#draft').value = 'shared normal draft'; true`,
+      );
+      await unlock({ accountId: shared.accountId, private: true });
+      const sharedPrivate = await addAccount(
+        shared.providerId,
+        "Shared private fixture",
+      );
+      assert.equal(
+        (
+          await command("membership", {
+            accountId: shared.accountId,
+            private: false,
+          })
+        ).ok,
+        true,
+      );
+      await command("lock");
+      await page.evaluate(
+        (id) => window.desktop.activate(id),
+        shared.accountId,
+      );
+      await inPartition(
+        normalPartition,
+        `window.open('https://shared-workspace.test/shared-normal-fixture-popup'); true`,
+      );
+      await eventually(
+        "shared normal popup",
+        async () => !!(await popupState("shared-normal-fixture-popup")),
+      );
+      const normalBefore = (await views()).find(
+        (view) => view.partition === normalPartition,
+      );
+      const normalTabs = (await state()).providerTabs;
+      await unlock();
+      await page.evaluate(
+        (id) => window.desktop.activate(id),
+        sharedPrivate.id,
+      );
+      await inPartition(
+        sharedPrivate.partition,
+        `window.open('https://shared-workspace.test/shared-private-fixture-popup'); true`,
+      );
+      await eventually(
+        "shared private popup",
+        async () => !!(await popupState("shared-private-fixture-popup")),
+      );
+      assert.equal(
+        (
+          await page.evaluate(
+            (id) => window.desktop.closeProvider(id),
+            shared.providerId,
+          )
+        ).ok,
+        true,
+      );
+      assert.equal(
+        (await views()).some(
+          (view) => view.partition === sharedPrivate.partition,
+        ),
+        false,
+      );
+      assert.equal(await popupState("shared-private-fixture-popup"), null);
+      const retained = (await views()).find(
+        (view) => view.partition === normalPartition,
+      );
+      assert.ok(
+        retained,
+        "closing private custom tab must retain normal custom page",
+      );
+      assert.equal(retained.id, normalBefore.id);
+      assert.equal(retained.document.token, normalBefore.document.token);
+      assert.equal(retained.document.draft, normalBefore.document.draft);
+      assert.equal(retained.visible, false);
+      assert.equal(retained.muted, true);
+      assert.deepEqual(await popupState("shared-normal-fixture-popup"), {
+        visible: false,
+        muted: true,
+      });
+      await command("lock");
+      assert.equal((await state()).active, shared.accountId);
+      assert.deepEqual((await state()).providerTabs, normalTabs);
+      assert.equal(
+        (await views()).find((view) => view.partition === normalPartition).id,
+        normalBefore.id,
+      );
+      assert.deepEqual(await popupState("shared-normal-fixture-popup"), {
+        visible: true,
+        muted: false,
+      });
+    },
+  );
+
+  await run(
+    "returning to normal Settings or welcome restores warm audio without opening popups",
+    async () => {
+      for (const panel of ["settings", "welcome"]) {
+        await page.evaluate((panel) => window.desktop[panel](), panel);
+        await unlock();
+        await command("lock");
+        assert.equal((await state()).panel, panel);
+        await assertNormalAudioRestored();
+        assert.deepEqual(await popupState("shared-normal-fixture-popup"), {
+          visible: false,
+          muted: false,
+        });
+      }
+    },
+  );
+
+  await run(
+    "all-private catalog leaves an empty usable normal workspace",
+    async () => {
+      const publicIds = (await state()).accounts.map((account) => account.id);
+      for (const accountId of publicIds) {
+        await unlock({ accountId, private: true });
+        assert.equal(
+          (await state()).accounts.find((account) => account.id === accountId)
+            ?.private,
+          true,
+        );
+        await command("lock");
+      }
+      assert.deepEqual((await state()).accounts, []);
+      assert.equal((await state()).active, "");
+      assert.deepEqual((await state()).providerTabs, { open: [], pinned: [] });
+      await page.evaluate(() => window.desktop.settings());
+      assert.equal((await state()).panel, "settings");
+      await page.evaluate(() => window.desktop.providerLibrary(true));
+      assert.equal((await state()).panel, "providers");
+      await page.evaluate(async () => {
+        await window.desktop.providerLibrary(false);
+        await window.desktop.back();
+        await window.desktop.reload();
+        await window.desktop.settings();
+        await window.desktop.welcome();
+      });
+      assert.equal((await state()).privateSpace.unlocked, false);
+    },
+  );
+
+  await run(
+    "all-private restart starts locked without loading private pages",
+    async () => {
+      await stop();
+      await launch();
+      assert.equal((await state()).privateSpace.unlocked, false);
+      assert.deepEqual((await state()).accounts, []);
+      assert.deepEqual(await views(), []);
+      await unlock();
+      assert.ok(
+        (await state()).accounts.some(
+          (account) => account.name === privateName,
+        ),
+      );
+    },
+  );
+
   await run(
     "interrupted outbound membership recovers private on restart",
     async () => {
       await stop();
       const path = join(root, "TinNhanDesktop", "accounts.json");
       const catalog = JSON.parse(await readFile(path, "utf8"));
-      catalog.accounts.find((a) => a.id === "zalo").private = false;
+      catalog.accounts.find(
+        (account) => account.id === privateAccount.id,
+      ).private = false;
       await writeFile(path, JSON.stringify(catalog));
       await writeFile(
         join(root, "TinNhanDesktop", "private-membership.json"),
-        JSON.stringify({ accountId: "zalo" }),
+        JSON.stringify({ accountId: privateAccount.id }),
       );
       await launch();
       assert.equal(
-        (await state()).accounts.some((a) => a.id === "zalo"),
+        (await state()).accounts.some(
+          (account) => account.id === privateAccount.id,
+        ),
         false,
       );
       assert.deepEqual(await views(), []);
       await unlock();
       assert.equal(
-        (await state()).accounts.find((a) => a.id === "zalo").private,
+        (await state()).accounts.find(
+          (account) => account.id === privateAccount.id,
+        ).private,
         true,
       );
       assert.equal(
         JSON.parse(await readFile(path, "utf8")).accounts.find(
-          (a) => a.id === "zalo",
+          (account) => account.id === privateAccount.id,
         ).private,
         true,
       );
@@ -433,7 +940,7 @@ try {
   assert.deepEqual(
     errors,
     [],
-    "renderer must not throw during privacy transitions",
+    "renderer must not throw during workspace transitions",
   );
   console.log(
     `PASS ${checks.length} private-space smoke checks, synthetic sessions only`,

@@ -198,12 +198,13 @@
         <div class="tools">
           <button
             id="private-space-toggle"
-            class="icon-button"
+            class="workspace-toggle"
             type="button"
             aria-label="Không gian kín"
             title="Không gian kín"
           >
             <svg aria-hidden="true"><use href="#i-lock" /></svg>
+            <span id="workspace-label">Không gian thường</span>
           </button>
           <button
             id="quick-switch"
@@ -247,7 +248,7 @@
             <div class="welcome-copy">
               <p class="eyebrow">GOM · KHÔNG GIAN CỦA BẠN</p>
               <h1 id="welcome-title">Chào mừng đến với Gom.</h1>
-              <p>
+              <p id="welcome-description">
                 Các cuộc trò chuyện quen thuộc, trong một cửa sổ. Chọn tài khoản
                 để tiếp tục hoặc mở thêm nền tảng.
               </p>
@@ -291,7 +292,9 @@
             </div>
             <div id="welcome-accounts" class="welcome-account-grid"></div>
             <div id="welcome-empty" class="welcome-empty" hidden>
-              <p>Chưa có tài khoản nào để tiếp tục.</p>
+              <p id="welcome-empty-description">
+                Chưa có tài khoản nào để tiếp tục.
+              </p>
               <button class="secondary" type="button" data-open-providers>
                 Chọn nền tảng đầu tiên
               </button>

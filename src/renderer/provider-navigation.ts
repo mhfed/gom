@@ -51,6 +51,7 @@ export function createProviderNavigation(options: {
   let ordered: ProviderId[] = [];
   let adding = false;
   let wasLibrary = false;
+  let generation = 0;
   const widths = new Map<ProviderId, number>();
   const canvas = document.createElement("canvas").getContext("2d");
   if (canvas)
@@ -65,15 +66,34 @@ export function createProviderNavigation(options: {
   const report = (message: string) => {
     $("provider-error").textContent = message;
   };
+  const workspaceGuard = () => {
+    const token = generation;
+    const space = options.getState().privateSpace;
+    const unlocked = !!space?.unlocked;
+    const lockVersion = space?.lockVersion;
+    return () => {
+      const current = options.getState().privateSpace;
+      return (
+        token === generation &&
+        unlocked === !!current?.unlocked &&
+        lockVersion === current?.lockVersion
+      );
+    };
+  };
   const close = async (id: ProviderId) => {
+    const isCurrent = workspaceGuard();
     try {
       const result = await window.desktop.closeProvider(id);
+      if (!isCurrent()) return;
       if (!result.ok) {
         await window.desktop.providerLibrary(true);
+        if (!isCurrent()) return;
         report(result.message || "Chưa đóng được tab. Bạn thử lại nhé.");
       }
     } catch {
+      if (!isCurrent()) return;
       await window.desktop.providerLibrary(true);
+      if (!isCurrent()) return;
       report("Chưa đóng được tab. Bạn thử lại nhé.");
     }
   };
@@ -405,6 +425,7 @@ export function createProviderNavigation(options: {
   form.onsubmit = async (event) => {
     event.preventDefault();
     if (adding || !form.reportValidity()) return;
+    const isCurrent = workspaceGuard();
     report("");
     adding = true;
     syncLibrary(options.getState());
@@ -414,6 +435,7 @@ export function createProviderNavigation(options: {
         $<HTMLInputElement>("provider-name").value.trim(),
         $<HTMLInputElement>("provider-url").value.trim(),
       );
+      if (!isCurrent()) return;
       if (!result.ok) {
         report(
           result.message ||
@@ -425,11 +447,13 @@ export function createProviderNavigation(options: {
       if (result.accountId) await window.desktop.activate(result.accountId);
       else if (result.providerId) await options.select(result.providerId);
     } catch {
-      report("Chưa thêm được website. Bạn thử lại nhé.");
+      if (isCurrent()) report("Chưa thêm được website. Bạn thử lại nhé.");
     } finally {
-      adding = false;
-      prop($("provider-save"), "textContent", "Thêm và mở website");
-      syncLibrary(options.getState());
+      if (isCurrent()) {
+        adding = false;
+        prop($("provider-save"), "textContent", "Thêm và mở website");
+        syncLibrary(options.getState());
+      }
     }
   };
   $<HTMLInputElement>("provider-name").oninput = (event) => {
@@ -465,6 +489,10 @@ export function createProviderNavigation(options: {
   new ResizeObserver(fit).observe($("provider-tab-area"));
   return {
     reset() {
+      generation++;
+      adding = false;
+      wasLibrary = false;
+      prop($("provider-save"), "textContent", "Thêm và mở website");
       headerSignature = "";
       librarySignature = "";
       visible = [];

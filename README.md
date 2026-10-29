@@ -21,16 +21,16 @@ Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Di
 
 ## Tải Gom
 
-Phiên bản hiện tại: **0.7.8**, phát hành ngày **28/10/2026**. Chọn bộ cài phù hợp với máy của bạn:
+Phiên bản chuẩn bị phát hành: **0.7.9**. Các liên kết dưới đây có hiệu lực sau khi công bố bản phát hành. Chọn bộ cài phù hợp với máy của bạn:
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
 | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.7.8/Gom-macOS-arm64-0.7.8.dmg)         |
-| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.7.8/Gom-win32-x64-0.7.8-Setup.exe) |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.7.9/Gom-macOS-arm64-0.7.9.dmg)         |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.7.9/Gom-win32-x64-0.7.9-Setup.exe) |
 
-Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.7.8/Gom-macOS-arm64-0.7.8.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.7.9/Gom-macOS-arm64-0.7.9.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.7.8](https://github.com/mhfed/gom/releases/tag/v0.7.8) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.7.9](https://github.com/mhfed/gom/releases/tag/v0.7.9) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -46,7 +46,7 @@ Xem [nội dung bản 0.7.8](https://github.com/mhfed/gom/releases/tag/v0.7.8) h
 
 ### Trên Mac
 
-1. Tải và mở tệp **Gom-macOS-arm64-0.7.8.dmg**.
+1. Tải và mở tệp **Gom-macOS-arm64-0.7.9.dmg**.
 2. Kéo **Gom.app** vào **Applications**.
 3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 
@@ -56,7 +56,7 @@ DMG cũng kèm **Mo-Gom.command**. Sau khi kéo app vào Applications, bạn có
 
 ### Trên Windows
 
-1. Tải **Gom-win32-x64-0.7.8-Setup.exe**.
+1. Tải **Gom-win32-x64-0.7.9-Setup.exe**.
 2. Chạy tệp Setup và đợi quá trình cài đặt hoàn tất.
 3. Mở **Gom** từ Start menu nếu app chưa tự mở.
 
@@ -90,11 +90,15 @@ Logo mới áp dụng cho toàn bộ nền tảng đó và được lưu trên m
 
 ### Không gian kín
 
-Bấm **biểu tượng ổ khóa** trên thanh công cụ để đặt mật khẩu riêng của Gom (8–256 ký tự). Sau đó vào **Cài đặt → Tài khoản**, mở menu thao tác của tài khoản và chọn **Đưa vào không gian kín**.
+Gom có **Không gian thường** và **Không gian kín**, mỗi nơi có tài khoản, tab, tab ghim và tài khoản đang chọn riêng. Nhãn trên thanh công cụ cho biết bạn đang ở đâu.
 
-Bấm ổ khóa hoặc **⌘/Ctrl Shift L** trong Gom để khóa. Tài khoản kín sẽ ẩn khỏi danh sách, tìm kiếm nhanh và menu khay. Mở lại bằng biểu tượng ổ khóa và mật khẩu. Gom cũng tự khóa khi ẩn/thu nhỏ cửa sổ, máy ngủ, màn hình khóa hoặc khởi động lại.
+Bấm **Không gian thường** cạnh biểu tượng ổ khóa để đặt mật khẩu (8–256 ký tự) hoặc nhập mật khẩu đã có. Gom chuyển sang **Không gian kín**; nếu chưa có tài khoản kín, không gian này bắt đầu trống. Bấm **Mở nền tảng** hoặc **Thêm tài khoản** để thêm và đăng nhập tài khoản riêng tại đây. Tài khoản thêm trong không gian kín tự thuộc không gian kín.
 
-Tài khoản kín luôn tắt thông báo, kể cả lúc mở khóa, và đăng nhập trực tiếp trong Gom. Thông báo đã gửi trước khi chuyển vào không gian kín có thể còn trong lịch sử hệ điều hành. Phiên và bản nháp đang mở được giữ qua khóa/mở.
+Bấm **Không gian kín** hoặc **⌘/Ctrl Shift L** để khóa và về không gian thường, khôi phục các tab và tài khoản đang dùng trước đó. Gom tự khóa khi ẩn/thu nhỏ cửa sổ, máy ngủ, màn hình khóa hoặc khởi động lại; chuyển sang ứng dụng khác không tự khóa.
+
+Muốn chuyển tài khoản đang có, vào **Cài đặt → Tài khoản**, mở menu thao tác và chọn **Đưa vào không gian kín** hoặc **Chuyển sang không gian thường**. Khi chuyển vào, Gom yêu cầu mật khẩu. Bản 0.7.9 giữ nguyên mật khẩu, phiên đăng nhập và phân loại tài khoản đã có từ 0.7.8; tài khoản thường không tự chuyển vào không gian kín.
+
+Tài khoản kín luôn tắt thông báo, kể cả lúc đang dùng, và đăng nhập trực tiếp trong Gom. Thông báo đã gửi trước khi chuyển vào không gian kín có thể còn trong lịch sử hệ điều hành. Phiên và bản nháp đang mở được giữ qua lần chuyển không gian.
 
 Mật khẩu khóa truy cập qua giao diện Gom; **không mã hóa lại dữ liệu phiên trên đĩa**. Không có nút đặt lại mật khẩu làm hiện tài khoản kín khi quên mật khẩu. Xem [hướng dẫn Không gian kín](docs/private-space.md).
 
@@ -130,7 +134,7 @@ Số trên tab dựa vào chỉ báo mà nền tảng cung cấp. Số có dấu
 Mở **Cài đặt → Cập nhật → Kiểm tra cập nhật** để xem phiên bản mới:
 
 - **Windows**: khi có bản tương thích, tải trong app và chọn khởi động lại để cài
-- **Mac**: bản 0.7.8 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
+- **Mac**: bản 0.7.9 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
 
 Lưu hoặc sao chép bản nháp quan trọng trước khi thoát app để cập nhật. Gom dùng lại dữ liệu tài khoản đang có; việc duy trì đăng nhập và khôi phục bản nháp còn phụ thuộc từng nền tảng.
 

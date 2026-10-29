@@ -8,7 +8,7 @@ on:
         required: true
         type: choice
         options:
-          - v0.7.8
+          - v0.7.9
 
 permissions:
   contents: write
@@ -48,9 +48,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          if ($env:RELEASE_TAG -ne "v0.7.8") { throw "Only v0.7.8 is supported by this workflow." }
+          if ($env:RELEASE_TAG -ne "v0.7.9") { throw "Only v0.7.9 is supported by this workflow." }
           $version = node -p "require('./package.json').version"
-          if ($version -ne "0.7.8") { throw "Expected package version 0.7.8; found $version." }
+          if ($version -ne "0.7.9") { throw "Expected package version 0.7.9; found $version." }
           $draft = gh release view $env:RELEASE_TAG --repo mhfed/gom --json isDraft --jq .isDraft
           if ($LASTEXITCODE -ne 0 -or $draft -ne "true") { throw "The target GitHub release must already exist as a draft." }
 
@@ -61,7 +61,7 @@ jobs:
         run: npm run typecheck
 
       - name: Private-space and release regression tests
-        run: node --test --experimental-strip-types tests/private-space.test.ts tests/private-state.test.ts tests/notification-click.test.ts tests/update-check.test.ts tests/provider-tabs.test.ts
+        run: node --test --experimental-strip-types tests/private-space.test.ts tests/private-state.test.ts tests/workspace-state.test.ts tests/accounts-multi.test.ts tests/notification-click.test.ts tests/update-check.test.ts tests/provider-tabs.test.ts
 
       - name: Create Windows x64 Squirrel packages
         run: npm run make:win
@@ -81,8 +81,8 @@ jobs:
         run: |
           $output = Join-Path $PWD "out-release/make/squirrel.windows/x64"
           $files = @(
-            (Join-Path $output "Gom-win32-x64-0.7.8-Setup.exe"),
-            (Join-Path $output "Gom_win32_x64-0.7.8-full.nupkg"),
+            (Join-Path $output "Gom-win32-x64-0.7.9-Setup.exe"),
+            (Join-Path $output "Gom_win32_x64-0.7.9-full.nupkg"),
             (Join-Path $output "RELEASES")
           )
           foreach ($file in $files) {
@@ -101,7 +101,7 @@ jobs:
             $bundleHash = (Get-FileHash "out-release/Gom-win32-x64/resources/app.asar" -Algorithm SHA256).Hash.ToLowerInvariant()
             if ($payloadHash -ne $bundleHash) { throw "The update package ASAR differs from the verified bundle." }
           } finally { $archive.Dispose() }
-          $checksumFile = Join-Path $output "SHA256SUMS-Gom-0.7.8-windows.txt"
+          $checksumFile = Join-Path $output "SHA256SUMS-Gom-0.7.9-windows.txt"
           $checksumLines = foreach ($file in $files) {
             $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $(Split-Path -Leaf $file)"
@@ -116,8 +116,8 @@ jobs:
         run: |
           $output = Join-Path $PWD "out-release/make/squirrel.windows/x64"
           gh release upload $env:RELEASE_TAG `
-            (Join-Path $output "Gom-win32-x64-0.7.8-Setup.exe") `
-            (Join-Path $output "Gom_win32_x64-0.7.8-full.nupkg") `
+            (Join-Path $output "Gom-win32-x64-0.7.9-Setup.exe") `
+            (Join-Path $output "Gom_win32_x64-0.7.9-full.nupkg") `
             (Join-Path $output "RELEASES") `
-            (Join-Path $output "SHA256SUMS-Gom-0.7.8-windows.txt") `
+            (Join-Path $output "SHA256SUMS-Gom-0.7.9-windows.txt") `
             --repo mhfed/gom --clobber
