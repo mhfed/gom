@@ -225,6 +225,22 @@
             ><span id="shelf-count" class="shelf-count">0</span>
           </button>
           <button
+            id="reminders-open"
+            class="icon-button reminder-toolbar"
+            type="button"
+            title="Nhắc trả lời"
+            aria-label="Nhắc trả lời"
+            aria-haspopup="dialog"
+            aria-controls="reminders-dialog"
+          >
+            <svg aria-hidden="true"><use href="#i-bell" /></svg>
+            <span
+              id="reminder-due-count"
+              class="reminder-due-count"
+              hidden
+            ></span>
+          </button>
+          <button
             id="private-space-toggle"
             class="workspace-toggle"
             type="button"
@@ -1110,6 +1126,97 @@
           </button>
         </div>
       </form>
+    </dialog>
+    <dialog id="reminders-dialog" aria-labelledby="reminders-title">
+      <div class="reminders-heading">
+        <div>
+          <p class="reminders-eyebrow">GOM · VIỆC CẦN QUAY LẠI</p>
+          <h2 id="reminders-title">Nhắc trả lời</h2>
+        </div>
+        <button
+          id="reminders-close"
+          class="icon-button"
+          type="button"
+          aria-label="Đóng nhắc việc"
+          title="Đóng"
+        >
+          <svg aria-hidden="true"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <p id="reminder-private-hint" class="hint reminders-intro"></p>
+      <p id="reminder-storage-error" class="form-error" role="alert"></p>
+      <div class="reminders-layout">
+        <section class="reminders-collection" aria-label="Danh sách nhắc việc">
+          <div
+            class="reminder-filters"
+            role="tablist"
+            aria-label="Trạng thái nhắc việc"
+          >
+            <button
+              id="reminder-pending"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="reminder-results"
+            >
+              Đang chờ
+            </button>
+            <button
+              id="reminder-done"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="reminder-results"
+            >
+              Đã xong
+            </button>
+          </div>
+          <div
+            id="reminder-results"
+            role="tabpanel"
+            aria-labelledby="reminder-pending"
+          >
+            <div id="reminder-list"></div>
+            <p id="reminder-empty" class="hint"></p>
+          </div>
+        </section>
+        <form
+          id="reminder-form"
+          class="reminder-create"
+          aria-describedby="reminder-error"
+        >
+          <h3>Tạo nhắc việc</h3>
+          <label class="field-label" for="reminder-account"
+            >Tài khoản cần quay lại</label
+          >
+          <select id="reminder-account" required></select>
+          <label class="field-label" for="reminder-note">Việc cần làm</label>
+          <textarea
+            id="reminder-note"
+            rows="3"
+            aria-describedby="reminder-note-count"
+            required
+            placeholder="Chiều gửi báo giá cho anh Hải…"
+          ></textarea>
+          <p id="reminder-note-count" class="hint reminder-note-count">
+            0/500 ký tự
+          </p>
+          <label class="field-label" for="reminder-due">Nhắc lúc</label>
+          <div class="reminder-quick" aria-label="Chọn giờ nhanh">
+            <button type="button" data-reminder-quick="15">15 phút nữa</button>
+            <button type="button" data-reminder-quick="60">1 giờ nữa</button>
+            <button type="button" data-reminder-quick="tomorrow">
+              Mai, 9 giờ
+            </button>
+          </div>
+          <input id="reminder-due" type="datetime-local" required />
+          <p id="reminder-error" class="form-error" role="alert"></p>
+          <button id="reminder-save" type="submit" class="primary">
+            Tạo nhắc việc
+          </button>
+        </form>
+      </div>
+      <p id="reminder-feedback" class="hint" role="status"></p>
     </dialog>
     <dialog id="private-space-dialog" aria-labelledby="private-space-title">
       <form

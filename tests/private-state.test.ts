@@ -126,6 +126,45 @@ test("locked snapshot removes private account IDs and provider details from ever
   );
 });
 
+test("reminder notes and due badges are projected exclusively with their account workspace", () => {
+  const state = fixture();
+  const row = {
+    dueAt: Date.now() - 1000,
+    createdAt: 1,
+    completedAt: null,
+    notifiedAt: null,
+  };
+  state.reminders = {
+    items: [
+      {
+        ...row,
+        id: "normal-reminder",
+        accountId: "public",
+        note: "Normal note",
+      },
+      {
+        ...row,
+        id: "secret-reminder",
+        accountId: "hidden",
+        note: "SECRET_REMINDER_NOTE",
+      },
+    ],
+    unavailable: false,
+    error: "",
+    dueCount: 2,
+  };
+  const normal = privateState(state, false);
+  assert.equal(normal.reminders!.dueCount, 1);
+  assert.equal(JSON.stringify(normal).includes("SECRET_REMINDER_NOTE"), false);
+  assert.equal(JSON.stringify(normal).includes("secret-reminder"), false);
+  const secret = privateState(state, true);
+  assert.equal(secret.reminders!.dueCount, 1);
+  assert.deepEqual(
+    secret.reminders!.items.map((r) => r.id),
+    ["secret-reminder"],
+  );
+});
+
 test("private workspace excludes normal accounts, tabs, provider details and Chrome profiles", () => {
   const state = fixture();
   state.accounts[0].provider = "web_normal";

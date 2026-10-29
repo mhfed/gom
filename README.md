@@ -104,6 +104,10 @@ Bản 0.8.1 có ngăn **Khay** để giữ chữ, link, ảnh và bản sao tệ
 
 Mỗi không gian giữ tối đa 100 món, tổng 250 MiB; mỗi tệp/ảnh tối đa 50 MiB và mỗi đoạn chữ tối đa 64 KiB. Khi khóa hoặc đổi không gian, Gom đóng khay và hủy thao tác chưa hoàn tất của không gian cũ. Nội dung đã sao chép hoặc lưu ra ngoài vẫn ở ngoài Gom. Xem [cách dùng Khay](docs/transfer-shelf.md).
 
+### Nhắc trả lời (bản phát triển)
+
+Nhánh phát triển có **Nhắc trả lời** để ghi việc cần quay lại, gắn với tài khoản và chọn giờ nhắc. Có giờ nhanh, đổi giờ tùy chỉnh, hoãn 15 phút, hoàn tất và xóa. Nhắc việc thường phát thông báo khi Gom còn chạy; nhắc việc kín chỉ hiện trong danh sách/badge kín. Xem [hướng dẫn](docs/reply-reminders.md). Bản phát hành 0.8.1 chưa có tính năng này.
+
 ### Không gian kín
 
 Gom có **Không gian thường** và **Không gian kín**, mỗi nơi có tài khoản, tab, tab ghim và tài khoản đang chọn riêng. Nhãn trên thanh công cụ cho biết bạn đang ở đâu.

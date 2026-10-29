@@ -30,6 +30,20 @@ export function privateState(state: AppState, unlocked: boolean): AppState {
   return {
     ...state,
     accounts,
+    reminders: state.reminders
+      ? {
+          ...state.reminders,
+          items: state.reminders.items.filter((item) =>
+            ids.has(item.accountId),
+          ),
+          dueCount: state.reminders.items.filter(
+            (item) =>
+              ids.has(item.accountId) &&
+              item.completedAt === null &&
+              item.dueAt <= Date.now(),
+          ).length,
+        }
+      : undefined,
     providers,
     active,
     privateSpace: state.privateSpace
