@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gom · Chat nổi</title>
+    <link rel="icon" href="app.png" />
+    <link rel="stylesheet" href="floating.css" />
+  </head>
+  <body>
+    <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <symbol id="pin" viewBox="0 0 24 24">
+          <path d="m9 3 6 0-1 6 4 4v2H6v-2l4-4-1-6M12 15v6" />
+        </symbol>
+        <symbol id="return" viewBox="0 0 24 24">
+          <path d="M14 3h7v7m0-7-9 9M3 7v14h14v-8M7 3H3v4" />
+        </symbol>
+        <symbol id="minus" viewBox="0 0 24 24">
+          <path d="M5 12h14" />
+        </symbol>
+      </defs>
+    </svg>
+    <header id="floating-header" aria-label="Chat nổi Gom" hidden>
+      <div class="brand">
+        <img src="app.png" alt="" draggable="false" /><span>Gom</span>
+      </div>
+      <span id="floating-source" class="source" aria-live="polite"></span>
+      <div class="tools">
+        <button
+          id="floating-pin"
+          class="tool"
+          type="button"
+          title="Luôn nổi trên các cửa sổ khác"
+          aria-label="Luôn nổi trên các cửa sổ khác"
+          aria-pressed="true"
+        >
+          <svg aria-hidden="true"><use href="#pin" /></svg>
+        </button>
+        <button
+          id="floating-return"
+          class="tool"
+          type="button"
+          title="Mở trong Gom"
+          aria-label="Mở trong Gom"
+        >
+          <svg aria-hidden="true"><use href="#return" /></svg>
+        </button>
+        <button
+          id="floating-collapse"
+          class="tool collapse"
+          type="button"
+          title="Thu thành bong bóng"
+          aria-label="Thu thành bong bóng"
+        >
+          <svg aria-hidden="true"><use href="#minus" /></svg
+          ><span>Thu gọn</span>
+        </button>
+      </div>
+    </header>
+    <button
+      id="floating-bubble"
+      class="bubble"
+      type="button"
+      title="Bấm để mở chat nổi · kéo để đổi góc"
+      aria-label="Mở lại chat nổi Gom"
+      hidden
+    >
+      <img src="app.png" alt="" draggable="false" />
+    </button>
+    <script src="floating.js"></script>
+  </body>
+</html>

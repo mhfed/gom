@@ -1,5 +1,6 @@
 import { PrivateSpaceStore } from "./private-space.ts";
 import { privateState } from "./private-state.ts";
+import { FloatingChat } from "./floating-chat.ts";
 import {
   normalizeWorkspaceNavigation,
   type WorkspaceNavigation,
@@ -39,7 +40,7 @@ import {
   toggleProviderPin,
   closeProviderTab,
 } from "./provider-tabs.ts";
-import { layoutViews } from "./layout.ts";
+import { layoutViews, resetViewLayout } from "./layout.ts";
 import { normalizeUnread } from "./unread.ts";
 import { authScript } from "./auth-detection.ts";
 import { pageSnapshotScript } from "./page-snapshot.ts";
@@ -161,6 +162,7 @@ const chromeRoot =
     : join(homedir(), "Library/Application Support/Google/Chrome");
 const sources = new ChromeSources(chromeRoot, "", process.platform);
 let win: BrowserWindow;
+let floating: FloatingChat | undefined;
 let closing = false,
   closed = false;
 let poll: ReturnType<typeof setInterval>;
@@ -369,6 +371,7 @@ function publicAccount(id: unknown): boolean {
   return !!account && !account.private;
 }
 function visibleState(): AppState {
+  state.floating = floating?.snapshot();
   state.privateSpace = {
     ...privateStore.status(),
     unlocked: privateUnlocked,
@@ -452,6 +455,7 @@ function hideInactiveWorkspace() {
 }
 function switchWorkspace(toPrivate: boolean) {
   const changed = privateUnlocked !== toPrivate;
+  if (changed || privateUnlocked) floating?.conceal();
   rememberWorkspace();
   resetWorkspaceInteractions();
   privateUnlocked = toPrivate;
@@ -586,6 +590,7 @@ async function transferAccount(
         }
         // Commit to memory synchronously after checking the generation. A later
         // lock sees the completed, explicitly requested membership change.
+        if (floating?.accountId === accountId) floating.conceal();
         state.accounts = next;
         const destination = workspaces[toPrivate ? "private" : "normal"];
         const moved = findAccount(accountId, true)!;
@@ -1137,7 +1142,7 @@ function layout() {
   if (!win || win.isDestroyed()) return;
   const [width, height] = win.getContentSize();
   layoutViews(
-    views.entries(),
+    [...views.entries()].filter(([id]) => id !== floating?.accountId),
     width,
     height,
     state.active,
@@ -1158,6 +1163,7 @@ function activate(id: AccountId, focusPage = true) {
     closingProviders.has(account.provider)
   )
     return;
+  if (floating?.accountId === id) floating.returnToMain(false);
   const opened = !state.providerTabs.open.includes(account.provider);
   state.providerTabs = openProviderTab(state.providerTabs, account.provider);
   const selectionChanged =
@@ -1187,6 +1193,49 @@ function activate(id: AccountId, focusPage = true) {
   void detect(id, view.webContents, true);
   publish();
   if (selectionChanged || opened) scheduleSave();
+}
+
+async function floatChat(): Promise<AccountResult> {
+  if (
+    !floating ||
+    closing ||
+    accountEditorOpen ||
+    state.accountBusy ||
+    state.importing ||
+    state.commandOpen ||
+    state.panel !== "service" ||
+    !accessible(state.active)
+  )
+    return {
+      ok: false,
+      message: "Mở một tab tài khoản trước khi tách chat nổi.",
+    };
+  const id = state.active;
+  const view = views.peek(id);
+  if (!view || view.webContents.isDestroyed())
+    return { ok: false, message: "Tab chưa sẵn sàng. Hãy mở lại tài khoản." };
+  try {
+    const opened = await floating.detach(id, view);
+    // The controller revokes in-flight detach on an actual workspace change.
+    // Normal main-window hiding also advances privacyGeneration, but must not
+    // cancel a normal floating window while its local shell is still loading.
+    if (!accessible(id) || closing) {
+      if (opened && floating.accountId === id) floating.conceal();
+      return {
+        ok: false,
+        message: "Không gian đã thay đổi. Chat nổi đã được thu hồi.",
+      };
+    }
+    return opened
+      ? { ok: true, accountId: id }
+      : { ok: false, message: "Chưa mở được chat nổi. Bạn thử lại nhé." };
+  } catch {
+    if (floating.accountId === id) floating.conceal();
+    return {
+      ok: false,
+      message: "Chưa mở được chat nổi. Tab của bạn vẫn được giữ trong Gom.",
+    };
+  }
 }
 
 function detect(id: AccountId, contents: WebContents, refresh = false) {
@@ -1282,8 +1331,10 @@ function fail(id: AccountId, reason: FailureReason) {
 }
 function reloadProvider(id: AccountId, manual = false, home = false) {
   if (closing || state.importing || !accessible(id)) return;
+  const inFloating = floating?.accountId === id && floating.isFocused();
   if (
     manual &&
+    !inFloating &&
     (state.panel !== "service" ||
       state.commandOpen ||
       accountEditorOpen ||
@@ -1307,19 +1358,27 @@ function reloadProvider(id: AccountId, manual = false, home = false) {
       .catch(() => {});
   else view.webContents.reload();
 }
+function focusedNavigationAccount(): AccountId {
+  return floating?.isFocused() && floating.accountId
+    ? floating.accountId
+    : state.active;
+}
 function goBack() {
+  const id = focusedNavigationAccount();
+  const inFloating = floating?.accountId === id && floating.isFocused();
   if (
     closing ||
-    !accessible(state.active) ||
-    state.panel !== "service" ||
-    state.commandOpen ||
-    accountEditorOpen ||
-    !state.providerTabs.open.includes(
-      findAccount(state.active, true)?.provider || "zalo",
-    )
+    !accessible(id) ||
+    (!inFloating &&
+      (state.panel !== "service" ||
+        state.commandOpen ||
+        accountEditorOpen ||
+        !state.providerTabs.open.includes(
+          findAccount(id, true)?.provider || "zalo",
+        )))
   )
     return;
-  const contents = views.peek(state.active)?.webContents;
+  const contents = views.peek(id)?.webContents;
   if (
     contents &&
     !contents.isDestroyed() &&
@@ -1356,7 +1415,8 @@ function showWindow() {
     !state.commandOpen &&
     state.panel === "service" &&
     !state.connections[state.active]?.reason &&
-    accessible(state.active)
+    accessible(state.active) &&
+    floating?.accountId !== state.active
   )
     views.activate(state.active).webContents.focus();
   else win.webContents.focus();
@@ -2079,6 +2139,8 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
       };
     if (closing || generation !== privacyGeneration)
       return { ok: false, message: "Không gian đã thay đổi. Thao tác đã hủy." };
+    if (floating?.accountId && providerFor(floating.accountId) === provider)
+      floating.conceal();
     const active = findAccount(state.active, true)?.provider || "zalo";
     const result = closeProviderTab(state.providerTabs, provider, active);
     state.providerTabs = result.tabs;
@@ -2428,6 +2490,7 @@ async function changeAccount(
         state.accounts = next;
         for (const a of next) initializeAccount(a);
         if (command === "account-archive") {
+          if (floating?.accountId === id) floating.conceal();
           epochs.set(id, (epochs.get(id) ?? 0) + 1);
           for (const popup of [...popups])
             if (
@@ -2573,6 +2636,7 @@ function beginAutomaticUpdate() {
 async function quit(installUpdate = false) {
   if (closing) return;
   closing = true;
+  floating?.close();
   clearInterval(poll);
   clearTimeout(saveTimer);
   clearTimeout(wakeTimer);
@@ -2815,6 +2879,30 @@ else {
       },
     });
     win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    floating = new FloatingChat({
+      mainWindow: win,
+      directory: __dirname,
+      icon: appIconPath,
+      canAccess: (id) => !closing && accessible(id),
+      describe: (id) => {
+        const account = findAccount(id)!;
+        return {
+          provider: providerDefinition(account.provider).label,
+          account: account.name,
+          private: !!account.private,
+        };
+      },
+      onChange: () => {
+        for (const [, view] of views.entries()) resetViewLayout(view);
+        layout();
+        publish(true);
+      },
+      onReturn: (id) => {
+        if (closing || !accessible(id)) return;
+        activate(id);
+        showWindow();
+      },
+    });
     win.webContents.on("will-navigate", (event) => event.preventDefault());
     win.webContents.on("did-start-loading", () => {
       accountEditorOpen = false;
@@ -2893,6 +2981,8 @@ else {
       if (providerId !== undefined && !accessibleProvider(providerId))
         return { ok: false };
       switch (command) {
+        case "float-chat":
+          return floatChat();
         case "private-space":
           return privateSpaceCommand(arg);
         case "state":
@@ -3223,12 +3313,13 @@ else {
             },
             {
               label: "Trang đầu nền tảng",
-              click: () => reloadProvider(state.active, true, true),
+              click: () =>
+                reloadProvider(focusedNavigationAccount(), true, true),
             },
             {
               label: "Tải lại nền tảng",
               accelerator: "CmdOrCtrl+R",
-              click: () => reloadProvider(state.active, true),
+              click: () => reloadProvider(focusedNavigationAccount(), true),
             },
           ],
         },
@@ -3251,7 +3342,10 @@ else {
     win.on("move", scheduleSave);
     win.on("hide", lockPrivateSpace);
     win.on("minimize", lockPrivateSpace);
-    powerMonitor.on("lock-screen", lockPrivateSpace);
+    powerMonitor.on("lock-screen", () => {
+      floating?.conceal();
+      lockPrivateSpace();
+    });
     win.on("close", (event) => {
       if (!closed) {
         event.preventDefault();
@@ -3291,6 +3385,7 @@ else {
     configureShortcut(state.preferences.shortcut);
     powerMonitor.on("suspend", () => {
       sleeping = true;
+      floating?.conceal();
       lockPrivateSpace();
       updateSchedule.suspend();
     });

@@ -1581,6 +1581,14 @@ input[aria-invalid="true"] {
   place-items: center;
   padding: 30px;
 }
+#floating-placeholder {
+  position: absolute;
+  inset: var(--header-height) 0 0;
+  display: grid;
+  place-items: center;
+  padding: 30px;
+  background: var(--paper);
+}
 .connection-card {
   max-width: 430px;
   text-align: center;

@@ -183,6 +183,14 @@ export interface Presentation {
   pinned: AccountId[];
 }
 export interface AppState {
+  floating?: {
+    accountId: string | null;
+    detached: boolean;
+    collapsed: boolean;
+    pinned: boolean;
+    provider: string;
+    account: string;
+  };
   privateSpace?: {
     configured: boolean;
     unlocked: boolean;
@@ -216,6 +224,7 @@ export interface AppState {
   updates: UpdateState;
 }
 export interface DesktopBridge {
+  floatChat(): Promise<AccountResult>;
   privateSpace(
     action: "setup" | "unlock" | "lock" | "change-password" | "membership",
     data?: {
