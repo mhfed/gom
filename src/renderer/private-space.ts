@@ -1,9 +1,6 @@
 import type { Account, AppState } from "../shared.ts";
 
-export function createPrivateSpaceUI(options: {
-  getState(): AppState;
-  showAccounts(): void;
-}) {
+export function createPrivateSpaceUI(options: { getState(): AppState }) {
   const $ = <T extends HTMLElement>(id: string) =>
     document.getElementById(id) as T;
   const dialog = $<HTMLDialogElement>("private-space-dialog");
@@ -16,6 +13,7 @@ export function createPrivateSpaceUI(options: {
   let pendingAccount: { id: string; private: boolean } | null = null;
   let generation = 0;
   let busy = false;
+  let holdsSurface = false;
   let stateSignature = "";
   const clear = () => {
     password.value = "";
@@ -31,6 +29,9 @@ export function createPrivateSpaceUI(options: {
     generation++;
     busy = false;
     pendingAccount = null;
+    // Main already restored the destination workspace. A stale dialog close
+    // must not send a command that shows a just-hidden window again.
+    holdsSurface = false;
     clear();
     submit.disabled = false;
     $("private-space-error").textContent = "";
@@ -38,8 +39,10 @@ export function createPrivateSpaceUI(options: {
   }
   function cancel() {
     const wasBusy = busy;
+    const release = holdsSurface;
     reset();
     if (wasBusy) void window.desktop.privateSpace("lock");
+    else if (release) void window.desktop.command(false);
   }
   async function open(
     request: typeof mode,
@@ -47,9 +50,6 @@ export function createPrivateSpaceUI(options: {
   ) {
     if (busy || dialog.open) return;
     const token = ++generation;
-    options.showAccounts();
-    await window.desktop.settings();
-    if (token !== generation) return;
     mode = request;
     pendingAccount = account ?? null;
     clear();
@@ -72,7 +72,7 @@ export function createPrivateSpaceUI(options: {
     confirmation.required = creates;
     submit.textContent =
       mode === "setup"
-        ? "Tạo mật khẩu"
+        ? "Tạo và vào không gian kín"
         : mode === "change-password"
           ? "Lưu mật khẩu"
           : "Mở không gian kín";
@@ -80,8 +80,19 @@ export function createPrivateSpaceUI(options: {
     if (submit.disabled)
       $("private-space-error").textContent =
         "Không đọc được cấu hình khóa. Các tài khoản kín vẫn được giữ khóa.";
+    holdsSurface = true;
     dialog.showModal();
-    password.focus();
+    try {
+      // Hide native provider views without replacing this workspace's panel.
+      // The shell suppresses the command palette while this dialog owns it.
+      await window.desktop.command(true);
+      if (token === generation) password.focus();
+    } catch {
+      if (token === generation) {
+        holdsSurface = false;
+        reset();
+      }
+    }
   }
   async function membership(account: { id: string; private: boolean }) {
     const token = generation;
@@ -95,7 +106,7 @@ export function createPrivateSpaceUI(options: {
         result.ok
           ? account.private
             ? "Đã đưa tài khoản vào không gian kín. Thông báo của tài khoản này được tắt."
-            : "Đã đưa tài khoản ra ngoài."
+            : "Đã chuyển tài khoản sang không gian thường."
           : result.message || "Chưa thay đổi được tài khoản.",
       );
     } catch {
@@ -128,9 +139,19 @@ export function createPrivateSpaceUI(options: {
     event.preventDefault();
     cancel();
   };
-  dialog.onclose = clear;
+  dialog.onclose = () => {
+    clear();
+    if (holdsSurface) {
+      holdsSurface = false;
+      void window.desktop.command(false);
+    }
+  };
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) cancel();
+    if (document.hidden) {
+      const wasOpen = holdsSurface || busy;
+      reset();
+      if (wasOpen) void window.desktop.privateSpace("lock");
+    }
   });
   form.onsubmit = async (event) => {
     event.preventDefault();
@@ -146,15 +167,20 @@ export function createPrivateSpaceUI(options: {
     submit.disabled = true;
     $("private-space-error").textContent = "";
     const token = generation;
+    const action = mode;
+    const account = pendingAccount;
     const data = {
       password: password.value,
-      ...(mode === "change-password"
+      ...(action === "change-password"
         ? { newPassword: nextPassword.value }
+        : {}),
+      ...(action !== "change-password" && account
+        ? { accountId: account.id, private: account.private }
         : {}),
     };
     clear();
     try {
-      const result = await window.desktop.privateSpace(mode, data);
+      const result = await window.desktop.privateSpace(action, data);
       if (token !== generation) return;
       if (!result.ok) {
         $("private-space-error").textContent =
@@ -162,15 +188,13 @@ export function createPrivateSpaceUI(options: {
         password.focus();
         return;
       }
-      const account = pendingAccount;
       pendingAccount = null;
       dialog.close();
       feedback(
-        mode === "change-password"
+        action === "change-password"
           ? "Đã đổi mật khẩu."
-          : "Không gian kín đã mở. Bạn có thể quản lý các tài khoản kín tại đây.",
+          : "Đang ở không gian kín. Tài khoản và tab ở đây được giữ riêng.",
       );
-      if (account) await membership(account);
     } catch {
       if (token === generation)
         $("private-space-error").textContent =
@@ -187,6 +211,7 @@ export function createPrivateSpaceUI(options: {
   return {
     move,
     reset,
+    isOpen: () => dialog.open,
     sync(state: AppState) {
       const next = JSON.stringify(state.privateSpace);
       if (next === stateSignature) return;
@@ -194,22 +219,28 @@ export function createPrivateSpaceUI(options: {
       const unlocked = state.privateSpace?.unlocked === true;
       const configured = state.privateSpace?.configured === true;
       const label = unlocked
-        ? "Khóa không gian kín"
+        ? "Khóa và về không gian thường"
         : configured
           ? "Mở không gian kín"
           : "Thiết lập không gian kín";
       $("private-space-toggle").title = label;
       $("private-space-toggle").setAttribute("aria-label", label);
       $("private-space-toggle").classList.toggle("active", unlocked);
+      $("workspace-label").textContent = unlocked
+        ? "Không gian kín"
+        : "Không gian thường";
+      document.documentElement.dataset.workspace = unlocked
+        ? "private"
+        : "normal";
       $("private-space-open").textContent = label;
       $("private-space-change").hidden = !unlocked;
       $("private-space-status").textContent = state.privateSpace?.unavailable
         ? "Cấu hình khóa chưa đọc được. Tài khoản kín vẫn được giữ khóa."
         : unlocked
-          ? "Đang mở · khóa nhanh bằng nút ổ khóa hoặc ⌘/Ctrl Shift L."
+          ? "Đang ở không gian kín · tài khoản và tab riêng. Khóa để về không gian thường."
           : configured
-            ? "Đã khóa · nhập mật khẩu để mở các tài khoản kín."
-            : "Đặt mật khẩu, rồi chọn tài khoản cần đưa vào không gian kín.";
+            ? "Đang ở không gian thường · nhập mật khẩu để vào không gian kín."
+            : "Tạo không gian kín với mật khẩu riêng, rồi thêm tài khoản vào đó.";
     },
   };
 }

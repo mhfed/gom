@@ -1650,6 +1650,33 @@ input[aria-invalid="true"] {
   border-radius: 14px;
   background: var(--paper);
 }
+.workspace-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+}
+.workspace-toggle svg {
+  width: 15px;
+  height: 15px;
+}
+.workspace-toggle:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.workspace-toggle.active {
+  background: var(--selected);
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .private-space-actions {
   display: flex;
   flex-wrap: wrap;

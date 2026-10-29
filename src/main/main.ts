@@ -1,6 +1,10 @@
 import { PrivateSpaceStore } from "./private-space.ts";
 import { privateState } from "./private-state.ts";
 import {
+  normalizeWorkspaceNavigation,
+  type WorkspaceNavigation,
+} from "./workspace-state.ts";
+import {
   defaultAccounts,
   accountPartition,
   AccountCatalogStore,
@@ -324,6 +328,11 @@ const membershipJournalPath = join(
 );
 const membershipJournal = new SettingsWriter(membershipJournalPath);
 let privateUnlocked = false;
+let workspaces: { normal: WorkspaceNavigation; private: WorkspaceNavigation } =
+  {
+    normal: normalizeWorkspaceNavigation(undefined, state.accounts, false),
+    private: normalizeWorkspaceNavigation(undefined, state.accounts, true),
+  };
 let privacyGeneration = 0;
 let privacyDialogs = new AbortController();
 const privacyMenus = new Set<Menu>();
@@ -353,7 +362,7 @@ function privacyMenu(menu: Menu, options: Electron.PopupOptions) {
 }
 function accessible(id: unknown, archived = false): boolean {
   const account = findAccount(id, archived);
-  return !!account && (!account.private || privateUnlocked);
+  return !!account && Boolean(account.private) === privateUnlocked;
 }
 function publicAccount(id: unknown): boolean {
   const account = findAccount(id);
@@ -370,45 +379,92 @@ function visibleState(): AppState {
 function accessibleProvider(id: unknown): id is ProviderId {
   return knownProvider(id) && visibleState().providers.some((p) => p.id === id);
 }
-function lockPrivateSpace() {
-  const wasPrivate =
-    privateUnlocked || findAccount(state.active, true)?.private;
+function rememberWorkspace() {
+  if (!workspaces) return;
+  workspaces[privateUnlocked ? "private" : "normal"] =
+    normalizeWorkspaceNavigation(
+      {
+        active: state.active,
+        providerTabs: state.providerTabs,
+        presentation: state.presentation,
+        lastAccounts: Object.fromEntries(lastAccounts),
+        collapsed: state.collapsed,
+        panel: state.panel,
+      },
+      state.accounts,
+      privateUnlocked,
+    );
+}
+function restoreWorkspace() {
+  const key = privateUnlocked ? "private" : "normal";
+  const next = normalizeWorkspaceNavigation(
+    workspaces[key],
+    state.accounts,
+    privateUnlocked,
+  );
+  workspaces[key] = next;
+  state.active = next.active;
+  state.providerTabs = next.providerTabs;
+  state.presentation = next.presentation;
+  state.collapsed = next.collapsed;
+  state.panel = next.panel;
+  lastAccounts.clear();
+  for (const [provider, id] of Object.entries(next.lastAccounts))
+    lastAccounts.set(provider as ProviderId, id);
+}
+function resetWorkspaceInteractions() {
   privacyGeneration++;
   privacyDialogs.abort();
   privacyDialogs = new AbortController();
   for (const menu of privacyMenus) menu.closePopup();
   privacyMenus.clear();
-  privateUnlocked = false;
   accountEditorOpen = false;
   state.commandOpen = false;
-  for (const account of state.accounts.filter((a) => a.private)) {
-    epochs.set(account.id, (epochs.get(account.id) ?? 0) + 1);
+  state.notice = "";
+}
+function hideInactiveWorkspace() {
+  for (const account of state.accounts) {
+    const inactive = !accessible(account.id);
     const view = views.peek(account.id);
     if (view && !view.webContents.isDestroyed()) {
-      view.setVisible(false);
-      view.webContents.setAudioMuted(true);
-      view.webContents.send("gom-private-notifications");
+      view.webContents.setAudioMuted(inactive);
+      if (inactive) {
+        view.setVisible(false);
+        if (account.private) view.webContents.send("gom-private-notifications");
+      }
     }
-    testAlerts.get(account.id)?.close();
-    testAlerts.delete(account.id);
+    if (inactive) {
+      epochs.set(account.id, (epochs.get(account.id) ?? 0) + 1);
+      testAlerts.get(account.id)?.close();
+      testAlerts.delete(account.id);
+    }
   }
   for (const popup of popups) {
     if (popup.isDestroyed()) continue;
-    if (findAccount(popupProviders.get(popup.webContents), true)?.private) {
-      popup.webContents.setAudioMuted(true);
-      popup.webContents.send("gom-private-notifications");
+    const id = popupProviders.get(popup.webContents);
+    popup.webContents.setAudioMuted(!accessible(id));
+    if (!accessible(id)) {
+      if (findAccount(id, true)?.private)
+        popup.webContents.send("gom-private-notifications");
       popup.hide();
     }
   }
-  if (!accessible(state.active)) {
-    state.active =
-      state.accounts.find((a) => !a.archived && !a.private)?.id || "";
-  }
-  if (wasPrivate) state.panel = "welcome";
-  state.notice = "";
+}
+function switchWorkspace(toPrivate: boolean) {
+  const changed = privateUnlocked !== toPrivate;
+  rememberWorkspace();
+  resetWorkspaceInteractions();
+  privateUnlocked = toPrivate;
+  if (changed) restoreWorkspace();
+  hideInactiveWorkspace();
+  if (changed && state.panel === "service" && accessible(state.active))
+    activate(state.active, false);
   layout();
   publish(true);
   scheduleSave();
+}
+function lockPrivateSpace() {
+  switchWorkspace(false);
 }
 async function privateSpaceCommand(arg: unknown): Promise<AccountResult> {
   const request = arg as {
@@ -424,13 +480,47 @@ async function privateSpaceCommand(arg: unknown): Promise<AccountResult> {
   }
   const generation = privacyGeneration;
   if (request.action === "setup" || request.action === "unlock") {
+    if (privateUnlocked)
+      return { ok: false, message: "Bạn đang ở không gian kín." };
+    if (state.accountBusy || state.importing)
+      return {
+        ok: false,
+        message: "Đợi thao tác tài khoản hoàn tất rồi thử lại.",
+      };
+    const transfer = data.accountId !== undefined || data.private !== undefined;
+    if (
+      transfer &&
+      (typeof data.accountId !== "string" ||
+        data.private !== true ||
+        !accessible(data.accountId, true))
+    )
+      return {
+        ok: false,
+        message: "Tài khoản không thuộc không gian hiện tại.",
+      };
     const result = await (request.action === "setup"
       ? privateStore.setup(data.password)
       : privateStore.verify(data.password));
     if (generation !== privacyGeneration || closing)
       return { ok: false, message: "Không gian đã khóa. Hãy mở lại." };
-    if (result.ok) privateUnlocked = true;
-    else if (privateStore.status().unavailable) lockPrivateSpace();
+    if (result.ok) {
+      if (state.accountBusy || state.importing)
+        return {
+          ok: false,
+          message: "Đợi thao tác tài khoản hoàn tất rồi thử lại.",
+        };
+      if (transfer) {
+        const moved = await transferAccount(
+          data.accountId as string,
+          true,
+          generation,
+        );
+        if (!moved.ok) return moved;
+      }
+      if (generation !== privacyGeneration || closing)
+        return { ok: false, message: "Không gian đã khóa. Hãy mở lại." };
+      switchWorkspace(true);
+    } else if (privateStore.status().unavailable) lockPrivateSpace();
     publish(true);
     return result;
   }
@@ -451,6 +541,15 @@ async function privateSpaceCommand(arg: unknown): Promise<AccountResult> {
     typeof data.private !== "boolean"
   )
     return { ok: false };
+  if (!accessible(data.accountId, true) || data.private !== false)
+    return { ok: false, message: "Tài khoản không thuộc không gian hiện tại." };
+  return transferAccount(data.accountId, data.private, generation);
+}
+async function transferAccount(
+  accountId: string,
+  toPrivate: boolean,
+  generation: number,
+): Promise<AccountResult> {
   if (state.accountBusy || state.importing || state.catalogWarning)
     return {
       ok: false,
@@ -462,15 +561,18 @@ async function privateSpaceCommand(arg: unknown): Promise<AccountResult> {
       publish();
       const before = state.accounts;
       try {
-        if (!findAccount(data.accountId, true)) return { ok: false };
+        if (!accessible(accountId, true) || generation !== privacyGeneration)
+          return {
+            ok: false,
+            message: "Không gian đã thay đổi. Thao tác đã hủy.",
+          };
+        rememberWorkspace();
         const next = before.map((a) =>
-          a.id === data.accountId
-            ? { ...a, private: data.private as boolean }
-            : a,
+          a.id === accountId ? { ...a, private: toPrivate } : a,
         );
         // A durable marker prevents a failed rollback/crash from revealing an
         // outbound private account on the next launch.
-        await membershipJournal.write({ accountId: data.accountId });
+        await membershipJournal.write({ accountId });
         if (generation !== privacyGeneration || closing) {
           await rm(membershipJournalPath, { force: true });
           return { ok: false, message: "Không gian đã khóa. Thay đổi đã hủy." };
@@ -485,10 +587,24 @@ async function privateSpaceCommand(arg: unknown): Promise<AccountResult> {
         // Commit to memory synchronously after checking the generation. A later
         // lock sees the completed, explicitly requested membership change.
         state.accounts = next;
+        const destination = workspaces[toPrivate ? "private" : "normal"];
+        const moved = findAccount(accountId, true)!;
+        if (!moved.archived) {
+          destination.providerTabs = openProviderTab(
+            destination.providerTabs,
+            moved.provider,
+          );
+          destination.active = accountId;
+          destination.lastAccounts[moved.provider] = accountId;
+          destination.panel = "service";
+        }
+        restoreWorkspace();
+        hideInactiveWorkspace();
+        layout();
         publish(true);
         await rm(membershipJournalPath, { force: true });
-        const id = data.accountId as string;
-        if (data.private) {
+        const id = accountId;
+        if (toPrivate) {
           testAlerts.get(id)?.close();
           testAlerts.delete(id);
           views.peek(id)?.webContents.send("gom-private-notifications");
@@ -1384,7 +1500,7 @@ function testNotification(id: AccountId) {
   });
   testAlerts.set(id, notification);
   notification.on("click", () => {
-    if (!closing && publicAccount(id)) {
+    if (!closing && publicAccount(id) && accessible(id)) {
       activate(id);
       showWindow();
     }
@@ -1874,7 +1990,7 @@ function accountForProvider(provider: ProviderId) {
 function activateProvider(provider: ProviderId, focusPage = true) {
   const target = accountForProvider(provider);
   if (target) activate(target.id, focusPage);
-  else showSettings();
+  else showProviderLibrary();
 }
 async function addProvider(arg: unknown): Promise<ProviderResult> {
   if (state.importing || state.accountBusy || closing)
@@ -1896,10 +2012,15 @@ async function addProvider(arg: unknown): Promise<ProviderResult> {
   return (
     accountOps.run(async () => {
       state.accountBusy = true;
+      const generation = privacyGeneration;
+      const inPrivateSpace = privateUnlocked;
       publish();
       try {
         const provider = createCustomProvider(name, url);
-        const account = createAccount(provider.id, "Cá nhân");
+        const account = {
+          ...createAccount(provider.id, "Cá nhân"),
+          private: inPrivateSpace,
+        };
         const providers = [...state.providers, provider];
         const accounts = [...state.accounts, account];
         if (closing) return { ok: false, message: "App đang thoát." };
@@ -1907,7 +2028,8 @@ async function addProvider(arg: unknown): Promise<ProviderResult> {
         state.providers = providers;
         state.accounts = accounts;
         initializeAccount(account);
-        activate(account.id);
+        if (generation === privacyGeneration && accessible(account.id))
+          activate(account.id);
         await persist();
         return { ok: true, accountId: account.id, providerId: provider.id };
       } catch (error) {
@@ -1939,12 +2061,13 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
     };
   if (!state.providerTabs.open.includes(provider)) return { ok: true };
   state.accountBusy = true;
+  const generation = privacyGeneration;
   closingProviders.add(provider);
   publish();
   try {
     const custom = providerDefinition(provider).custom;
     const owned = [...views.entries()].filter(
-      ([id]) => providerFor(id) === provider,
+      ([id]) => providerFor(id) === provider && accessible(id),
     );
     if (
       custom &&
@@ -1954,7 +2077,8 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
         ok: false,
         message: "Chưa lưu xong phiên website. Bạn thử đóng tab lại sau.",
       };
-    if (closing) return { ok: false, message: "App đang thoát." };
+    if (closing || generation !== privacyGeneration)
+      return { ok: false, message: "Không gian đã thay đổi. Thao tác đã hủy." };
     const active = findAccount(state.active, true)?.provider || "zalo";
     const result = closeProviderTab(state.providerTabs, provider, active);
     state.providerTabs = result.tabs;
@@ -1962,7 +2086,8 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
       for (const popup of [...popups])
         if (!popup.isDestroyed()) {
           const id = popupProviders.get(popup.webContents);
-          if (id && providerFor(id) === provider) popup.destroy();
+          if (id && accessible(id) && providerFor(id) === provider)
+            popup.destroy();
         }
       for (const [id, view] of owned) {
         epochs.set(id, (epochs.get(id) ?? 0) + 1);
@@ -2260,12 +2385,15 @@ async function changeAccount(
         const generation = privacyGeneration;
         if (command === "account-add") {
           if (
-            !knownProvider(data.provider) ||
+            !accessibleProvider(data.provider) ||
             typeof data.name !== "string" ||
             typeof data.avatar !== "string"
           )
             throw Error("invalid-account-name");
-          added = createAccount(data.provider, data.name, data.avatar);
+          added = {
+            ...createAccount(data.provider, data.name, data.avatar),
+            private: privateUnlocked,
+          };
           next.push(added);
         } else if (command === "account-edit") {
           if (typeof data.name !== "string" || typeof data.avatar !== "string")
@@ -2340,12 +2468,13 @@ async function changeAccount(
                 ) ||
                 next.find((a) => !a.archived && accessible(a.id))
               )?.id || "";
-            if (state.panel === "service") {
+            if (state.panel === "service" && accessible(state.active)) {
               state.providerTabs = openProviderTab(
                 state.providerTabs,
                 findAccount(state.active, true)?.provider || "zalo",
               );
             }
+            if (!accessible(state.active)) state.panel = "welcome";
             if (
               accessible(state.active) &&
               !views.peek(state.active) &&
@@ -2383,15 +2512,18 @@ async function changeAccount(
 }
 async function save() {
   if (!win || win.isDestroyed()) return;
+  rememberWorkspace();
+  const normal = workspaces.normal;
   await settingsWriter.write({
-    active: findAccount(state.active, true)?.provider || "zalo",
-    activeAccount: state.active,
-    lastAccounts: Object.fromEntries(lastAccounts),
-    collapsed: state.collapsed,
+    active: findAccount(normal.active, true)?.provider || "zalo",
+    activeAccount: normal.active,
+    lastAccounts: normal.lastAccounts,
+    collapsed: normal.collapsed,
     bounds: win.getNormalBounds(),
     preferences: state.preferences,
-    presentation: state.presentation,
-    providerTabs: state.providerTabs,
+    presentation: normal.presentation,
+    providerTabs: normal.providerTabs,
+    workspaces,
     providerTabDefaultsVersion: savedProviderTabDefaultsVersion,
   });
 }
@@ -2622,19 +2754,31 @@ else {
     );
     await privateStore.load(state.accounts.some((a) => a.private));
     for (const a of state.accounts) initializeAccount(a);
-    const selected =
-      findAccount(stored.activeAccount) ||
-      findAccount(stored.active) ||
-      state.accounts.find((a) => !a.archived)!;
-    state.active = accessible(selected.id)
-      ? selected.id
-      : state.accounts.find((a) => !a.archived && !a.private)?.id || "";
-    if (stored.lastAccounts && typeof stored.lastAccounts === "object")
-      for (const { id: provider } of state.providers) {
-        const id = (stored.lastAccounts as Record<string, unknown>)[provider];
-        if (findAccount(id)?.provider === provider)
-          lastAccounts.set(provider, id as AccountId);
-      }
+    const legacyNavigation = {
+      active: stored.activeAccount || stored.active,
+      lastAccounts: stored.lastAccounts,
+      collapsed: state.collapsed,
+      presentation: state.presentation,
+      providerTabs: state.providerTabs,
+      panel: "welcome",
+    };
+    const savedSpaces =
+      stored.workspaces && typeof stored.workspaces === "object"
+        ? (stored.workspaces as Record<string, unknown>)
+        : {};
+    workspaces = {
+      normal: normalizeWorkspaceNavigation(
+        savedSpaces.normal || legacyNavigation,
+        state.accounts,
+        false,
+      ),
+      private: normalizeWorkspaceNavigation(
+        savedSpaces.private || legacyNavigation,
+        state.accounts,
+        true,
+      ),
+    };
+    restoreWorkspace();
     if (!stored.activeAccount)
       await copyFile(
         settingsPath,
@@ -2691,6 +2835,7 @@ else {
           state.providers,
         ) ||
         !publicAccount(provider) ||
+        !accessible(provider) ||
         !notificationAllowed(state.preferences, provider) ||
         Date.now() - (lastNotificationClicks.get(provider) ?? 0) < 1000
       )
@@ -2730,7 +2875,10 @@ else {
             ? arg?.accountId || "messenger"
             : undefined;
       if (accountId !== undefined && !accessible(accountId, true))
-        return { ok: false, message: "Mở khóa không gian kín trước." };
+        return {
+          ok: false,
+          message: "Tài khoản không thuộc không gian hiện tại.",
+        };
       const providerId = ["provider-pin", "provider-close"].includes(command)
         ? arg
         : [

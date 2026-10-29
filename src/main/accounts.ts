@@ -181,7 +181,10 @@ export function moveAccount(
   const a = accounts.find((a) => a.id === id && !a.archived);
   if (!a || ![-1, 1].includes(direction)) throw Error("unknown-account");
   const peers = accounts.filter(
-    (b) => b.provider === a.provider && !b.archived,
+    (b) =>
+      b.provider === a.provider &&
+      Boolean(b.private) === Boolean(a.private) &&
+      !b.archived,
   );
   const other = peers[peers.indexOf(a) + direction];
   if (!other) return accounts.slice();

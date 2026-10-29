@@ -120,7 +120,97 @@ test("locked snapshot removes private account IDs and provider details from ever
   assert.equal(locked.panel, "welcome");
   assert.equal(state.accounts.length, 2);
   assert.equal(state.active, "hidden");
-  assert.equal(privateState(state, true).accounts.length, 2);
+  assert.deepEqual(
+    privateState(state, true).accounts.map((a) => a.id),
+    ["hidden"],
+  );
+});
+
+test("private workspace excludes normal accounts, tabs, provider details and Chrome profiles", () => {
+  const state = fixture();
+  state.accounts[0].provider = "web_normal";
+  state.providers.push({
+    id: "web_normal",
+    label: "Normal site",
+    entry: "https://normal.test/",
+    hosts: ["normal.test"],
+    color: "#123",
+    custom: true,
+  });
+  state.providerTabs = {
+    open: ["web_normal", "web_secret"],
+    pinned: ["web_normal", "web_secret"],
+  };
+  state.privateSpace = {
+    configured: true,
+    unlocked: false,
+    unavailable: false,
+    retryAt: 0,
+  };
+  state.profiles = [
+    {
+      id: "normal-profile",
+      label: "Normal Chrome",
+      email: "normal@example.test",
+      preferred: true,
+    },
+  ];
+  state.notice = "Public account notice";
+  state.notificationStatus = "Public account notification";
+  const projected = privateState(state, true);
+  assert.deepEqual(
+    projected.accounts.map((a) => a.id),
+    ["hidden"],
+  );
+  assert.deepEqual(projected.providerTabs, {
+    open: ["web_secret"],
+    pinned: ["web_secret"],
+  });
+  assert.deepEqual(projected.presentation.pinned, ["hidden"]);
+  assert.deepEqual(projected.profiles, []);
+  assert.equal(projected.privateSpace?.unlocked, true);
+  assert.equal(projected.active, "hidden");
+  assert.equal(projected.panel, "service");
+  const json = JSON.stringify(projected);
+  for (const normal of [
+    "public",
+    "Public",
+    "web_normal",
+    "Normal site",
+    "normal.test",
+    "normal@example.test",
+  ])
+    assert.equal(json.includes(normal), false, normal);
+  assert.equal(state.accounts.length, 2);
+  assert.equal(state.profiles.length, 1);
+});
+
+test("a newly opened private workspace is empty even when normal accounts and tabs exist", () => {
+  const state = fixture();
+  state.accounts = state.accounts.filter((a) => !a.private);
+  state.active = "public";
+  state.providerTabs = { open: ["zalo"], pinned: ["zalo"] };
+  const projected = privateState(state, true);
+  assert.deepEqual(projected.accounts, []);
+  assert.deepEqual(projected.providerTabs, { open: [], pinned: [] });
+  assert.equal(projected.active, "");
+  assert.equal(projected.panel, "welcome");
+  assert.equal(projected.canGoBack, false);
+  for (const panel of ["settings", "providers", "welcome"] as const) {
+    state.panel = panel;
+    assert.equal(privateState(state, true).panel, panel);
+  }
+});
+
+test("workspace snapshot keeps all provider tabs closed without inventing an active account", () => {
+  const state = fixture();
+  state.active = "";
+  state.providerTabs = { open: [], pinned: ["web_secret"] };
+  state.panel = "providers";
+  const projected = privateState(state, true);
+  assert.equal(projected.active, "");
+  assert.deepEqual(projected.providerTabs, { open: [], pinned: [] });
+  assert.equal(projected.panel, "providers");
 });
 
 test("a catalog containing only private accounts yields an empty welcome, never a hidden active fallback", () => {
