@@ -21,16 +21,16 @@ Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Di
 
 ## Tải Gom
 
-Phiên bản hiện tại: **0.8.0**, phát hành ngày **29/10/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
+Bản **0.8.1** đang được chuẩn bị cho Mac Apple Silicon và Windows x64. Bộ cài, kiểm tra trên gói đóng sẵn và việc công bố bản phát hành đang chờ hoàn tất; xem [trạng thái kiểm chứng](docs/verification-0.8.1.md).
 
-| Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
-| -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.0/Gom-macOS-arm64-0.8.0.dmg)         |
-| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.0/Gom-win32-x64-0.8.0-Setup.exe) |
+| Máy của bạn                                              | Yêu cầu                  | Bộ cài 0.8.1 dự kiến            |
+| -------------------------------------------------------- | ------------------------ | ------------------------------- |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | `Gom-macOS-arm64-0.8.1.dmg`     |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | `Gom-win32-x64-0.8.1-Setup.exe` |
 
-Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.0/Gom-macOS-arm64-0.8.0.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm gói `Gom-macOS-arm64-0.8.1.zip`. Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.8.0](https://github.com/mhfed/gom/releases/tag/v0.8.0) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.8.1](docs/release-0.8.1.md). Trong lúc chuẩn bị, bộ cài đã công bố vẫn có tại [trang phát hành 0.8.0](https://github.com/mhfed/gom/releases/tag/v0.8.0) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -46,7 +46,7 @@ Xem [nội dung bản 0.8.0](https://github.com/mhfed/gom/releases/tag/v0.8.0) h
 
 ### Trên Mac
 
-1. Tải và mở tệp **Gom-macOS-arm64-0.8.0.dmg**.
+1. Tải và mở tệp **Gom-macOS-arm64-0.8.1.dmg**.
 2. Kéo **Gom.app** vào **Applications**.
 3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 
@@ -56,7 +56,7 @@ DMG cũng kèm **Mo-Gom.command**. Sau khi kéo app vào Applications, bạn có
 
 ### Trên Windows
 
-1. Tải **Gom-win32-x64-0.8.0-Setup.exe**.
+1. Tải **Gom-win32-x64-0.8.1-Setup.exe**.
 2. Chạy tệp Setup và đợi quá trình cài đặt hoàn tất.
 3. Mở **Gom** từ Start menu nếu app chưa tự mở.
 
@@ -90,13 +90,19 @@ Logo mới áp dụng cho toàn bộ nền tảng đó và được lưu trên m
 
 ### Chat nổi và bong bóng
 
-Mở tab muốn dùng, rồi bấm **Tách tab thành chat nổi** trên thanh công cụ. Gom chuyển nguyên trang đang dùng sang cửa sổ nhỏ, giữ phiên đăng nhập và bản nháp đang mở.
+Mở tab muốn dùng, rồi bấm **Tách tab thành chat nổi** trên thanh công cụ. Gom chuyển trang đang dùng sang cửa sổ nhỏ, giữ phiên đăng nhập và tải lại đúng một lần sau khi áp dụng kích thước popup. Lưu hoặc sao chép bản nháp quan trọng trước khi tách: lần tải lại ban đầu có thể làm mất bản nháp tùy nền tảng. Thu/mở bong bóng và đưa tab về Gom không tải lại trang.
 
-- Bấm **Thu gọn** hoặc **Escape** để thu thành bong bóng logo Gom ở góc màn hình; bấm bong bóng để mở lại.
+- Bấm **Thu gọn** hoặc **Escape** để thu thành bong bóng logo Gom đường kính 36 px (60% kích thước trước) ở góc màn hình; bấm bong bóng để mở lại.
 - Kéo bong bóng để chuyển sang góc dưới trái hoặc phải. Kéo thanh tiêu đề/cạnh cửa sổ để di chuyển và đổi kích thước.
 - Bấm **Ghim** để bật/tắt luôn nổi; bấm **Mở trong Gom** để đưa tab về cửa sổ chính.
 
 Mỗi lúc có một tab nổi. Chat nổi thường tiếp tục hoạt động khi ẩn cửa sổ chính. Chat nổi kín và bong bóng được thu hồi khi không gian kín bị khóa. Xem [hướng dẫn Chat nổi](docs/floating-chat.md).
+
+### Khay trung chuyển
+
+Bản 0.8.1 có ngăn **Khay** để giữ chữ, link, ảnh và bản sao tệp khi chuyển giữa các nền tảng. Nội dung được mã hóa trên máy và còn sau khi thoát Gom; có tìm kiếm, ghim và xóa, với khay thường/kín riêng. Gom chỉ đọc clipboard khi bạn bấm **Lấy từ clipboard**. Chữ/link/ảnh dùng nút **Sao chép**; tệp dùng **Chọn tệp…** để thêm và **Lưu bản sao…** để dùng lại.
+
+Mỗi không gian giữ tối đa 100 món, tổng 250 MiB; mỗi tệp/ảnh tối đa 50 MiB và mỗi đoạn chữ tối đa 64 KiB. Khi khóa hoặc đổi không gian, Gom đóng khay và hủy thao tác chưa hoàn tất của không gian cũ. Nội dung đã sao chép hoặc lưu ra ngoài vẫn ở ngoài Gom. Xem [cách dùng Khay](docs/transfer-shelf.md).
 
 ### Không gian kín
 
@@ -144,7 +150,7 @@ Số trên tab dựa vào chỉ báo mà nền tảng cung cấp. Số có dấu
 Mở **Cài đặt → Cập nhật → Kiểm tra cập nhật** để xem phiên bản mới:
 
 - **Windows**: khi có bản tương thích, tải trong app và chọn khởi động lại để cài
-- **Mac**: bản 0.8.0 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
+- **Mac**: bản 0.8.1 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
 
 Lưu hoặc sao chép bản nháp quan trọng trước khi thoát app để cập nhật. Gom dùng lại dữ liệu tài khoản đang có; việc duy trì đăng nhập và khôi phục bản nháp còn phụ thuộc từng nền tảng.
 
@@ -155,7 +161,7 @@ Các phím sau hoạt động trong Gom:
 | Thao tác                       | Mac             | Windows            |
 | ------------------------------ | --------------- | ------------------ |
 | Tìm và chuyển nhanh tài khoản  | `⌘ K`           | `Ctrl K`           |
-| Khóa không gian kín           | `⌘ Shift L`     | `Ctrl Shift L`     |
+| Khóa không gian kín            | `⌘ Shift L`     | `Ctrl Shift L`     |
 | Mở cài đặt                     | `⌘ ,`           | `Ctrl ,`           |
 | Tải lại nền tảng đang mở       | `⌘ R`           | `Ctrl R`           |
 | Quay lại trang trước           | `⌘ [`           | `Ctrl [`           |

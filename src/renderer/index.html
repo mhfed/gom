@@ -212,6 +212,19 @@
         <span class="tool-divider" aria-hidden="true"></span>
         <div class="tools">
           <button
+            id="shelf-toggle"
+            class="workspace-toggle shelf-toggle"
+            type="button"
+            title="Khay"
+            aria-label="Khay"
+            aria-controls="shelf-panel"
+            aria-expanded="false"
+          >
+            <svg aria-hidden="true"><use href="#i-attach" /></svg
+            ><span>Khay</span
+            ><span id="shelf-count" class="shelf-count">0</span>
+          </button>
+          <button
             id="private-space-toggle"
             class="workspace-toggle"
             type="button"
@@ -257,6 +270,92 @@
         </div>
         <p id="subtitle" class="sr-only" role="status">Đang kết nối…</p>
       </header>
+      <section id="shelf-panel" aria-labelledby="shelf-title" hidden>
+        <div class="shelf-heading">
+          <div>
+            <span id="shelf-workspace" class="shelf-workspace"
+              >Không gian thường</span
+            >
+            <h2 id="shelf-title">Khay</h2>
+          </div>
+          <button
+            id="shelf-close"
+            class="icon-button"
+            type="button"
+            aria-label="Đóng khay"
+            title="Đóng khay · Esc"
+          >
+            <svg aria-hidden="true"><use href="#i-close" /></svg>
+          </button>
+        </div>
+        <p class="shelf-description">
+          Gom lại, dùng ở bất kỳ cuộc trò chuyện nào.
+        </p>
+        <label class="shelf-search" for="shelf-search"
+          ><svg aria-hidden="true"><use href="#i-search" /></svg
+          ><input
+            id="shelf-search"
+            type="search"
+            placeholder="Tìm trong khay"
+            autocomplete="off"
+        /></label>
+        <div class="shelf-filters" role="group" aria-label="Loại nội dung">
+          <button type="button" data-shelf-filter="all" aria-pressed="true">
+            Tất cả</button
+          ><button type="button" data-shelf-filter="text" aria-pressed="false">
+            Chữ &amp; link</button
+          ><button type="button" data-shelf-filter="image" aria-pressed="false">
+            Ảnh</button
+          ><button type="button" data-shelf-filter="file" aria-pressed="false">
+            Tệp
+          </button>
+        </div>
+        <div class="shelf-compose">
+          <label class="sr-only" for="shelf-text">Văn bản thêm vào khay</label>
+          <textarea
+            id="shelf-text"
+            rows="2"
+            placeholder="Một đoạn chữ cần dùng lại…"
+            spellcheck="false"
+          ></textarea>
+          <div class="shelf-add-actions">
+            <button id="shelf-from-clipboard" type="button">
+              Lấy từ clipboard</button
+            ><button id="shelf-add-text" type="button">Thêm chữ</button>
+          </div>
+          <button id="shelf-pick-files" class="shelf-pick-files" type="button">
+            <svg aria-hidden="true"><use href="#i-plus" /></svg>Chọn tệp…
+          </button>
+        </div>
+        <p id="shelf-status" role="status" aria-live="polite" tabindex="-1"></p>
+        <button id="shelf-retry" type="button" hidden>Thử đọc lại khay</button>
+        <p id="shelf-quota" class="shelf-note" hidden>
+          Khay đã đầy. Xóa vài món để thêm nội dung mới.
+        </p>
+        <div
+          id="shelf-clear-confirm"
+          class="shelf-confirm"
+          role="group"
+          aria-labelledby="shelf-clear-question"
+          hidden
+        >
+          <p id="shelf-clear-question"></p>
+          <div>
+            <button id="shelf-clear-cancel" type="button">Giữ lại</button
+            ><button id="shelf-clear-accept" type="button">
+              Xóa mục chưa ghim
+            </button>
+          </div>
+        </div>
+        <div id="shelf-list" aria-label="Nội dung trong khay"></div>
+        <div class="shelf-footer">
+          <span id="shelf-capacity"></span
+          ><button id="shelf-clear" type="button">Dọn mục chưa ghim</button>
+        </div>
+        <p id="shelf-private-note" class="shelf-note" hidden>
+          Nội dung đã sao chép hoặc lưu ra ngoài vẫn ở ngoài Gom sau khi khóa.
+        </p>
+      </section>
       <section
         id="floating-placeholder"
         aria-labelledby="floating-placeholder-title"

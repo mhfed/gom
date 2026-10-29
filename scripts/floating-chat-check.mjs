@@ -19,13 +19,23 @@ const bootstrap = join(root, "bootstrap.cjs");
 const password = "fixture-floating-password";
 const checks = [];
 const errors = [];
+const freshDetachOnly = process.argv.includes("--fresh-detach-only");
 let client;
 let page;
 const fixture = `<!doctype html><html data-floating-fixture="true"><body>
 <h1>Floating fixture, no real accounts</h1><input id="contact-search-input">
 <div class="chatlist"><a data-peer-id="fixture"></a></div>
 <button aria-label="New message">New message</button><textarea id="draft"></textarea>
-<script>document.documentElement.dataset.documentToken=crypto.randomUUID()</script>
+<script>
+document.documentElement.dataset.documentToken=crypto.randomUUID();
+addEventListener('DOMContentLoaded',()=>{
+  document.documentElement.dataset.startupWidth=String(innerWidth);
+  document.documentElement.dataset.bootMode=innerWidth<=480?'mobile':'desktop';
+  const loadCount=Number(sessionStorage.getItem('floating-load-count')||0)+1;
+  sessionStorage.setItem('floating-load-count',String(loadCount));
+  document.documentElement.dataset.loadCount=String(loadCount);
+});
+</script>
 </body></html>`;
 await writeFile(
   bootstrap,
@@ -79,6 +89,7 @@ async function eventually(label, predicate, timeout = 15000) {
 }
 const state = () => page.evaluate(() => window.desktop.state());
 async function run(label, work) {
+  if (freshDetachOnly && !label.startsWith("fresh detach ")) return;
   await work();
   checks.push(label);
   console.log(`PASS ${label}`);
@@ -203,6 +214,10 @@ async function nativeViews() {
               `({
               fixture:document.documentElement.dataset.floatingFixture,
               token:document.documentElement.dataset.documentToken,
+              startupWidth:Number(document.documentElement.dataset.startupWidth)||null,
+              bootMode:document.documentElement.dataset.bootMode,
+              loadCount:Number(document.documentElement.dataset.loadCount)||null,
+              readyState:document.readyState,
               draft:document.querySelector('#draft')?.value,
               stored:localStorage.getItem('floating-fixture')
             })`,
@@ -235,12 +250,65 @@ async function inPartition(partition, expression) {
 }
 async function activate(id, partition = "persist:" + id) {
   await page.evaluate((id) => window.desktop.activate(id), id);
+  await eventually("fixture native page " + id, async () => {
+    const document = (await viewFor(partition))?.document;
+    return (
+      !!document?.token &&
+      document.loadCount > 0 &&
+      document.readyState === "complete"
+    );
+  });
+}
+async function waitForFreshReload(partition, before) {
   await eventually(
-    "fixture native page " + id,
-    async () => !!(await viewFor(partition))?.document?.token,
+    "fresh floating page boots at popup width",
+    async () =>
+      (await viewFor(partition))?.document?.loadCount >
+      before.document.loadCount,
   );
+  const floating = await viewFor(partition);
+  assert.equal(
+    floating.id,
+    before.id,
+    "fresh popup keeps the same WebContents",
+  );
+  assert.notEqual(
+    floating.document.token,
+    before.document.token,
+    "fresh detach reloads the document",
+  );
+  assert.equal(
+    floating.document.loadCount,
+    before.document.loadCount + 1,
+    "fresh detach reloads exactly once",
+  );
+  assert.ok(
+    floating.document.startupWidth <= floating.bounds.width,
+    "document startup viewport fits the floating native view",
+  );
+  assert.equal(
+    floating.document.bootMode,
+    "mobile",
+    "fresh document chooses the compact startup layout",
+  );
+  assert.equal(
+    floating.document.stored,
+    before.document.stored,
+    "fresh reload keeps session storage partition data",
+  );
+  return floating;
 }
 async function detach() {
+  const current = await state();
+  const selected = current.accounts.find(
+    (account) => account.id === current.active,
+  );
+  const partition = selected.id.startsWith("acc_")
+    ? "persist:tn-account-" + selected.id
+    : "persist:" + selected.id;
+  const before = await viewFor(partition);
+  const fresh =
+    !current.floating?.detached || current.floating.accountId !== selected.id;
   const result = await page.evaluate(() => window.desktop.floatChat());
   assert.equal(result.ok, true, result.message);
   await eventually(
@@ -253,6 +321,7 @@ async function detach() {
       (window) => window.mode === "panel" && window.visible,
     ),
   );
+  if (fresh) await waitForFreshReload(partition, before);
 }
 async function assertConcealed() {
   const current = await state();
@@ -309,37 +378,50 @@ try {
     async () => {
       await showMain();
       await activate("zalo");
-      const lockVersion = (await state()).privateSpace.lockVersion;
+      const before = await viewFor("persist:zalo");
       await client.evaluate(() => {
         globalThis.floatingFixture.floatLoadPause = {
           armed: true,
           entered: false,
         };
       });
-      const pending = page.evaluate(() => window.desktop.floatChat());
+      const pending = page
+        .evaluate(() => window.desktop.floatChat())
+        .then(
+          (value) => ({ value }),
+          (error) => ({ error }),
+        );
       try {
         await eventually("first floating shell load paused", () =>
           client.evaluate(
             () => globalThis.floatingFixture.floatLoadPause?.entered === true,
           ),
         );
-        await client.evaluate(({ BrowserWindow }) => {
-          BrowserWindow.getAllWindows()
-            .find((window) =>
-              /[/\\]index\.html(?:[?#]|$)/.test(window.webContents.getURL()),
-            )
-            .hide();
+        await client.evaluate(async ({ BrowserWindow }) => {
+          const main = BrowserWindow.getAllWindows().find((window) =>
+            /[/\\]index\.html(?:[?#]|$)/.test(window.webContents.getURL()),
+          );
+          await new Promise((resolve, reject) => {
+            const hidden = () => {
+              clearTimeout(timer);
+              resolve();
+            };
+            const timer = setTimeout(() => {
+              main.removeListener("hide", hidden);
+              reject(Error("Native main hide event missing"));
+            }, 5000);
+            main.once("hide", hidden);
+            main.hide();
+          });
         });
-        await eventually(
-          "normal main hide processed",
-          async () => (await state()).privateSpace.lockVersion !== lockVersion,
-        );
       } finally {
         await client.evaluate(() =>
           globalThis.floatingFixture.floatLoadPause?.release?.(),
         );
       }
-      const result = await pending;
+      const outcome = await pending;
+      if (outcome.error) throw outcome.error;
+      const result = outcome.value;
       assert.equal(
         result.ok,
         true,
@@ -354,17 +436,18 @@ try {
             (window) => window.mode === "panel" && window.visible,
           ),
       );
+      await waitForFreshReload("persist:zalo", before);
       await showMain();
       await floatingCommand("return");
     },
   );
   await run(
-    "detaching reparents the same native page without losing draft or session",
+    "fresh detach reloads once at popup width while keeping native identity and session",
     async () => {
       await activate("zalo");
       await inPartition(
         "persist:zalo",
-        `document.querySelector('#draft').value='floating normal draft';localStorage.setItem('floating-fixture','normal session');true`,
+        `localStorage.setItem('floating-fixture','normal session');true`,
       );
       normalBefore = await viewFor("persist:zalo");
       assert.equal(normalBefore.owner, "main");
@@ -372,7 +455,17 @@ try {
       const floating = await viewFor("persist:zalo");
       assert.equal(floating.owner, "panel");
       assert.equal(floating.id, normalBefore.id);
-      assert.deepEqual(floating.document, normalBefore.document);
+      assert.notEqual(floating.document.token, normalBefore.document.token);
+      assert.equal(
+        floating.document.loadCount,
+        normalBefore.document.loadCount + 1,
+      );
+      assert.equal(floating.document.stored, "normal session");
+      await inPartition(
+        "persist:zalo",
+        `document.querySelector('#draft').value='floating normal draft';true`,
+      );
+      normalBefore = await viewFor("persist:zalo");
       assert.equal(floating.visible, true);
       assert.ok(
         floating.bounds.y >= 45,
@@ -400,10 +493,13 @@ try {
       );
       const bubble = windows.find((window) => window.mode === "bubble");
       assert.equal(bubble.visible, true);
-      assert.equal(bubble.bounds.width, 72);
-      assert.equal(bubble.bounds.height, 72);
+      assert.equal(bubble.bounds.width, 48);
+      assert.equal(bubble.bounds.height, 48);
       assert.equal((await viewFor("persist:zalo")).visible, false);
       const bubblePage = await floatingPage("bubble");
+      const bubbleBox = await bubblePage.locator(".bubble").boundingBox();
+      assert.equal(bubbleBox.width, 36);
+      assert.equal(bubbleBox.height, 36);
       assert.equal(
         (await bubblePage.locator("body").innerText()).includes(
           "floating normal draft",
@@ -419,6 +515,17 @@ try {
       assert.equal(reopened.id, normalBefore.id);
       assert.deepEqual(reopened.document, normalBefore.document);
       assert.equal(reopened.visible, true);
+      const sameAccount = await page.evaluate(() => window.desktop.floatChat());
+      assert.equal(sameAccount.ok, true, sameAccount.message);
+      await inPartition(
+        "persist:zalo",
+        "new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))",
+      );
+      assert.deepEqual(
+        (await viewFor("persist:zalo")).document,
+        normalBefore.document,
+        "requesting the already-floating account never reloads its draft",
+      );
     },
   );
   await run(
@@ -561,6 +668,14 @@ try {
     "locking private space conceals panel and bubble and denies stale expansion",
     async () => {
       await detach();
+      const reloaded = await viewFor(privateAccount.partition);
+      assert.equal(reloaded.id, privateBefore.id);
+      assert.equal(reloaded.document.stored, privateBefore.document.stored);
+      await inPartition(
+        privateAccount.partition,
+        `document.querySelector('#draft').value='private floating draft';true`,
+      );
+      privateBefore = await viewFor(privateAccount.partition);
       await floatingCommand("collapse");
       await privateCommand("lock");
       assert.equal((await state()).privateSpace.unlocked, false);

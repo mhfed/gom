@@ -59,7 +59,7 @@ export function snapBubbleBounds(
   work: FloatingRect,
 ): FloatingRect {
   const safe = inset(work);
-  const size = Math.min(72, safe.width, safe.height);
+  const size = Math.min(48, safe.width, safe.height);
   const left =
     finite(bounds.x + bounds.width / 2, work.x + work.width) <
     work.x + work.width / 2;

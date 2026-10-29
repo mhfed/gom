@@ -134,8 +134,8 @@ header {
   left: 6px;
   display: grid;
   place-items: center;
-  width: 60px;
-  height: 60px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 50%;
@@ -146,8 +146,8 @@ header {
   -webkit-app-region: no-drag;
 }
 .bubble img {
-  width: 44px;
-  height: 44px;
+  width: 26px;
+  height: 26px;
   pointer-events: none;
 }
 .bubble:hover:not(:disabled) {
