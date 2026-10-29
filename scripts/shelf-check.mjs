@@ -43,7 +43,11 @@ const root = ${JSON.stringify(root)};
 e.app.setPath('appData', root);
 process.env.LOCALAPPDATA = root;
 require('node:os').homedir = () => root;
-globalThis.shelfFixture = { sessions: new Map(), errors: [], clipboard: [], openPaths: [], savePath: null, messageBoxes: [] };
+globalThis.shelfFixture = { sessions: new Map(), errors: [], clipboard: [], openPaths: [], savePath: null, messageBoxes: [], windowEvents:[] };
+e.app.on('browser-window-created', (_event, window) => {
+  const id=window.id;
+  for (const name of ['show','hide','close','closed']) window.on(name,()=>shelfFixture.windowEvents.push({name,id,time:Date.now()}));
+});
 process.on('uncaughtExceptionMonitor', error => shelfFixture.errors.push(error.message));
 const fs = require('node:fs/promises');
 e.app.on('will-quit', () => require('node:fs').writeFileSync(require('node:path').join(root, 'quit-observed.json'), JSON.stringify({exports:require('node:fs').readdirSync(root).filter(name => name.startsWith('.gom-export-'))})));
@@ -142,6 +146,28 @@ async function launch() {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.waitForFunction(() => !!window.desktop?.privateSpace);
   await eventually("initial state", async () => !!(await state()).privateSpace);
+  // The preload bridge exists before main finishes its post-load startup.
+  // Wait for that completed navigation before exporting from a fresh launch.
+  await eventually(
+    "startup welcome navigation",
+    async () => (await state()).panel === "welcome",
+  );
+  await client.evaluate(({ app, BrowserWindow }) => {
+    const main = BrowserWindow.getAllWindows().find((window) =>
+      window.webContents.getURL().includes("index.html"),
+    );
+    app.focus({ steal: true });
+    if (!main.isVisible()) main.show();
+    main.focus();
+  });
+  await eventually("foreground startup main", () =>
+    client.evaluate(({ BrowserWindow }) => {
+      const main = BrowserWindow.getAllWindows().find((window) =>
+        window.webContents.getURL().includes("index.html"),
+      );
+      return main.isVisible() && main.isFocused();
+    }),
+  );
   assert.deepEqual(
     await client.evaluate(({ app }) => ({
       data: app.getPath("userData"),
@@ -996,6 +1022,12 @@ try {
     `PASS ${checks.length} shelf acceptance groups, synthetic sessions only`,
   );
 } catch (error) {
+  console.error(
+    "Native shelf lifecycle",
+    JSON.stringify(
+      await client?.evaluate(() => shelfFixture.windowEvents).catch(() => null),
+    ),
+  );
   console.error(
     "Fixture failure state",
     JSON.stringify(await state().catch(() => null)),

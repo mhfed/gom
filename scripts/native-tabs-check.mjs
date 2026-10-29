@@ -206,6 +206,37 @@ async function active(
     openProviders.map((id) => (id === provider ? 0 : -1)),
   );
 }
+async function shellKey(selector, key) {
+  // Native OS foregrounding must settle before focusing the shell child. DOM
+  // focus alone does not route Electron keyboard input to that WebContents.
+  await client.evaluate(({ app, BrowserWindow }) => {
+    app.focus({ steal: true });
+    BrowserWindow.getAllWindows()[0].focus();
+  });
+  await eventually("foreground fixture before " + key, () =>
+    client.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].isFocused(),
+    ),
+  );
+  await client.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].webContents.focus(),
+  );
+  await eventually("shell input owner before " + key, () =>
+    client.evaluate(({ BrowserWindow }) => {
+      const main = BrowserWindow.getAllWindows()[0];
+      return main.isFocused() && main.webContents.isFocused();
+    }),
+  );
+  await page.locator(selector).focus();
+  assert.equal(
+    await page
+      .locator(selector)
+      .evaluate((node) => node === document.activeElement),
+    true,
+    "keyboard target owns DOM focus before " + key,
+  );
+  await page.keyboard.press(key);
+}
 async function openAccountMenu({ keyboard = false } = {}) {
   const before = await state();
   const provider = before.accounts.find(
@@ -585,7 +616,7 @@ try {
         ["platform-zalo", "platform-telegram", "platform-messenger"],
         "1280px header keeps other supported providers in the overflow menu",
       );
-      for (const [from, key, expected] of [
+      for (let [from, key, expected] of [
         ["zalo", "ArrowRight", "telegram"],
         ["telegram", "ArrowRight", "messenger"],
         ["messenger", "ArrowRight", second.accountId],
@@ -593,8 +624,25 @@ try {
         ["messenger", "Home", second.accountId],
         ["zalo", "End", "messenger"],
       ]) {
-        await page.locator(`#platform-${from}`).press(key);
+        if (key === "ArrowLeft" || key === "End") {
+          // The selected account caption changes available tab width. Wrap
+          // through the actual visible order, including two-tab layouts.
+          const last = await page
+            .locator('[role="tab"][id^="platform-"]:visible')
+            .last()
+            .getAttribute("id");
+          const provider = last.replace("platform-", "");
+          expected = provider === "zalo" ? second.accountId : provider;
+        }
+        await shellKey(`#platform-${from}`, key);
         await active(expected, { focus: false });
+        assert.equal(
+          await client.evaluate(({ BrowserWindow }) =>
+            BrowserWindow.getAllWindows()[0].webContents.isFocused(),
+          ),
+          true,
+          "independent roving action retains shell focus",
+        );
       }
       const accelerators = await client.evaluate(({ Menu }) =>
         Menu.getApplicationMenu()

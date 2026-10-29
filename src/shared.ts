@@ -183,8 +183,24 @@ export interface Presentation {
   theme: "platform" | "system" | "light" | "dark";
   pinned: AccountId[];
 }
+export interface ReplyReminder {
+  id: string;
+  accountId: AccountId;
+  note: string;
+  dueAt: number;
+  createdAt: number;
+  completedAt: number | null;
+  notifiedAt: number | null;
+}
+export interface ReminderSnapshot {
+  items: ReplyReminder[];
+  dueCount?: number;
+  unavailable: boolean;
+  error: string;
+}
 export interface AppState {
   shelf?: ShelfSummary;
+  reminders?: ReminderSnapshot;
   floating?: {
     accountId: string | null;
     detached: boolean;
@@ -227,6 +243,17 @@ export interface AppState {
 }
 export interface DesktopBridge {
   shelf(request: ShelfRequest): Promise<ShelfResult>;
+  reminder(
+    action: "add" | "complete" | "snooze" | "remove" | "open" | "surface",
+    data?: {
+      id?: string;
+      accountId?: AccountId;
+      note?: string;
+      dueAt?: number;
+      open?: boolean;
+      lockVersion?: number;
+    },
+  ): Promise<AccountResult>;
   floatChat(): Promise<AccountResult>;
   privateSpace(
     action: "setup" | "unlock" | "lock" | "change-password" | "membership",

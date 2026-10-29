@@ -2,6 +2,7 @@ import { createCommandPalette } from "./command.ts";
 import { createProviderNavigation } from "./provider-navigation.ts";
 import { createPrivateSpaceUI } from "./private-space.ts";
 import { createShelfUI } from "./shelf.ts";
+import { createReminderUI } from "./reminders.ts";
 import {
   type Account,
   type AccountId,
@@ -1050,6 +1051,7 @@ function render(state: AppState) {
   current = state;
   privateSpaceUI.sync(state);
   shelfUI.render(state);
+  reminderUI.sync(state);
   const rebuilt = rebuildAccounts(state);
   const settings = state.panel === "settings";
   const library = state.panel === "providers";
@@ -1310,7 +1312,9 @@ function render(state: AppState) {
       );
   lastPanel = state.panel;
   command.sync(
-    privateSpaceUI.isOpen() ? { ...state, commandOpen: false } : state,
+    privateSpaceUI.isOpen() || reminderUI.isOpen()
+      ? { ...state, commandOpen: false }
+      : state,
   );
   if (!previous) showTab(activeTab);
 }
@@ -1525,9 +1529,11 @@ const shelfUI = createShelfUI({
 const privateSpaceUI = createPrivateSpaceUI({
   getState: () => current,
 });
+const reminderUI = createReminderUI({ getState: () => current });
 function scrubPrivateUI() {
   privacyGeneration++;
   privateSpaceUI.reset();
+  reminderUI.reset();
   command.reset();
   providerNavigation.reset();
   for (const id of ["account-editor", "provider-logo-editor"]) {
@@ -1563,7 +1569,8 @@ function requestCommand() {
   if (
     $<HTMLDialogElement>("account-editor").open ||
     $<HTMLDialogElement>("provider-logo-editor").open ||
-    $<HTMLDialogElement>("private-space-dialog").open
+    $<HTMLDialogElement>("private-space-dialog").open ||
+    reminderUI.isOpen()
   )
     return;
   void window.desktop.command(!current.commandOpen);

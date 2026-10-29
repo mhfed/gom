@@ -4,6 +4,8 @@ import { FloatingChat } from "./floating-chat.ts";
 import { ShelfStore } from "./shelf-store.ts";
 import { ShelfService } from "./shelf-service.ts";
 import { SHELF_LIMITS } from "../shelf-types.ts";
+import { ReminderStore } from "./reminders.ts";
+import { ReminderService } from "./reminder-service.ts";
 import {
   normalizeWorkspaceNavigation,
   type WorkspaceNavigation,
@@ -93,6 +95,7 @@ import {
   type AppState,
   type ProviderStatus,
   type ProviderResult,
+  type ReplyReminder,
 } from "../shared.ts";
 import {
   navigationPolicy,
@@ -168,6 +171,8 @@ const chromeRoot =
 const sources = new ChromeSources(chromeRoot, "", process.platform);
 let win: BrowserWindow;
 let floating: FloatingChat | undefined;
+let reminderService: ReminderService | undefined;
+let reminderSurfaceOpen = false;
 let closing = false,
   closed = false;
 let poll: ReturnType<typeof setInterval>;
@@ -329,6 +334,31 @@ const providerLogoStore = new ProviderLogoStore(
 const privateStore = new PrivateSpaceStore(
   join(app.getPath("userData"), "private-space.json"),
 );
+const reminderStore = new ReminderStore(
+  join(app.getPath("userData"), "reminders.json"),
+  {
+    encrypt: async (text) => {
+      if (
+        !(await safeStorage.isAsyncEncryptionAvailable()) ||
+        (process.platform === "linux" &&
+          safeStorage.getSelectedStorageBackend() === "basic_text")
+      )
+        throw new Error("reminder-key-unavailable");
+      return (await safeStorage.encryptStringAsync(text)).toString("base64");
+    },
+    decrypt: async (encoded) => {
+      if (
+        !(await safeStorage.isAsyncEncryptionAvailable()) ||
+        (process.platform === "linux" &&
+          safeStorage.getSelectedStorageBackend() === "basic_text")
+      )
+        throw new Error("reminder-key-unavailable");
+      return (
+        await safeStorage.decryptStringAsync(Buffer.from(encoded, "base64"))
+      ).result;
+    },
+  },
+);
 const membershipJournalPath = join(
   app.getPath("userData"),
   "private-membership.json",
@@ -473,6 +503,7 @@ function publicAccount(id: unknown): boolean {
 }
 function visibleState(): AppState {
   state.floating = floating?.snapshot();
+  state.reminders = reminderService?.snapshot();
   state.privateSpace = {
     ...privateStore.status(),
     unlocked: privateUnlocked,
@@ -527,6 +558,7 @@ function resetWorkspaceInteractions() {
   for (const menu of privacyMenus) menu.closePopup();
   privacyMenus.clear();
   accountEditorOpen = false;
+  reminderSurfaceOpen = false;
   state.commandOpen = false;
   state.notice = "";
 }
@@ -560,7 +592,10 @@ function hideInactiveWorkspace() {
 }
 function switchWorkspace(toPrivate: boolean) {
   const changed = privateUnlocked !== toPrivate;
-  if (changed || privateUnlocked) floating?.conceal();
+  if (changed || privateUnlocked) {
+    floating?.conceal();
+    reminderService?.invalidate();
+  }
   rememberWorkspace();
   resetWorkspaceInteractions();
   privateUnlocked = toPrivate;
@@ -696,6 +731,7 @@ async function transferAccount(
         // Commit to memory synchronously after checking the generation. A later
         // lock sees the completed, explicitly requested membership change.
         if (floating?.accountId === accountId) floating.conceal();
+        reminderService?.invalidate();
         state.accounts = next;
         const destination = workspaces[toPrivate ? "private" : "normal"];
         const moved = findAccount(accountId, true)!;
@@ -1310,7 +1346,7 @@ function layout() {
     win.webContents.focus();
 }
 function activate(id: AccountId, focusPage = true) {
-  if (accountEditorOpen) return;
+  if (accountEditorOpen || reminderSurfaceOpen) return;
   const account = findAccount(id);
   if (
     !account ||
@@ -1550,6 +1586,7 @@ function goBack() {
 }
 function tick() {
   if (closing || sleeping) return;
+  void reminderService?.tick();
   const online = isOnline();
   for (const [id] of views.entries()) {
     const c = state.connections[id];
@@ -1586,6 +1623,10 @@ function showWindow() {
 }
 function showSettings() {
   shelfService.close();
+  if (reminderSurfaceOpen) {
+    showWindow();
+    return;
+  }
   state.commandOpen = false;
   state.panel = "settings";
   layout();
@@ -1593,7 +1634,7 @@ function showSettings() {
   showWindow();
 }
 function showProviderLibrary() {
-  if (closing || accountEditorOpen) return;
+  if (closing || accountEditorOpen || reminderSurfaceOpen) return;
   shelfService.close();
   state.commandOpen = false;
   state.panel = "providers";
@@ -1602,7 +1643,7 @@ function showProviderLibrary() {
   showWindow();
 }
 function showWelcome() {
-  if (closing || accountEditorOpen) return;
+  if (closing || accountEditorOpen || reminderSurfaceOpen) return;
   shelfService.close();
   state.commandOpen = false;
   state.panel = "welcome";
@@ -1748,6 +1789,35 @@ function testNotification(id: AccountId) {
   state.notificationStatus = "Đang gửi thông báo thử…";
   publish();
   notification.show();
+}
+function notifyReminder(item: ReplyReminder, click: () => void) {
+  if (
+    closing ||
+    !publicAccount(item.accountId) ||
+    !accessible(item.accountId) ||
+    !Notification.isSupported()
+  )
+    return null;
+  const alert = new Notification({
+    title: "Gom · Nhắc trả lời",
+    body: item.note + "\n" + accountLabel(item.accountId),
+    silent: false,
+  });
+  alert.on("click", click);
+  alert.on("failed", () => {
+    if (!closing && accessible(item.accountId)) {
+      state.notice =
+        "Hệ điều hành chưa hiển thị được nhắc việc. Bạn vẫn có thể xem trong Nhắc trả lời.";
+      publish();
+    }
+  });
+  try {
+    alert.show();
+    return alert;
+  } catch {
+    alert.close();
+    return null;
+  }
 }
 async function verifyMessenger(contents: WebContents) {
   await contents.loadURL(PROVIDERS.messenger.entry);
@@ -2662,6 +2732,7 @@ async function changeAccount(
         state.accounts = next;
         for (const a of next) initializeAccount(a);
         if (command === "account-archive") {
+          reminderService?.invalidate();
           if (floating?.accountId === id) floating.conceal();
           epochs.set(id, (epochs.get(id) ?? 0) + 1);
           for (const popup of [...popups])
@@ -2808,6 +2879,7 @@ function beginAutomaticUpdate() {
 async function quit(installUpdate = false) {
   if (closing) return;
   closing = true;
+  await reminderService?.close();
   floating?.close();
   clearInterval(poll);
   clearTimeout(saveTimer);
@@ -2992,6 +3064,7 @@ else {
     );
     await privateStore.load(state.accounts.some((a) => a.private));
     await shelfStore.load();
+    await reminderStore.load();
     for (const a of state.accounts) initializeAccount(a);
     const legacyNavigation = {
       active: stored.activeAccount || stored.active,
@@ -3077,6 +3150,36 @@ else {
         activate(id);
         showWindow();
       },
+    });
+    reminderService = new ReminderService({
+      store: reminderStore,
+      currentEpoch: () => privacyGeneration,
+      accounts: () => state.accounts,
+      accessible: (id) => accessible(id, true),
+      canNotify: (id) =>
+        !closing &&
+        !sleeping &&
+        !state.preferences.paused &&
+        publicAccount(id) &&
+        accessible(id) &&
+        Notification.isSupported(),
+      openAccount: async (id) => {
+        if (
+          closing ||
+          !accessible(id) ||
+          accountEditorOpen ||
+          state.commandOpen
+        )
+          return {
+            ok: false,
+            message: "Đóng hộp thoại hiện tại trước khi mở tài khoản.",
+          };
+        activate(id);
+        showWindow();
+        return { ok: true, accountId: id };
+      },
+      notify: notifyReminder,
+      changed: () => publish(),
     });
     win.webContents.on("will-navigate", (event) => event.preventDefault());
     win.webContents.on("did-start-loading", () => {
@@ -3182,6 +3285,50 @@ else {
           )
             views.peek(state.active)?.webContents.focus();
           return result;
+        }
+        case "reminder": {
+          if (arg?.action === "surface") {
+            if (arg?.data?.lockVersion !== privacyGeneration)
+              return {
+                ok: false,
+                message: "Không gian đã thay đổi. Hãy mở lại nhắc việc.",
+              };
+            if (arg?.data?.open === false) {
+              reminderSurfaceOpen = false;
+              state.commandOpen = false;
+              layout();
+              publish();
+              if (
+                win.isVisible() &&
+                !win.isMinimized() &&
+                win.isFocused() &&
+                state.panel === "service" &&
+                accessible(state.active) &&
+                floating?.accountId !== state.active &&
+                !state.connections[state.active]?.reason
+              )
+                views.peek(state.active)?.webContents.focus();
+              return { ok: true };
+            }
+            if (
+              arg?.data?.open !== true ||
+              accountEditorOpen ||
+              state.accountBusy ||
+              state.importing
+            )
+              return {
+                ok: false,
+                message:
+                  "Đợi thao tác hiện tại hoàn tất trước khi mở nhắc việc.",
+              };
+            floating?.returnToMain(false);
+            reminderSurfaceOpen = true;
+            showCommand(true);
+            return { ok: true };
+          }
+          return (
+            reminderService?.handle(arg?.action, arg?.data) ?? { ok: false }
+          );
         }
         case "float-chat":
           return floatChat();
@@ -3319,6 +3466,7 @@ else {
           await persist();
           return;
         case "command":
+          if (arg === false) reminderSurfaceOpen = false;
           if (typeof arg === "boolean") showCommand(arg);
           return;
         case "command-closed":
