@@ -21,16 +21,16 @@ Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Di
 
 ## Tải Gom
 
-Phiên bản hiện tại: **0.8.1**, phát hành ngày **29/10/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
+Phiên bản hiện tại: **0.8.2**, phát hành ngày **29/10/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
 | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-macOS-arm64-0.8.1.dmg)         |
-| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-win32-x64-0.8.1-Setup.exe) |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom-macOS-arm64-0.8.2.dmg)         |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom-win32-x64-0.8.2-Setup.exe) |
 
-Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-macOS-arm64-0.8.1.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom-macOS-arm64-0.8.2.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1), [kết quả kiểm chứng](docs/verification-0.8.1.md) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.8.2](https://github.com/mhfed/gom/releases/tag/v0.8.2), [kết quả kiểm chứng](docs/verification-0.8.2.md) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -46,7 +46,7 @@ Xem [nội dung bản 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1), 
 
 ### Trên Mac
 
-1. Tải và mở tệp **Gom-macOS-arm64-0.8.1.dmg**.
+1. Tải và mở tệp **Gom-macOS-arm64-0.8.2.dmg**.
 2. Kéo **Gom.app** vào **Applications**.
 3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 
@@ -56,7 +56,7 @@ DMG cũng kèm **Mo-Gom.command**. Sau khi kéo app vào Applications, bạn có
 
 ### Trên Windows
 
-1. Tải **Gom-win32-x64-0.8.1-Setup.exe**.
+1. Tải **Gom-win32-x64-0.8.2-Setup.exe**.
 2. Chạy tệp Setup và đợi quá trình cài đặt hoàn tất.
 3. Mở **Gom** từ Start menu nếu app chưa tự mở.
 
@@ -100,13 +100,13 @@ Mỗi lúc có một tab nổi. Chat nổi thường tiếp tục hoạt động
 
 ### Khay trung chuyển
 
-Bản 0.8.1 có ngăn **Khay** để giữ chữ, link, ảnh và bản sao tệp khi chuyển giữa các nền tảng. Nội dung được mã hóa trên máy và còn sau khi thoát Gom; có tìm kiếm, ghim và xóa, với khay thường/kín riêng. Gom chỉ đọc clipboard khi bạn bấm **Lấy từ clipboard**. Chữ/link/ảnh dùng nút **Sao chép**; tệp dùng **Chọn tệp…** để thêm và **Lưu bản sao…** để dùng lại.
+Bản 0.8.2 có ngăn **Khay** để giữ chữ, link, ảnh và bản sao tệp khi chuyển giữa các nền tảng. Nội dung được mã hóa trên máy và còn sau khi thoát Gom; có tìm kiếm, ghim và xóa, với khay thường/kín riêng. Gom chỉ đọc clipboard khi bạn bấm **Lấy từ clipboard**. Chữ/link/ảnh dùng nút **Sao chép**; tệp dùng **Chọn tệp…** để thêm và **Lưu bản sao…** để dùng lại.
 
 Mỗi không gian giữ tối đa 100 món, tổng 250 MiB; mỗi tệp/ảnh tối đa 50 MiB và mỗi đoạn chữ tối đa 64 KiB. Khi khóa hoặc đổi không gian, Gom đóng khay và hủy thao tác chưa hoàn tất của không gian cũ. Nội dung đã sao chép hoặc lưu ra ngoài vẫn ở ngoài Gom. Xem [cách dùng Khay](docs/transfer-shelf.md).
 
-### Nhắc trả lời (bản phát triển)
+### Nhắc trả lời
 
-Nhánh phát triển có **Nhắc trả lời** để ghi việc cần quay lại, gắn với tài khoản và chọn giờ nhắc. Có giờ nhanh, đổi giờ tùy chỉnh, hoãn 15 phút, hoàn tất và xóa. Nhắc việc thường phát thông báo khi Gom còn chạy; nhắc việc kín chỉ hiện trong danh sách/badge kín. Xem [hướng dẫn](docs/reply-reminders.md). Bản phát hành 0.8.1 chưa có tính năng này.
+Gom có **Nhắc trả lời** để ghi việc cần quay lại, gắn với tài khoản và chọn giờ nhắc. Có giờ nhanh, đổi giờ tùy chỉnh, hoãn 15 phút, hoàn tất và xóa. Nhắc việc thường phát thông báo khi Gom còn chạy; nhắc việc kín chỉ hiện trong danh sách/badge kín. Xem [hướng dẫn](docs/reply-reminders.md). Có từ bản 0.8.2.
 
 ### Không gian kín
 
@@ -154,7 +154,7 @@ Số trên tab dựa vào chỉ báo mà nền tảng cung cấp. Số có dấu
 Mở **Cài đặt → Cập nhật → Kiểm tra cập nhật** để xem phiên bản mới:
 
 - **Windows**: khi có bản tương thích, tải trong app và chọn khởi động lại để cài
-- **Mac**: bản 0.8.1 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
+- **Mac**: bản 0.8.2 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
 
 Lưu hoặc sao chép bản nháp quan trọng trước khi thoát app để cập nhật. Gom dùng lại dữ liệu tài khoản đang có; việc duy trì đăng nhập và khôi phục bản nháp còn phụ thuộc từng nền tảng.
 

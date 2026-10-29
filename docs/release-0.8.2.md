@@ -1,6 +1,6 @@
 # Gom 0.8.2 — Nhắc trả lời
 
-**Đang chuẩn bị phát hành.** Bộ cài Mac Apple Silicon, Windows x64 và việc cài lên máy đang chờ kiểm chứng. Bản ổn định đã kiểm chứng gần nhất là [Gom 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1). Xem [biên bản 0.8.2](verification-0.8.2.md) để theo dõi bằng chứng trước khi công bố.
+[Gom 0.8.2](https://github.com/mhfed/gom/releases/tag/v0.8.2) đã phát hành ngày **29/10/2026** cho Mac Apple Silicon và Windows x64. Bộ cài, ASAR và checksum đã được kiểm chứng; xem [biên bản 0.8.2](verification-0.8.2.md).
 
 ## Nhắc trả lời
 
@@ -14,9 +14,7 @@ Gom mở đúng tài khoản, không bảo đảm mở đúng cuộc hội tho�
 
 Kho nhắc việc được mã hóa bằng khóa do tài khoản hệ điều hành bảo vệ, tối đa **500 việc / 1 MiB**. Ghi chú tối đa **500 ký tự Unicode**, giờ hẹn tối đa **366 ngày** trong tương lai. Mở form Nhắc trả lời đóng Khay và đưa chat nổi về Gom, giữ trang, phiên đăng nhập và bản nháp. Xem [hướng dẫn Nhắc trả lời](reply-reminders.md).
 
-## Bộ cài dự kiến
-
-Các liên kết dưới đây dành cho bản 0.8.2 sau khi hoàn tất kiểm chứng và phát hành:
+## Bộ cài
 
 - macOS Apple Silicon: [Gom-macOS-arm64-0.8.2.dmg](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom-macOS-arm64-0.8.2.dmg), [Gom-macOS-arm64-0.8.2.zip](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom-macOS-arm64-0.8.2.zip) và [SHA256SUMS-Gom-0.8.2-macos.txt](https://github.com/mhfed/gom/releases/download/v0.8.2/SHA256SUMS-Gom-0.8.2-macos.txt).
 - Windows x64: [Gom-win32-x64-0.8.2-Setup.exe](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom-win32-x64-0.8.2-Setup.exe), [Gom_win32_x64-0.8.2-full.nupkg](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom_win32_x64-0.8.2-full.nupkg), [RELEASES](https://github.com/mhfed/gom/releases/download/v0.8.2/RELEASES) và [SHA256SUMS-Gom-0.8.2-windows.txt](https://github.com/mhfed/gom/releases/download/v0.8.2/SHA256SUMS-Gom-0.8.2-windows.txt).

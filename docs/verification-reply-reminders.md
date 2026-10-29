@@ -2,6 +2,8 @@
 
 Trạng thái: đã hoàn thiện mã nguồn trên nhánh `codex/complete-reply-reminders`, nền Gom 0.8.1. Chưa nâng phiên bản, đóng gói installer, phát hành hay cài vào máy trong công việc này. Bản phát hành 0.8.1 chưa có Nhắc trả lời.
 
+Sau lượt hoàn thiện mã nguồn, [Gom 0.8.2](release-0.8.2.md) đã được đóng gói, phát hành và cài theo yêu cầu tiếp theo. Xem [kiểm chứng bản phát hành](verification-0.8.2.md) cho kết quả Mac/Windows và bản cài thực tế; phần dưới giữ bằng chứng của công việc mã nguồn.
+
 ## Bằng chứng đã có
 
 | Lệnh                                   | Kết quả cuối                          |

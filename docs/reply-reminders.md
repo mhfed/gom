@@ -1,6 +1,6 @@
 # Nhắc trả lời
 
-Nhắc trả lời giúp bạn ghi việc cần quay lại, chọn tài khoản và hẹn giờ trong Gom. Tính năng hiện ở nhánh phát triển `codex/complete-reply-reminders`; bản phát hành 0.8.1 chưa có tính năng này.
+Nhắc trả lời giúp bạn ghi việc cần quay lại, chọn tài khoản và hẹn giờ trong Gom. Tính năng có từ [Gom 0.8.2](https://github.com/mhfed/gom/releases/tag/v0.8.2) trên Mac Apple Silicon và Windows x64.
 
 ## Tạo nhắc việc
 

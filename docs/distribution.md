@@ -1,16 +1,16 @@
 # Phân phối Gom cho macOS và Windows
 
-**Gom 0.8.2 đang chuẩn bị phát hành** cho macOS Apple Silicon (arm64) và Windows x64; bộ gói, checksum và việc cài lên máy còn chờ kiểm chứng. Bản ổn định đã kiểm chứng gần nhất là [Gom 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1). Xem [ghi chú 0.8.2](release-0.8.2.md) và [biên bản kiểm chứng 0.8.2](verification-0.8.2.md) trước khi công bố hoặc cài đặt.
+[Gom 0.8.2](https://github.com/mhfed/gom/releases/tag/v0.8.2) đã phát hành ngày **29/10/2026** cho macOS Apple Silicon (arm64) và Windows x64. Bộ gói và checksum đã được kiểm chứng; bản Mac mới đã được cài trên máy theo yêu cầu. Xem [ghi chú 0.8.2](release-0.8.2.md) và [biên bản kiểm chứng](verification-0.8.2.md).
 
 Bản Mac yêu cầu macOS 13 trở lên, chưa có gói Intel hoặc Universal. App ký ad-hoc, chưa ký Apple Developer ID và chưa notarize. Windows yêu cầu Windows 10/11 x64, chưa ký Authenticode.
 
 ## Cài đặt
 
-Sau khi bản 0.8.2 được kiểm chứng và phát hành, trên Mac mở `Gom-macOS-arm64-0.8.2.dmg`, kéo **Gom.app** vào **Applications**, eject DMG rồi mở Gom từ Applications. Nếu macOS chặn app tải từ nguồn bạn tin cậy, vào **System Settings → Privacy & Security → Open Anyway**; xem [hướng dẫn Apple](https://support.apple.com/en-us/102445).
+Trên Mac, mở `Gom-macOS-arm64-0.8.2.dmg`, kéo **Gom.app** vào **Applications**, eject DMG rồi mở Gom từ Applications. Nếu macOS chặn app tải từ nguồn bạn tin cậy, vào **System Settings → Privacy & Security → Open Anyway**; xem [hướng dẫn Apple](https://support.apple.com/en-us/102445).
 
 DMG có `Mo-Gom.command` để gỡ cờ cách ly riêng của Gom rồi mở app sau khi đã kéo vào Applications. Chỉ dùng khi tin cậy nguồn tải. Không tắt Gatekeeper toàn hệ thống. Nếu hệ thống báo app hỏng hoặc có mã độc, kiểm tra nguồn và SHA-256 trước.
 
-Trên Windows, chạy `Gom-win32-x64-0.8.2-Setup.exe` sau khi bản này được kiểm chứng và phát hành. Squirrel cài theo tài khoản người dùng, không yêu cầu quyền quản trị viên. SmartScreen có thể cảnh báo; Smart App Control hoặc chính sách tổ chức có thể chặn app chưa ký. SHA-256 chỉ kiểm tra tính toàn vẹn, không thay chữ ký nhà phát hành.
+Trên Windows, chạy `Gom-win32-x64-0.8.2-Setup.exe`. Squirrel cài theo tài khoản người dùng, không yêu cầu quyền quản trị viên. SmartScreen có thể cảnh báo; Smart App Control hoặc chính sách tổ chức có thể chặn app chưa ký. SHA-256 chỉ kiểm tra tính toàn vẹn, không thay chữ ký nhà phát hành.
 
 Gói chỉ chứa chương trình và tài nguyên hiển thị. Không đưa hồ sơ Chrome, tài khoản, cookie hoặc lịch sử chat của máy build vào bộ cài.
 
