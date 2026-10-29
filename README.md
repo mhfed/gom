@@ -21,16 +21,16 @@ Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Di
 
 ## Tải Gom
 
-Phiên bản hiện tại: **0.7.9**, phát hành ngày **29/10/2026**. Chọn bộ cài phù hợp với máy của bạn:
+Phiên bản **0.8.0 đang chuẩn bị phát hành** cho Mac Apple Silicon và Windows x64. Các liên kết tải dưới đây có hiệu lực sau khi bản phát hành được công bố:
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
 | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.7.9/Gom-macOS-arm64-0.7.9.dmg)         |
-| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.7.9/Gom-win32-x64-0.7.9-Setup.exe) |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.0/Gom-macOS-arm64-0.8.0.dmg)         |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.0/Gom-win32-x64-0.8.0-Setup.exe) |
 
-Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.7.9/Gom-macOS-arm64-0.7.9.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.0/Gom-macOS-arm64-0.8.0.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.7.9](https://github.com/mhfed/gom/releases/tag/v0.7.9) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.8.0](https://github.com/mhfed/gom/releases/tag/v0.8.0) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -46,7 +46,7 @@ Xem [nội dung bản 0.7.9](https://github.com/mhfed/gom/releases/tag/v0.7.9) h
 
 ### Trên Mac
 
-1. Tải và mở tệp **Gom-macOS-arm64-0.7.9.dmg**.
+1. Tải và mở tệp **Gom-macOS-arm64-0.8.0.dmg**.
 2. Kéo **Gom.app** vào **Applications**.
 3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 
@@ -56,7 +56,7 @@ DMG cũng kèm **Mo-Gom.command**. Sau khi kéo app vào Applications, bạn có
 
 ### Trên Windows
 
-1. Tải **Gom-win32-x64-0.7.9-Setup.exe**.
+1. Tải **Gom-win32-x64-0.8.0-Setup.exe**.
 2. Chạy tệp Setup và đợi quá trình cài đặt hoàn tất.
 3. Mở **Gom** từ Start menu nếu app chưa tự mở.
 
@@ -87,6 +87,16 @@ Bạn có thể tùy chỉnh cách các nền tảng xuất hiện:
 Logo mới áp dụng cho toàn bộ nền tảng đó và được lưu trên máy. Trong hộp đổi logo, chọn **Dùng logo mặc định** rồi **Lưu logo** để khôi phục.
 
 Đóng tab giữ lại dữ liệu đăng nhập. Với website riêng, hãy lưu nội dung đang soạn trước khi đóng tab vì khả năng khôi phục bản nháp phụ thuộc website.
+
+### Chat nổi và bong bóng
+
+Mở tab muốn dùng, rồi bấm **Tách tab thành chat nổi** trên thanh công cụ. Gom chuyển nguyên trang đang dùng sang cửa sổ nhỏ, giữ phiên đăng nhập và bản nháp đang mở.
+
+- Bấm **Thu gọn** hoặc **Escape** để thu thành bong bóng logo Gom ở góc màn hình; bấm bong bóng để mở lại.
+- Kéo bong bóng để chuyển sang góc dưới trái hoặc phải. Kéo thanh tiêu đề/cạnh cửa sổ để di chuyển và đổi kích thước.
+- Bấm **Ghim** để bật/tắt luôn nổi; bấm **Mở trong Gom** để đưa tab về cửa sổ chính.
+
+Mỗi lúc có một tab nổi. Chat nổi thường tiếp tục hoạt động khi ẩn cửa sổ chính. Chat nổi kín và bong bóng được thu hồi khi không gian kín bị khóa. Xem [hướng dẫn Chat nổi](docs/floating-chat.md).
 
 ### Không gian kín
 
@@ -134,7 +144,7 @@ Số trên tab dựa vào chỉ báo mà nền tảng cung cấp. Số có dấu
 Mở **Cài đặt → Cập nhật → Kiểm tra cập nhật** để xem phiên bản mới:
 
 - **Windows**: khi có bản tương thích, tải trong app và chọn khởi động lại để cài
-- **Mac**: bản 0.7.9 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
+- **Mac**: bản 0.8.0 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
 
 Lưu hoặc sao chép bản nháp quan trọng trước khi thoát app để cập nhật. Gom dùng lại dữ liệu tài khoản đang có; việc duy trì đăng nhập và khôi phục bản nháp còn phụ thuộc từng nền tảng.
 
