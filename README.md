@@ -21,7 +21,7 @@ Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Di
 
 ## Tải Gom
 
-Phiên bản chuẩn bị phát hành: **0.7.9**. Các liên kết dưới đây có hiệu lực sau khi công bố bản phát hành. Chọn bộ cài phù hợp với máy của bạn:
+Phiên bản hiện tại: **0.7.9**, phát hành ngày **29/10/2026**. Chọn bộ cài phù hợp với máy của bạn:
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
 | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |

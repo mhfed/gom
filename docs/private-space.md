@@ -1,6 +1,6 @@
 # Không gian kín — Gom 0.7.9
 
-Bản **0.7.9 đang chuẩn bị phát hành** sửa cách hoạt động của Không gian kín: hai không gian có tài khoản, tab và trạng thái đang mở riêng. Bản 0.7.8 chỉ ẩn/hiện tài khoản kín trong danh sách chung khi mở khóa.
+[Gom 0.7.9](https://github.com/mhfed/gom/releases/tag/v0.7.9), phát hành ngày **29/10/2026**, sửa cách hoạt động của Không gian kín: hai không gian có tài khoản, tab và trạng thái đang mở riêng. Bản 0.7.8 chỉ ẩn/hiện tài khoản kín trong danh sách chung khi mở khóa.
 
 1. Bấm **Không gian thường** cạnh biểu tượng ổ khóa trên thanh công cụ. Lần đầu, đặt mật khẩu (8–256 ký tự); các lần sau nhập mật khẩu để vào.
 2. Khi nhãn đổi thành **Không gian kín**, bạn đang dùng không gian riêng. Nếu chưa có tài khoản kín, danh sách và tab trống. Bấm **Mở nền tảng** hoặc **Thêm tài khoản** để tạo và đăng nhập tài khoản tại đây.

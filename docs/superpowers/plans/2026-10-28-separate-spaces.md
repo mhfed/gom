@@ -44,4 +44,4 @@ Preserve existing sessions and passwords; never use personal profiles in testing
 
 - [x] Run typecheck, complete unit suite, build and isolated Electron/UI smoke checks.
 - [x] Independent review focused on isolation and asynchronous transitions; fix findings.
-- [ ] Package/release corrected version and install validated Mac app under the existing release/install authorization.
+- [x] Package/release corrected version and install validated Mac app under the existing release/install authorization.
