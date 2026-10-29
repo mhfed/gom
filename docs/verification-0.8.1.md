@@ -1,35 +1,36 @@
 # Kiểm chứng Gom 0.8.1
 
-Trạng thái: **đang chuẩn bị bản phát hành** ngày 29/10/2026. Chưa xác nhận đã công bố hoặc cài 0.8.1 trên máy người dùng. Các kết quả mã nguồn đã có dưới đây được ghi nhận từ lượt kiểm chứng tính năng trước khi đóng gói; chúng không thay thế kiểm tra lại trên gói 0.8.1.
+[Gom 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1) đã phát hành cho Mac Apple Silicon và Windows x64 ngày **29/10/2026**, lúc `2026-10-29T09:16:49Z` (**16:16:49** giờ Việt Nam). Không cài hoặc thay ứng dụng trên máy người dùng trong đợt phát hành này.
 
-## Bằng chứng mã nguồn đã có
+## Mã nguồn
 
-- Typecheck và **211/211 unit test** đạt.
-- Electron Khay: **10 nhóm đạt**, gồm persistence, chữ/link/ảnh/tệp, hai không gian, callback cũ và thoát giữa lúc xuất file.
-- Native tabs: **16 nhóm đạt**, gồm giữ native page/bản nháp và không đổi DOM khi snapshot giữ nguyên.
-- Không gian kín: **17 nhóm đạt**; chat nổi: **12 nhóm đạt**, gồm reload một lần tại viewport popup, thu/mở không reload và bong bóng 36 px.
-- Rà soát độc lập phạm vi Khay và bản sửa popup không còn P1/P2 chưa xử lý tại thời điểm lượt kiểm chứng đó.
+- Typecheck và **212/212 unit test** đạt trên nguồn phát hành cuối.
+- Lượt kiểm chứng tính năng trước khi đóng gói đạt **10 nhóm Khay**, **16 nhóm native tabs**, **17 nhóm Không gian kín** và **12 nhóm chat nổi**. Kết quả native tabs thuộc mã nguồn; không có lượt 16 nhóm native tabs trên gói đóng sẵn trong đợt này.
+- Nguồn tạo gói ở commit `1772a68` được đối chiếu tương đương với nguồn tại tag `v0.8.1`, commit `5efa663`.
 
-Chi tiết, các trường hợp RED/GREEN và giới hạn fixture: [kiểm chứng Khay](verification-transfer-shelf.md), [bản sửa popup](floating-mobile-fix.md). Fixture dùng profile, tài khoản, clipboard, hộp thoại, safeStorage, tệp và trang giả; không xác nhận keychain/hộp thoại thực hoặc việc dán trên tài khoản nền tảng thật.
+Chi tiết các trường hợp RED/GREEN và phạm vi rà soát tính năng: [kiểm chứng Khay](verification-transfer-shelf.md), [bản sửa popup](floating-mobile-fix.md).
 
-## Kiểm tra gói 0.8.1 còn chờ
+## Mac Apple Silicon
 
-| Hạng mục                                                             | Trạng thái                                                                   |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Typecheck và unit suite trên nguồn phát hành cuối                    | Đạt: 212/212, gồm fixture Windows có thể bỏ qua symlink khi OS từ chối quyền |
-| Mac arm64: build, ASAR khớp runtime, DMG, ZIP, chữ ký ad-hoc         | Chờ xác nhận                                                                 |
-| Mac: Khay 10, Không gian kín 17, chat nổi 12 nhóm trên ASAR đóng gói | Chờ xác nhận                                                                 |
-| Mac: mount DMG chỉ đọc, version, ASAR, Applications link và launcher | Chờ xác nhận                                                                 |
-| Windows x64: CI, Setup, `.nupkg`, `RELEASES` và ASAR khớp runtime    | Chờ xác nhận                                                                 |
-| Windows: fixture Khay, Không gian kín và chat nổi trên ASAR đóng gói | Chờ xác nhận                                                                 |
-| SHA-256, metadata Squirrel, manifest và đối chiếu asset phát hành    | Chờ xác nhận                                                                 |
-| Công bố GitHub Release và kiểm tra tải xuống                         | Chờ xác nhận                                                                 |
-| Cài đặt hoặc mở bản 0.8.1 tại máy người dùng                         | Chưa xác nhận                                                                |
+- Build arm64, chữ ký ad-hoc, DMG và ZIP đạt kiểm tra. **23 file runtime** trong ASAR khớp bản build.
+- **10 nhóm Khay**, **17 nhóm Không gian kín** và **12 nhóm chat nổi** đạt trên ASAR đóng gói.
+- Mount DMG chỉ đọc xác nhận version, ASAR, liên kết Applications và launcher. ZIP được kiểm tra cùng gói ứng dụng.
+- Mac chưa có chữ ký Apple Developer ID và chưa notarize; cập nhật bằng DMG tải thủ công.
 
-## Gói dự kiến
+## Windows x64
 
-Mac: `Gom-macOS-arm64-0.8.1.dmg`, `Gom-macOS-arm64-0.8.1.zip`, `SHA256SUMS-Gom-0.8.1-macos.txt`.
+- [Windows CI 40847500539](https://github.com/mhfed/gom/actions/runs/40847500539), job `123358504075`: thành công; **118 test đạt, 0 test bỏ qua**.
+- Setup, `.nupkg` và `RELEASES` được tạo và kiểm tra. **23 file runtime** trong ASAR khớp bản build; payload Squirrel khớp payload ứng dụng.
+- **10 nhóm Khay**, **17 nhóm Không gian kín** và **12 nhóm chat nổi** đạt trên ASAR đóng gói Windows.
+- Windows chưa ký Authenticode và dùng Squirrel để cập nhật trong app.
 
-Windows: `Gom-win32-x64-0.8.1-Setup.exe`, `Gom_win32_x64-0.8.1-full.nupkg`, `RELEASES`, `SHA256SUMS-Gom-0.8.1-windows.txt`.
+## Asset phát hành và checksum
 
-Mac ký ad-hoc, chưa notarize. Windows chưa ký Authenticode. Tài liệu này sẽ được cập nhật bằng kết quả thực tế khi từng bước hoàn tất.
+Đủ **bảy asset** trên GitHub Release 0.8.1; SHA-256 của cả bảy khớp manifest theo nền tảng:
+
+- Mac: [DMG](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-macOS-arm64-0.8.1.dmg), [ZIP](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-macOS-arm64-0.8.1.zip), [manifest SHA-256](https://github.com/mhfed/gom/releases/download/v0.8.1/SHA256SUMS-Gom-0.8.1-macos.txt).
+- Windows: [Setup](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-win32-x64-0.8.1-Setup.exe), [gói Squirrel](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom_win32_x64-0.8.1-full.nupkg), [RELEASES](https://github.com/mhfed/gom/releases/download/v0.8.1/RELEASES), [manifest SHA-256](https://github.com/mhfed/gom/releases/download/v0.8.1/SHA256SUMS-Gom-0.8.1-windows.txt).
+
+## Giới hạn bằng chứng
+
+Fixture dùng profile, tài khoản, clipboard, hộp thoại, safeStorage, tệp và trang giả; store, bridge, callback và native view của Gom chạy thật. Các lượt này không xác nhận keychain/hộp thoại thực hoặc việc dán trên tài khoản nền tảng thật. Không dùng userData hay tài khoản đang đăng nhập của người dùng để kiểm thử. Khả năng từng nền tảng chọn giao diện mobile hoặc giữ bản nháp sau lần tải lại ban đầu vẫn phụ thuộc website.

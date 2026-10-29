@@ -1,6 +1,6 @@
 # Gom 0.8.1 — Khay trung chuyển và chat nổi gọn hơn
 
-Bản 0.8.1 đang được chuẩn bị cho Mac Apple Silicon và Windows x64. Bộ cài, kiểm tra trên gói đóng sẵn và việc công bố bản phát hành còn chờ hoàn tất; xem [trạng thái kiểm chứng](verification-0.8.1.md).
+[Gom 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1) đã phát hành ngày **29/10/2026** cho Mac Apple Silicon và Windows x64. Bộ cài, ASAR đóng gói và checksum đã được kiểm chứng; xem [kết quả kiểm chứng](verification-0.8.1.md).
 
 ## Khay trung chuyển
 
@@ -20,10 +20,10 @@ Xem [cách dùng Khay](transfer-shelf.md). Khay giữ bản sao độc lập; x�
 
 Việc từng nền tảng chọn giao diện mobile còn phụ thuộc cách website xử lý viewport. Xem [hướng dẫn Chat nổi](floating-chat.md). Quy tắc khóa Không gian kín và thu hồi chat nổi tiếp tục áp dụng.
 
-## Bộ cài dự kiến
+## Bộ cài
 
-- macOS Apple Silicon: `Gom-macOS-arm64-0.8.1.dmg`, `Gom-macOS-arm64-0.8.1.zip` và `SHA256SUMS-Gom-0.8.1-macos.txt`.
-- Windows x64: `Gom-win32-x64-0.8.1-Setup.exe`, `Gom_win32_x64-0.8.1-full.nupkg`, `RELEASES` và `SHA256SUMS-Gom-0.8.1-windows.txt`.
+- macOS Apple Silicon: [Gom-macOS-arm64-0.8.1.dmg](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-macOS-arm64-0.8.1.dmg), [Gom-macOS-arm64-0.8.1.zip](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-macOS-arm64-0.8.1.zip) và [SHA256SUMS-Gom-0.8.1-macos.txt](https://github.com/mhfed/gom/releases/download/v0.8.1/SHA256SUMS-Gom-0.8.1-macos.txt).
+- Windows x64: [Gom-win32-x64-0.8.1-Setup.exe](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-win32-x64-0.8.1-Setup.exe), [Gom_win32_x64-0.8.1-full.nupkg](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom_win32_x64-0.8.1-full.nupkg), [RELEASES](https://github.com/mhfed/gom/releases/download/v0.8.1/RELEASES) và [SHA256SUMS-Gom-0.8.1-windows.txt](https://github.com/mhfed/gom/releases/download/v0.8.1/SHA256SUMS-Gom-0.8.1-windows.txt).
 
 Bản Mac ký ad-hoc, chưa notarize; cập nhật qua DMG tải thủ công. Bản Windows chưa ký Authenticode và dùng Squirrel để cập nhật trong app. Các cảnh báo cài đặt của hệ điều hành vẫn có thể xuất hiện.
 

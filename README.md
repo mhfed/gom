@@ -21,16 +21,16 @@ Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Di
 
 ## Tải Gom
 
-Bản **0.8.1** đang được chuẩn bị cho Mac Apple Silicon và Windows x64. Bộ cài, kiểm tra trên gói đóng sẵn và việc công bố bản phát hành đang chờ hoàn tất; xem [trạng thái kiểm chứng](docs/verification-0.8.1.md).
+Phiên bản hiện tại: **0.8.1**, phát hành ngày **29/10/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
 
-| Máy của bạn                                              | Yêu cầu                  | Bộ cài 0.8.1 dự kiến            |
-| -------------------------------------------------------- | ------------------------ | ------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | `Gom-macOS-arm64-0.8.1.dmg`     |
-| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | `Gom-win32-x64-0.8.1-Setup.exe` |
+| Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
+| -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-macOS-arm64-0.8.1.dmg)         |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-win32-x64-0.8.1-Setup.exe) |
 
-Bản Mac có thêm gói `Gom-macOS-arm64-0.8.1.zip`. Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.1/Gom-macOS-arm64-0.8.1.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.8.1](docs/release-0.8.1.md). Trong lúc chuẩn bị, bộ cài đã công bố vẫn có tại [trang phát hành 0.8.0](https://github.com/mhfed/gom/releases/tag/v0.8.0) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1), [kết quả kiểm chứng](docs/verification-0.8.1.md) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>

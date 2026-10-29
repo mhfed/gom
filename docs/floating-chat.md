@@ -12,4 +12,4 @@ Mỗi lúc có một tab nổi. Tách tab khác trả tab trước về Gom. B�
 
 Trang bên trong là giao diện web của nền tảng, nên bố cục ở cửa sổ nhỏ tùy từng nền tảng. Có thể kéo rộng cửa sổ nếu nội dung chật. Thu/mở bong bóng, mở lại popup đang tồn tại và đưa tab về Gom không tải lại trang hoặc tạo bản sao tài khoản. Bản nháp gõ sau khi popup đã tải được giữ qua thu/mở bong bóng trong cùng lần chạy.
 
-Bản 0.8.1 đang được chuẩn bị cho Mac Apple Silicon và Windows x64; bộ cài, kiểm tra trên gói đóng sẵn và việc công bố còn chờ hoàn tất. Xem [ghi chú bản 0.8.1](release-0.8.1.md) và [trạng thái kiểm chứng](verification-0.8.1.md).
+[Gom 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1) đã phát hành ngày 29/10/2026 cho Mac Apple Silicon và Windows x64. Xem [ghi chú bản 0.8.1](release-0.8.1.md) và [kết quả kiểm chứng](verification-0.8.1.md).

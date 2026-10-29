@@ -18,4 +18,4 @@ Phạm vi bản sửa này chỉ gồm khởi tạo bố cục popup và kích t
 - Kích thước DOM bong bóng 36×36 và native window 48×48 đã được kiểm tra thực tế trong fixture; kéo/bám góc và quyền riêng tư vẫn đạt.
 - Review độc lập không còn P1/P2. Việc mỗi nền tảng thực tế chọn giao diện mobile còn phụ thuộc cách nền tảng đó xử lý viewport.
 
-Bản sửa được đưa vào 0.8.1 cùng Khay trung chuyển. Những kết quả ở trên thuộc lượt kiểm chứng mã nguồn trước khi đóng gói; kiểm tra lại ASAR, bộ cài, checksum và trạng thái phát hành 0.8.1 được theo dõi riêng tại [kiểm chứng 0.8.1](verification-0.8.1.md). Chưa có kết luận về cài đặt hoặc công bố 0.8.1 trong tài liệu này.
+Bản sửa đã phát hành trong [Gom 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1) cùng Khay trung chuyển ngày 29/10/2026. Những kết quả ở trên thuộc lượt kiểm chứng mã nguồn trước khi đóng gói; **12 nhóm chat nổi** cũng đã đạt trên ASAR đóng gói Mac và Windows của 0.8.1. Xem [kiểm chứng 0.8.1](verification-0.8.1.md) để biết kết quả bộ cài và checksum. Không cài hoặc thay ứng dụng trên máy người dùng trong đợt phát hành này.

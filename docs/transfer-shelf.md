@@ -2,7 +2,7 @@
 
 Khay là ngăn giữ nhiều nội dung để dùng lại khi chuyển giữa các nền tảng và tài khoản trong Gom. Nội dung được lưu trên máy và còn nguyên sau khi thoát, mở lại app.
 
-Khay được đưa vào bản 0.8.1. Bộ cài và việc công bố bản này đang được chuẩn bị; xem [trạng thái kiểm chứng 0.8.1](verification-0.8.1.md). Bản 0.8.0 chưa có Khay.
+Khay có trong [Gom 0.8.1](https://github.com/mhfed/gom/releases/tag/v0.8.1), phát hành ngày 29/10/2026 cho Mac Apple Silicon và Windows x64. Xem [kết quả kiểm chứng 0.8.1](verification-0.8.1.md). Bản 0.8.0 chưa có Khay.
 
 ## Thêm nội dung
 
