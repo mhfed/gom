@@ -663,7 +663,7 @@ try {
         const main = BrowserWindow.getAllWindows().find((w) =>
           w.webContents.getURL().includes("index.html"),
         );
-        app.focus({ steal: true });
+        if (process.platform === "darwin") app.focus({ steal: true });
         main.show();
         main.focus();
         main.webContents.focus();

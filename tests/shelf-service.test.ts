@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, readFile, rm, symlink } from "node:fs/promises";
+import {
+  mkdtemp,
+  writeFile,
+  readFile,
+  rm,
+  mkdir,
+  symlink,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -8,6 +15,22 @@ import {
   type ShelfEnvironment,
 } from "../src/main/shelf-service.ts";
 import type { ShelfItem, ShelfResult } from "../src/shelf-types.ts";
+
+async function fileSymlink(source: string, link: string): Promise<boolean> {
+  try {
+    await symlink(source, link);
+    return true;
+  } catch (error) {
+    if (
+      process.platform === "win32" &&
+      ["EPERM", "EACCES", "ENOTSUP"].includes(
+        (error as NodeJS.ErrnoException).code ?? "",
+      )
+    )
+      return false;
+    throw error;
+  }
+}
 
 function fixture() {
   let context = {
@@ -179,13 +202,11 @@ test("file picker cancelled by epoch cannot copy selected files into either shel
   assert.equal(f.records.normal.length + f.records.private.length, 0);
 });
 
-test("selected regular files are independent copies; symlinks and oversized batches are rejected", async () => {
+test("selected regular files are independent copies and oversized batches are rejected", async () => {
   const root = await mkdtemp(join(tmpdir(), "gom-shelf-service-"));
   try {
-    const source = join(root, "quote.txt"),
-      link = join(root, "link.txt");
+    const source = join(root, "quote.txt");
     await writeFile(source, "original");
-    await symlink(source, link);
     const f = fixture();
     f.setPicked([source]);
     assert.equal((await f.request("pick-files")).ok, true);
@@ -194,11 +215,28 @@ test("selected regular files are independent copies; symlinks and oversized batc
       (await f.store.readBinary("normal", "1"))?.toString(),
       "original",
     );
-    f.setPicked([link]);
-    assert.equal((await f.request("pick-files")).ok, false);
     f.setPicked(Array.from({ length: 11 }, () => source));
     assert.equal((await f.request("pick-files")).ok, false);
     assert.equal(f.records.normal.length, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("selected symbolic links are rejected without adding their target bytes", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "gom-shelf-symlink-"));
+  try {
+    const source = join(root, "quote.txt"),
+      link = join(root, "link.txt");
+    await writeFile(source, "original");
+    if (!(await fileSymlink(source, link))) {
+      t.skip("Windows runner does not permit file symlinks");
+      return;
+    }
+    const f = fixture();
+    f.setPicked([link]);
+    assert.equal((await f.request("pick-files")).ok, false);
+    assert.equal(f.records.normal.length, 0);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -328,8 +366,12 @@ test("mixed file selection reports each safe basename and reason without paths o
       unsafe = join(root, "unsafe\nname.txt");
     await writeFile(good, "good");
     await writeFile(quota, "quota");
-    await writeFile(unsafe, "unsafe");
-    await symlink(good, link);
+    // Windows cannot create a filename containing a newline. Still send the
+    // hostile picker path to exercise safe labels and a per-file rejection.
+    if (process.platform !== "win32") await writeFile(unsafe, "unsafe");
+    const hasSymlink = await fileSymlink(good, link);
+    // Keep the mixed batch active on runners without symlink privileges.
+    if (!hasSymlink) await mkdir(link);
     const add = f.store.addBinary;
     f.store.addBinary = async (space, input, valid) =>
       input.name === "quota.bin"
@@ -348,9 +390,19 @@ test("mixed file selection reports each safe basename and reason without paths o
       "all five rejected selections receive a reason",
     );
     assert.match(result.message!, /missing\.txt[^\n]*không còn/i);
-    assert.match(result.message!, /shortcut\.txt[^\n]*liên kết/i);
+    assert.match(
+      result.message!,
+      hasSymlink
+        ? /shortcut\.txt[^\n]*liên kết/i
+        : /shortcut\.txt[^\n]*(?:tệp thường|quyền đọc)/i,
+    );
     assert.match(result.message!, /quota\.bin[^\n]*đầy/i);
-    assert.match(result.message!, /unsafe_name\.txt[^\n]*không hợp lệ/i);
+    assert.match(
+      result.message!,
+      process.platform === "win32"
+        ? /unsafe_name\.txt[^\n]*(?:không còn|chưa đọc được)/i
+        : /unsafe_name\.txt[^\n]*không hợp lệ/i,
+    );
     assert.equal(result.message!.includes(root), false);
     assert.equal(result.message!.includes("unsafe\nname.txt"), false);
     assert.equal(result.message!.includes(longName), false);

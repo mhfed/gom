@@ -8,7 +8,7 @@ Theo yêu cầu sau bản 0.8.0:
 
 Việc tải lại lúc tách là thay đổi có chủ đích so với 0.8.0. Phiên đăng nhập/partition vẫn giữ; bản nháp chưa lưu trước lần tải lại phụ thuộc nền tảng. Bản nháp gõ sau khi popup đã tải được giữ qua thu/mở bong bóng.
 
-Nhắc trả lời được giữ riêng trên nhánh `codex/reply-reminders`, commit WIP `20aebfb`; bản sửa popup không chứa chức năng đang phát triển đó.
+Phạm vi bản sửa này chỉ gồm khởi tạo bố cục popup và kích thước bong bóng.
 
 ## Kiểm chứng
 
@@ -18,4 +18,4 @@ Nhắc trả lời được giữ riêng trên nhánh `codex/reply-reminders`, c
 - Kích thước DOM bong bóng 36×36 và native window 48×48 đã được kiểm tra thực tế trong fixture; kéo/bám góc và quyền riêng tư vẫn đạt.
 - Review độc lập không còn P1/P2. Việc mỗi nền tảng thực tế chọn giao diện mobile còn phụ thuộc cách nền tảng đó xử lý viewport.
 
-Đã build mã nguồn để kiểm thử. Chưa tạo bộ cài hoặc thay ứng dụng đang cài trên máy trong lần sửa này.
+Bản sửa được đưa vào 0.8.1 cùng Khay trung chuyển. Những kết quả ở trên thuộc lượt kiểm chứng mã nguồn trước khi đóng gói; kiểm tra lại ASAR, bộ cài, checksum và trạng thái phát hành 0.8.1 được theo dõi riêng tại [kiểm chứng 0.8.1](verification-0.8.1.md). Chưa có kết luận về cài đặt hoặc công bố 0.8.1 trong tài liệu này.

@@ -2,7 +2,7 @@
 
 Khay là ngăn giữ nhiều nội dung để dùng lại khi chuyển giữa các nền tảng và tài khoản trong Gom. Nội dung được lưu trên máy và còn nguyên sau khi thoát, mở lại app.
 
-Tính năng hiện ở nhánh phát triển `codex/transfer-shelf`; bản phát hành 0.8.0 và bản đang cài trên máy chưa có Khay.
+Khay được đưa vào bản 0.8.1. Bộ cài và việc công bố bản này đang được chuẩn bị; xem [trạng thái kiểm chứng 0.8.1](verification-0.8.1.md). Bản 0.8.0 chưa có Khay.
 
 ## Thêm nội dung
 
@@ -19,11 +19,11 @@ Mỗi không gian giữ tối đa 100 món, tổng 250 MiB. Mỗi tệp/ảnh t�
 
 Tìm theo chữ hoặc tên tệp, hoặc lọc loại nội dung. Bấm biểu tượng ghim để giữ món hay dùng ở trên cùng.
 
-| Nội dung | Cách dùng lại |
-| --- | --- |
-| Chữ, link | Bấm **Sao chép**, chuyển sang cuộc chat và dán |
-| Ảnh | Bấm **Sao chép**, rồi dán ở nền tảng hỗ trợ dán ảnh |
-| Tệp | Bấm **Lưu bản sao…**, chọn nơi lưu, rồi đính kèm bằng giao diện nền tảng |
+| Nội dung  | Cách dùng lại                                                            |
+| --------- | ------------------------------------------------------------------------ |
+| Chữ, link | Bấm **Sao chép**, chuyển sang cuộc chat và dán                           |
+| Ảnh       | Bấm **Sao chép**, rồi dán ở nền tảng hỗ trợ dán ảnh                      |
+| Tệp       | Bấm **Lưu bản sao…**, chọn nơi lưu, rồi đính kèm bằng giao diện nền tảng |
 
 Bạn chọn người nhận, kiểm tra nội dung và bấm gửi trong nền tảng đang dùng. Khả năng dán ảnh hoặc đính kèm phụ thuộc nền tảng đó. Bản đầu dùng nút chọn tệp và lưu bản sao; kéo tệp trực tiếp giữa khay và cuộc chat chưa có.
 
