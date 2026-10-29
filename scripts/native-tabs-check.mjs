@@ -14,7 +14,16 @@ const entry = join(project, "dist/main.cjs");
 await access(entry);
 const root = await mkdtemp(join(tmpdir(), "tin-nhan-native-tabs-"));
 const bootstrap = join(root, "bootstrap.cjs");
-const providers = ["zalo", "telegram", "messenger"];
+const providers = [
+  "zalo",
+  "telegram",
+  "messenger",
+  "gmail",
+  "instagram",
+  "discord",
+  "slack",
+  "tinder",
+];
 const cases = [];
 const errors = [];
 let client;
@@ -108,11 +117,39 @@ async function native() {
     );
   });
 }
-async function active(account, { focus = true } = {}) {
+async function active(
+  account,
+  { focus = true, openProviders = providers } = {},
+) {
   try {
     await eventually(`active account ${account}`, async () => {
       const current = await state();
-      const visible = (await native()).filter((view) => view.visible);
+      let visible = (await native()).filter((view) => view.visible);
+      if (focus) {
+        // The original action must select and reveal the expected account
+        // before foreground recovery may repeat that same activation.
+        if (
+          current.panel !== "service" ||
+          current.active !== account ||
+          visible.length !== 1 ||
+          visible[0].account !== account
+        )
+          return false;
+        // Native focus is asserted only while this synthetic window is in the
+        // foreground. Re-run the production activation after OS focus loss;
+        // never satisfy the assertion by directly focusing a child WebContents.
+        const refocused = await client.evaluate(({ app, BrowserWindow }) => {
+          const main = BrowserWindow.getAllWindows()[0];
+          if (main.isFocused()) return false;
+          app.focus({ steal: true });
+          main.focus();
+          return true;
+        });
+        if (refocused) {
+          await page.evaluate((id) => window.desktop.activate(id), account);
+          visible = (await native()).filter((view) => view.visible);
+        }
+      }
       return (
         current.panel === "service" &&
         current.active === account &&
@@ -161,12 +198,12 @@ async function active(account, { focus = true } = {}) {
     );
   assert.deepEqual(
     tabs.map((tab) => tab.id),
-    providers.map((id) => `platform-${id}`),
+    openProviders.map((id) => `platform-${id}`),
   );
   assert.equal(tabs.filter((tab) => tab.selected === "true").length, 1);
   assert.deepEqual(
     tabs.map((tab) => tab.index),
-    providers.map((id) => (id === provider ? 0 : -1)),
+    openProviders.map((id) => (id === provider ? 0 : -1)),
   );
 }
 async function openAccountMenu({ keyboard = false } = {}) {
@@ -422,7 +459,7 @@ try {
         })()`);
       });
       baseline = await native();
-      assert.equal(baseline.length, 4);
+      assert.equal(baseline.length, 9);
     },
   );
 
@@ -518,7 +555,7 @@ try {
   );
 
   await check(
-    "keyboard roving tabs follow Zalo, Telegram, Messenger order",
+    "keyboard roving tabs follow the visible provider order with overflow",
     async () => {
       // locator.focus() alone changes DOM focus, not Electron's focused child
       // WebContents. Enter the shell before exercising its keyboard controls.
@@ -541,6 +578,13 @@ try {
       );
       await page.keyboard.press("ArrowRight");
       await active("messenger", { focus: false });
+      assert.deepEqual(
+        await page
+          .locator('[role="tab"][id^="platform-"]:visible')
+          .evaluateAll((nodes) => nodes.map((node) => node.id)),
+        ["platform-zalo", "platform-telegram", "platform-messenger"],
+        "1280px header keeps other supported providers in the overflow menu",
+      );
       for (const [from, key, expected] of [
         ["zalo", "ArrowRight", "telegram"],
         ["telegram", "ArrowRight", "messenger"],
@@ -658,10 +702,20 @@ try {
           ),
           false,
         );
+        const visibleTabs = await page
+          .locator('[role="tab"][id^="platform-"]:visible')
+          .evaluateAll((nodes) => nodes.map((node) => node.id));
+        assert.ok(
+          visibleTabs.includes("platform-telegram"),
+          "selected provider remains visible at narrower widths",
+        );
+        assert.equal(
+          await page.locator("#provider-overflow").isVisible(),
+          true,
+        );
         for (const id of [
-          "platform-zalo",
-          "platform-telegram",
-          "platform-messenger",
+          ...visibleTabs,
+          "provider-overflow",
           "account-select",
           "add-account-toolbar",
           "quick-switch",
@@ -757,9 +811,17 @@ try {
       const snapshot = await state();
       await page.evaluate(() => {
         window.nativeTabsMutations = 0;
-        window.nativeTabsObserver = new MutationObserver(
-          (records) => (window.nativeTabsMutations += records.length),
-        );
+        window.nativeTabsMutationDetails = [];
+        window.nativeTabsObserver = new MutationObserver((records) => {
+          window.nativeTabsMutations += records.length;
+          for (const record of records)
+            if (window.nativeTabsMutationDetails.length < 40)
+              window.nativeTabsMutationDetails.push({
+                type: record.type,
+                id: record.target.id || record.target.parentElement?.id,
+                attribute: record.attributeName,
+              });
+        });
         window.nativeTabsObserver.observe(document.documentElement, {
           childList: true,
           subtree: true,
@@ -776,7 +838,13 @@ try {
         window.nativeTabsObserver.disconnect();
         return window.nativeTabsMutations;
       });
-      assert.equal(mutations, 0);
+      assert.equal(
+        mutations,
+        0,
+        JSON.stringify(
+          await page.evaluate(() => window.nativeTabsMutationDetails),
+        ),
+      );
     },
   );
 
@@ -819,8 +887,14 @@ try {
   );
 
   await check(
-    "platform with no active accounts opens its account editor",
+    "platform library opens account editor after its last account is archived",
     async () => {
+      await client.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0].setContentSize(1280, 840),
+      );
+      await eventually("Messenger tab available outside overflow", () =>
+        page.locator("#platform-messenger").isVisible(),
+      );
       // Archive is intentionally destructive to this fixture view; all view and
       // draft preservation assertions run before this explicit lifetime action.
       assert.equal(
@@ -828,7 +902,12 @@ try {
           .ok,
         true,
       );
-      await page.locator("#platform-messenger").click();
+      await eventually(
+        "archived platform removed from tabs",
+        async () => (await page.locator("#platform-messenger").count()) === 0,
+      );
+      await page.locator("#provider-add").click();
+      await page.locator("#open-provider-messenger").click();
       await page.locator("#account-editor").waitFor({ state: "visible" });
       assert.equal(
         await page.locator("#account-provider").inputValue(),
@@ -837,7 +916,9 @@ try {
       assert.ok((await native()).every((view) => !view.visible));
       await page.locator("#account-editor-cancel").click();
       await page.locator("#platform-zalo").click();
-      await active("zalo");
+      await active("zalo", {
+        openProviders: providers.filter((id) => id !== "messenger"),
+      });
     },
   );
 

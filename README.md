@@ -98,6 +98,10 @@ Mở tab muốn dùng, rồi bấm **Tách tab thành chat nổi** trên thanh c
 
 Mỗi lúc có một tab nổi. Chat nổi thường tiếp tục hoạt động khi ẩn cửa sổ chính. Chat nổi kín và bong bóng được thu hồi khi không gian kín bị khóa. Xem [hướng dẫn Chat nổi](docs/floating-chat.md).
 
+### Khay trung chuyển (bản phát triển)
+
+Nhánh phát triển có ngăn **Khay** để giữ chữ, link, ảnh và bản sao tệp khi chuyển giữa các nền tảng. Nội dung còn sau khi thoát Gom; có tìm kiếm, ghim và xóa, với khay thường/kín riêng. Chữ/link/ảnh dùng nút **Sao chép**; tệp dùng **Lưu bản sao…** để đính kèm. Xem [cách dùng Khay](docs/transfer-shelf.md). Bản phát hành 0.8.0 chưa có tính năng này.
+
 ### Không gian kín
 
 Gom có **Không gian thường** và **Không gian kín**, mỗi nơi có tài khoản, tab, tab ghim và tài khoản đang chọn riêng. Nhãn trên thanh công cụ cho biết bạn đang ở đâu.

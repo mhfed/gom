@@ -1,6 +1,7 @@
 import { createCommandPalette } from "./command.ts";
 import { createProviderNavigation } from "./provider-navigation.ts";
 import { createPrivateSpaceUI } from "./private-space.ts";
+import { createShelfUI } from "./shelf.ts";
 import {
   type Account,
   type AccountId,
@@ -47,6 +48,7 @@ let current: AppState;
 let activeTab = "accounts";
 let accountFilter = "all";
 let signature = "";
+let welcomeSignature = "";
 let editing: AccountId | null = null;
 let lastPanel = "";
 let logoDialogProvider: ProviderDefinition | null = null;
@@ -915,32 +917,52 @@ function renderWelcome(state: AppState) {
   for (const account of accounts) addAccount(account);
 
   const list = $("welcome-accounts");
-  list.replaceChildren();
-  for (const account of ordered.slice(0, 8)) {
-    const provider = providerOf(account.provider);
-    const card = element("button", "welcome-account");
-    card.type = "button";
-    card.setAttribute(
-      "aria-label",
-      `Mở ${account.name} trên ${provider.label}`,
-    );
-    card.append(providerLogo(provider));
-    const details = element("span", "welcome-account-details");
-    details.append(
-      element("strong", "welcome-account-name", account.name),
-      element("span", "welcome-account-provider", provider.label),
-    );
-    card.append(details);
-    const unread = state.unread[account.id]?.count;
-    if (unread !== null && unread !== undefined && unread > 0) {
-      const badge = element("span", "welcome-unread", String(unread));
-      badge.setAttribute("aria-label", `${unread} chưa đọc`);
-      card.append(badge);
-    } else {
-      card.append(icon("arrow"));
+  const visibleAccounts = ordered.slice(0, 8);
+  const nextWelcomeSignature = JSON.stringify([
+    privateWorkspace,
+    state.privateSpace?.lockVersion ?? 0,
+    visibleAccounts.map((account) => {
+      const provider = providerOf(account.provider);
+      const unread = state.unread[account.id]?.count;
+      return [
+        account.id,
+        account.name,
+        provider.id,
+        provider.label,
+        provider.logo,
+        unread !== null && unread !== undefined && unread > 0 ? unread : 0,
+      ];
+    }),
+  ]);
+  if (welcomeSignature !== nextWelcomeSignature) {
+    welcomeSignature = nextWelcomeSignature;
+    list.replaceChildren();
+    for (const account of visibleAccounts) {
+      const provider = providerOf(account.provider);
+      const card = element("button", "welcome-account");
+      card.type = "button";
+      card.setAttribute(
+        "aria-label",
+        `Mở ${account.name} trên ${provider.label}`,
+      );
+      card.append(providerLogo(provider));
+      const details = element("span", "welcome-account-details");
+      details.append(
+        element("strong", "welcome-account-name", account.name),
+        element("span", "welcome-account-provider", provider.label),
+      );
+      card.append(details);
+      const unread = state.unread[account.id]?.count;
+      if (unread !== null && unread !== undefined && unread > 0) {
+        const badge = element("span", "welcome-unread", String(unread));
+        badge.setAttribute("aria-label", `${unread} chưa đọc`);
+        card.append(badge);
+      } else {
+        card.append(icon("arrow"));
+      }
+      card.onclick = () => void window.desktop.activate(account.id);
+      list.append(card);
     }
-    card.onclick = () => void window.desktop.activate(account.id);
-    list.append(card);
   }
   setProperty(
     $("welcome-account-count"),
@@ -1027,6 +1049,7 @@ function render(state: AppState) {
   if (spaceChanged) scrubPrivateUI();
   current = state;
   privateSpaceUI.sync(state);
+  shelfUI.render(state);
   const rebuilt = rebuildAccounts(state);
   const settings = state.panel === "settings";
   const library = state.panel === "providers";
@@ -1495,6 +1518,10 @@ const command = createCommandPalette({
     void window.desktop.settings();
   },
 });
+const shelfUI = createShelfUI({
+  getState: () => current,
+  request: (request) => window.desktop.shelf(request),
+});
 const privateSpaceUI = createPrivateSpaceUI({
   getState: () => current,
 });
@@ -1514,6 +1541,7 @@ function scrubPrivateUI() {
   providerLogoData.clear();
   accountFilter = "all";
   signature = "";
+  welcomeSignature = "";
   for (const id of ["account-name", "account-avatar", "provider-logo-file"])
     $<HTMLInputElement>(id).value = "";
   for (const id of [

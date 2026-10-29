@@ -1,6 +1,6 @@
 # Khay trung chuyển của Gom
 
-Ngày: 2026-10-29. Trạng thái: **thiết kế để duyệt; chưa triển khai**.
+Ngày: 2026-10-29. Trạng thái: **đã duyệt và triển khai ở nhánh phát triển**. Người dùng duyệt bằng “làm đi bạn ơi”. Chưa đóng gói, phát hành hoặc cài đặt tính năng.
 
 ## Ý định và quyết định đã có
 
@@ -13,7 +13,7 @@ Ví dụ: gom đoạn mô tả, ảnh sản phẩm và tệp báo giá vào Khay
 1. **Khay trong bộ nhớ, xóa khi thoát app.** Ít việc lưu trữ hơn, nhưng mất nội dung đang gom dở và không đáp ứng lựa chọn của người dùng.
 2. **Khay lưu trên máy.** Giữ cả mục thường và mục ghim qua lần mở lại, có thao tác xóa và dọn khay. Cần quản lý dung lượng, bản sao tệp và ghi dữ liệu bền vững. **Người dùng đã chọn cách này.**
 
-Phạm vi thao tác, giới hạn và cách bảo vệ dữ liệu bên dưới là đề xuất của người thiết kế để duyệt, chưa phải các lựa chọn người dùng đã xác nhận riêng.
+Phạm vi thao tác, giới hạn và cách bảo vệ dữ liệu bên dưới do người thiết kế đề xuất và đã được người dùng duyệt trong cùng thiết kế; không phải các yêu cầu riêng do người dùng tự đặt ra.
 
 ## Phạm vi bản đầu
 

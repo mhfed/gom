@@ -1,6 +1,9 @@
 import { PrivateSpaceStore } from "./private-space.ts";
 import { privateState } from "./private-state.ts";
 import { FloatingChat } from "./floating-chat.ts";
+import { ShelfStore } from "./shelf-store.ts";
+import { ShelfService } from "./shelf-service.ts";
+import { SHELF_LIMITS } from "../shelf-types.ts";
 import {
   normalizeWorkspaceNavigation,
   type WorkspaceNavigation,
@@ -65,6 +68,8 @@ import {
   globalShortcut,
   Notification,
   clipboard,
+  ClipboardItem,
+  safeStorage,
   screen,
   net,
   autoUpdater,
@@ -338,6 +343,102 @@ let workspaces: { normal: WorkspaceNavigation; private: WorkspaceNavigation } =
 let privacyGeneration = 0;
 let privacyDialogs = new AbortController();
 const privacyMenus = new Set<Menu>();
+const shelfStore = new ShelfStore(join(app.getPath("userData"), "shelf"), {
+  available: async () => {
+    const available = await safeStorage.isAsyncEncryptionAvailable();
+    return (
+      available &&
+      !(
+        process.platform === "linux" &&
+        safeStorage.getSelectedStorageBackend() === "basic_text"
+      )
+    );
+  },
+  encrypt: async (text) =>
+    (await safeStorage.encryptStringAsync(text)).toString("base64"),
+  decrypt: async (encoded) =>
+    (await safeStorage.decryptStringAsync(Buffer.from(encoded, "base64")))
+      .result,
+});
+const shelfService = new ShelfService(shelfStore, {
+  current: () => ({
+    space: privateUnlocked ? "private" : "normal",
+    epoch: privacyGeneration,
+    live: !closing,
+  }),
+  readClipboard: async () => {
+    const items = (await clipboard.read()).slice(0, 8);
+    for (const item of items) {
+      const type = ["image/png", "image/jpeg"].find((type) =>
+        item.types.includes(type),
+      );
+      if (!type) continue;
+      const blob = await item.getType(type);
+      if (!("arrayBuffer" in blob)) throw Error("clipboard-type");
+      if (blob.size > SHELF_LIMITS.itemBytes) throw Error("clipboard-size");
+      return { kind: "image", data: Buffer.from(await blob.arrayBuffer()) };
+    }
+    for (const item of items) {
+      if (!item.types.includes("text/plain")) continue;
+      const blob = await item.getType("text/plain");
+      if (blob.size > SHELF_LIMITS.textBytes) throw Error("clipboard-size");
+      return { kind: "text", text: await blob.text() };
+    }
+    return null;
+  },
+  writeClipboard: async (item, data) => {
+    if (item.text !== undefined) await clipboard.writeText(item.text);
+    else if (data) {
+      const png = nativeImage.createFromBuffer(data).toPNG();
+      if (!png.length) throw Error("clipboard-image");
+      await clipboard.write([
+        new ClipboardItem({
+          "image/png": new Blob([new Uint8Array(png)], { type: "image/png" }),
+        }),
+      ]);
+    }
+  },
+  pickFiles: async () => {
+    const result = await dialog.showOpenDialog(win, {
+      title: "Thêm tệp vào Khay",
+      properties: ["openFile", "multiSelections"],
+    });
+    return result.canceled ? undefined : result.filePaths;
+  },
+  saveFile: async (name) => {
+    const result = await dialog.showSaveDialog(win, {
+      title: "Lưu bản sao từ Khay",
+      defaultPath: name,
+      properties: ["showOverwriteConfirmation"],
+    });
+    return result.canceled ? undefined : result.filePath;
+  },
+  imagePreview: async (data) => {
+    const image = nativeImage.createFromBuffer(data);
+    if (image.isEmpty()) return null;
+    const size = image.getSize();
+    if (size.width * size.height > SHELF_LIMITS.imagePixels) return null;
+    let edge: number = SHELF_LIMITS.previewEdge;
+    while (edge >= 80) {
+      const scale = Math.min(1, edge / Math.max(size.width, size.height));
+      const png = image
+        .resize({
+          width: Math.max(1, Math.round(size.width * scale)),
+          height: Math.max(1, Math.round(size.height * scale)),
+        })
+        .toPNG();
+      if (png.length <= SHELF_LIMITS.previewBytes) return png;
+      edge = Math.floor(edge * 0.7);
+    }
+    return null;
+  },
+  onSurface: (open) => {
+    layout();
+    publish(true);
+    if (open && win && !win.isDestroyed()) win.webContents.focus();
+  },
+  onChange: () => publish(true),
+});
 function privacyMessageBox(options: Electron.MessageBoxOptions) {
   return dialog.showMessageBox(win, {
     ...options,
@@ -377,7 +478,10 @@ function visibleState(): AppState {
     unlocked: privateUnlocked,
     lockVersion: privacyGeneration,
   };
-  return privateState(state, privateUnlocked);
+  return {
+    ...privateState(state, privateUnlocked),
+    shelf: shelfService.summary(),
+  };
 }
 function accessibleProvider(id: unknown): id is ProviderId {
   return knownProvider(id) && visibleState().providers.some((p) => p.id === id);
@@ -417,6 +521,7 @@ function restoreWorkspace() {
 }
 function resetWorkspaceInteractions() {
   privacyGeneration++;
+  shelfService.close();
   privacyDialogs.abort();
   privacyDialogs = new AbortController();
   for (const menu of privacyMenus) menu.closePopup();
@@ -933,6 +1038,39 @@ function guard(contents: WebContents, id: AccountId) {
     const selectedText = !!params.selectionText.trim();
     if (selectedText || params.isEditable)
       items.push({ role: "copy", label: "Sao chép" });
+    const shelfEpoch = privacyGeneration;
+    const addToShelf = async (text: string) => {
+      if (closing || !accessible(id) || shelfEpoch !== privacyGeneration)
+        return;
+      const result = await shelfService.handle({
+        action: "add-text",
+        text,
+        lockVersion: shelfEpoch,
+      });
+      if (!closing && shelfEpoch === privacyGeneration) {
+        if (result.ok)
+          await shelfService.handle({
+            action: "surface",
+            open: true,
+            lockVersion: shelfEpoch,
+          });
+        else {
+          await privacyMessageBox({
+            type: "warning",
+            message: "Chưa thêm được vào Khay.",
+            detail: result.message || "Bạn kiểm tra khay và thử lại.",
+            buttons: ["Đóng"],
+          });
+        }
+      }
+    };
+    if (selectedText)
+      items.push({
+        label: "Lưu đoạn chọn vào Khay",
+        click: () => {
+          void addToShelf(params.selectionText);
+        },
+      });
     if (params.isEditable) {
       if (items.length) items.push({ type: "separator" });
       items.push(
@@ -989,6 +1127,13 @@ function guard(contents: WebContents, id: AccountId) {
             clipboard.writeText(params.linkURL);
         },
       });
+      if (/^https?:\/\//i.test(params.linkURL))
+        items.push({
+          label: "Lưu liên kết vào Khay",
+          click: () => {
+            void addToShelf(params.linkURL);
+          },
+        });
     }
     if (!items.length)
       items.push({
@@ -1138,6 +1283,14 @@ function createView(id: AccountId) {
     .catch(() => {});
   return view;
 }
+function shelfCoversPage() {
+  return (
+    !!win &&
+    !win.isDestroyed() &&
+    shelfService.summary().open &&
+    win.getContentSize()[0] < 940
+  );
+}
 function layout() {
   if (!win || win.isDestroyed()) return;
   const [width, height] = win.getContentSize();
@@ -1151,7 +1304,10 @@ function layout() {
       (state.panel === "service" && state.connections[state.active].reason)
       ? "settings"
       : state.panel,
+    shelfService.summary().open ? 340 : 0,
   );
+  if (shelfCoversPage() && win.isFocused() && !win.webContents.isFocused())
+    win.webContents.focus();
 }
 function activate(id: AccountId, focusPage = true) {
   if (accountEditorOpen) return;
@@ -1187,6 +1343,7 @@ function activate(id: AccountId, focusPage = true) {
     win.isVisible() &&
     !win.isMinimized() &&
     win.isFocused() &&
+    !shelfCoversPage() &&
     !state.connections[id].reason
   )
     view.webContents.focus();
@@ -1421,12 +1578,14 @@ function showWindow() {
     state.panel === "service" &&
     !state.connections[state.active]?.reason &&
     accessible(state.active) &&
+    !shelfCoversPage() &&
     floating?.accountId !== state.active
   )
     views.activate(state.active).webContents.focus();
   else win.webContents.focus();
 }
 function showSettings() {
+  shelfService.close();
   state.commandOpen = false;
   state.panel = "settings";
   layout();
@@ -1435,6 +1594,7 @@ function showSettings() {
 }
 function showProviderLibrary() {
   if (closing || accountEditorOpen) return;
+  shelfService.close();
   state.commandOpen = false;
   state.panel = "providers";
   layout();
@@ -1443,6 +1603,7 @@ function showProviderLibrary() {
 }
 function showWelcome() {
   if (closing || accountEditorOpen) return;
+  shelfService.close();
   state.commandOpen = false;
   state.panel = "welcome";
   layout();
@@ -1460,6 +1621,7 @@ function showUpdates() {
 }
 function showCommand(open: boolean) {
   if (accountEditorOpen) return;
+  if (open) shelfService.close();
   state.commandOpen = open;
   layout();
   publish();
@@ -2227,7 +2389,12 @@ async function showProviderMenu(request: unknown) {
         id: "provider-logo-edit",
         label: "Đổi logo",
         click: () => {
-          selected = () => win.webContents.send("provider-logo-editor", id);
+          selected = () => {
+            shelfService.close();
+            layout();
+            publish(true);
+            win.webContents.send("provider-logo-editor", id);
+          };
         },
       },
       { type: "separator" },
@@ -2654,6 +2821,8 @@ async function quit(installUpdate = false) {
   for (const alert of testAlerts.values()) alert.close();
   await imports.close();
   await accountOps.close();
+  await shelfService.shutdown();
+  await shelfStore.flush();
   await save().catch(() => {});
   const ok = await flushBeforeClose([...configured]);
   if (!ok) {
@@ -2822,6 +2991,7 @@ else {
       state.accounts.map((a) => a.id),
     );
     await privateStore.load(state.accounts.some((a) => a.private));
+    await shelfStore.load();
     for (const a of state.accounts) initializeAccount(a);
     const legacyNavigation = {
       active: stored.activeAccount || stored.active,
@@ -2911,6 +3081,8 @@ else {
     win.webContents.on("will-navigate", (event) => event.preventDefault());
     win.webContents.on("did-start-loading", () => {
       accountEditorOpen = false;
+      shelfService.close();
+      layout();
     });
     ipcMain.on("provider-notification-click", (event) => {
       if (closing || event.senderFrame !== event.sender.mainFrame) return;
@@ -2986,6 +3158,31 @@ else {
       if (providerId !== undefined && !accessibleProvider(providerId))
         return { ok: false };
       switch (command) {
+        case "shelf": {
+          if (
+            arg?.action === "surface" &&
+            arg.open &&
+            (accountEditorOpen || state.commandOpen)
+          )
+            return {
+              ok: false,
+              message: "Đóng hộp thoại đang mở để dùng Khay.",
+            };
+          const result = await shelfService.handle(arg);
+          if (
+            result.ok &&
+            arg?.action === "surface" &&
+            arg.open === false &&
+            arg.lockVersion === privacyGeneration &&
+            state.panel === "service" &&
+            accessible(state.active) &&
+            floating?.accountId !== state.active &&
+            !state.connections[state.active]?.reason &&
+            win.isFocused()
+          )
+            views.peek(state.active)?.webContents.focus();
+          return result;
+        }
         case "float-chat":
           return floatChat();
         case "private-space":

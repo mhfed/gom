@@ -1,4 +1,5 @@
 import type { UpdateState } from "./update-types.ts";
+import type { ShelfRequest, ShelfResult, ShelfSummary } from "./shelf-types.ts";
 export type BuiltinProviderId =
   | "zalo"
   | "messenger"
@@ -183,6 +184,7 @@ export interface Presentation {
   pinned: AccountId[];
 }
 export interface AppState {
+  shelf?: ShelfSummary;
   floating?: {
     accountId: string | null;
     detached: boolean;
@@ -224,6 +226,7 @@ export interface AppState {
   updates: UpdateState;
 }
 export interface DesktopBridge {
+  shelf(request: ShelfRequest): Promise<ShelfResult>;
   floatChat(): Promise<AccountResult>;
   privateSpace(
     action: "setup" | "unlock" | "lock" | "change-password" | "membership",

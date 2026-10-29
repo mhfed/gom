@@ -1,8 +1,12 @@
-export function providerBounds(width: number, height: number) {
+export function providerBounds(
+  width: number,
+  height: number,
+  reservedRight = 0,
+) {
   return {
     x: 0,
     y: 52,
-    width: Math.max(0, width),
+    width: Math.max(0, width - Math.max(0, reservedRight)),
     height: Math.max(0, height - 52),
   };
 }
@@ -30,10 +34,14 @@ export function layoutViews(
   height: number,
   active: string,
   panel: string,
+  reservedRight = 0,
 ) {
-  const bounds = providerBounds(width, height);
+  const bounds = providerBounds(width, height, reservedRight);
   for (const [id, view] of views) {
-    const visible = panel === "service" && active === id;
+    const visible =
+      panel === "service" &&
+      active === id &&
+      !(reservedRight > 0 && width < 940);
     const previous = applied.get(view);
     const visibilityChanged = !previous || previous.visible !== visible;
     const boundsChanged =
