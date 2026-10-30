@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge, AppState, ProviderId } from "../shared.ts";
 const bridge: DesktopBridge = {
+  backup: (action, data) =>
+    ipcRenderer.invoke("desktop", "backup", { action, data }),
+  resources: (action, data) =>
+    ipcRenderer.invoke("desktop", "resources", { action, data }),
+  focus: (action, data) =>
+    ipcRenderer.invoke("desktop", "focus", { action, data }),
   shelf: (request) => ipcRenderer.invoke("desktop", "shelf", request),
   reminder: (action, data) =>
     ipcRenderer.invoke("desktop", "reminder", { action, data }),
@@ -11,7 +17,8 @@ const bridge: DesktopBridge = {
   activate: (id) => ipcRenderer.invoke("desktop", "activate", id),
   activateProvider: (provider, focusPage = true) =>
     ipcRenderer.invoke("desktop", "activate-provider", { provider, focusPage }),
-  navigationMenu: () => ipcRenderer.invoke("desktop", "navigation-menu"),
+  navigationMenu: (anchor) =>
+    ipcRenderer.invoke("desktop", "navigation-menu", anchor),
   accountMenu: (anchor) =>
     ipcRenderer.invoke("desktop", "account-menu", anchor),
   providerLibrary: (open) =>

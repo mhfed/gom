@@ -21,16 +21,16 @@ Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Di
 
 ## Tải Gom
 
-Phiên bản hiện tại: **0.8.2**, phát hành ngày **29/10/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
+Phiên bản hiện tại: **0.8.3**, phát hành ngày **30/10/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
 | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom-macOS-arm64-0.8.2.dmg)         |
-| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom-win32-x64-0.8.2-Setup.exe) |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg)         |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe) |
 
-Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.2/Gom-macOS-arm64-0.8.2.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.8.2](https://github.com/mhfed/gom/releases/tag/v0.8.2), [kết quả kiểm chứng](docs/verification-0.8.2.md) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.8.3](https://github.com/mhfed/gom/releases/tag/v0.8.3), [kết quả kiểm chứng](docs/verification-0.8.3.md) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -46,7 +46,7 @@ Xem [nội dung bản 0.8.2](https://github.com/mhfed/gom/releases/tag/v0.8.2), 
 
 ### Trên Mac
 
-1. Tải và mở tệp **Gom-macOS-arm64-0.8.2.dmg**.
+1. Tải và mở tệp **Gom-macOS-arm64-0.8.3.dmg**.
 2. Kéo **Gom.app** vào **Applications**.
 3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 
@@ -56,7 +56,7 @@ DMG cũng kèm **Mo-Gom.command**. Sau khi kéo app vào Applications, bạn có
 
 ### Trên Windows
 
-1. Tải **Gom-win32-x64-0.8.2-Setup.exe**.
+1. Tải **Gom-win32-x64-0.8.3-Setup.exe**.
 2. Chạy tệp Setup và đợi quá trình cài đặt hoàn tất.
 3. Mở **Gom** từ Start menu nếu app chưa tự mở.
 
@@ -66,11 +66,11 @@ Gom cài cho tài khoản Windows hiện tại, không yêu cầu quyền quản
 
 Bạn thêm nền tảng và đăng nhập trực tiếp trong Gom:
 
-1. Mở Gom, chọn **Mở nền tảng** trên màn chào mừng hoặc bấm nút **+** cạnh các tab.
+1. Mở Gom, chọn **Mở nền tảng** trên màn chào mừng hoặc bấm **+ → Mở nền tảng / website…** cạnh các tab.
 2. Chọn nền tảng bạn muốn dùng.
 3. Nếu Gom yêu cầu thêm tài khoản, đặt tên như **Cá nhân** hoặc **Công việc**, rồi chọn **Thêm tài khoản**.
 4. Đăng nhập trên trang của nền tảng. Dùng mã QR nếu trang đăng nhập có hỗ trợ.
-5. Muốn dùng thêm tài khoản, bấm nút **Thêm tài khoản** cạnh tên tài khoản đang chọn hoặc vào **Cài đặt → Tài khoản**.
+5. Muốn dùng thêm tài khoản, bấm **+ → Thêm tài khoản…** hoặc mở menu tên tài khoản đang chọn hoặc vào **Cài đặt → Tài khoản**.
 
 Mỗi tài khoản có phiên đăng nhập riêng. Bấm tên tài khoản trên thanh công cụ để chuyển tài khoản trong cùng nền tảng. Bấm logo **Gom** để trở về màn chào mừng.
 
@@ -78,10 +78,10 @@ Mỗi tài khoản có phiên đăng nhập riêng. Bấm tên tài khoản trê
 
 Bạn có thể tùy chỉnh cách các nền tảng xuất hiện:
 
-- **Ghim tab**: nhấp chuột phải vào tab, chọn **Ghim tab** để thu gọn thành biểu tượng
+- **Ghim tab**: nhấp chuột phải vào tab, chọn **Ghim tab** để đưa lên trước các tab khác; tab đang dùng vẫn hiện tên
 - **Đóng tab**: chọn **Đóng tab** trong menu chuột phải; mở lại nền tảng từ nút **+** khi cần
 - **Đổi logo**: nhấp chuột phải vào tab, chọn **Đổi logo**, chọn logo có sẵn hoặc tải ảnh PNG/JPG, rồi bấm **Lưu logo**
-- **Thêm website**: bấm **+**, điền **Tên hiển thị** và **Địa chỉ website** trong mục **Thêm website riêng**
+- **Thêm website**: bấm **+ → Mở nền tảng / website…**, điền **Tên hiển thị** và **Địa chỉ website** trong mục **Thêm website riêng**
 - **Đổi giao diện**: vào **Cài đặt → Giao diện** để chọn sáng, tối, theo hệ điều hành hoặc theo nền tảng
 
 Logo mới áp dụng cho toàn bộ nền tảng đó và được lưu trên máy. Trong hộp đổi logo, chọn **Dùng logo mặc định** rồi **Lưu logo** để khôi phục.
@@ -90,7 +90,7 @@ Logo mới áp dụng cho toàn bộ nền tảng đó và được lưu trên m
 
 ### Chat nổi và bong bóng
 
-Mở tab muốn dùng, rồi bấm **Tách tab thành chat nổi** trên thanh công cụ. Gom chuyển trang đang dùng sang cửa sổ nhỏ, giữ phiên đăng nhập và tải lại đúng một lần sau khi áp dụng kích thước popup. Lưu hoặc sao chép bản nháp quan trọng trước khi tách: lần tải lại ban đầu có thể làm mất bản nháp tùy nền tảng. Thu/mở bong bóng và đưa tab về Gom không tải lại trang.
+Mở tab muốn dùng, rồi chọn **Tách thành chat nổi** trong menu tên tài khoản hoặc **··· Công cụ**. Gom chuyển trang đang dùng sang cửa sổ nhỏ, giữ phiên đăng nhập và tải lại đúng một lần sau khi áp dụng kích thước popup. Lưu hoặc sao chép bản nháp quan trọng trước khi tách: lần tải lại ban đầu có thể làm mất bản nháp tùy nền tảng. Thu/mở bong bóng và đưa tab về Gom không tải lại trang.
 
 - Bấm **Thu gọn** hoặc **Escape** để thu thành bong bóng logo Gom đường kính 36 px (60% kích thước trước) ở góc màn hình; bấm bong bóng để mở lại.
 - Kéo bong bóng để chuyển sang góc dưới trái hoặc phải. Kéo thanh tiêu đề/cạnh cửa sổ để di chuyển và đổi kích thước.
@@ -100,7 +100,7 @@ Mỗi lúc có một tab nổi. Chat nổi thường tiếp tục hoạt động
 
 ### Khay trung chuyển
 
-Bản 0.8.2 có ngăn **Khay** để giữ chữ, link, ảnh và bản sao tệp khi chuyển giữa các nền tảng. Nội dung được mã hóa trên máy và còn sau khi thoát Gom; có tìm kiếm, ghim và xóa, với khay thường/kín riêng. Gom chỉ đọc clipboard khi bạn bấm **Lấy từ clipboard**. Chữ/link/ảnh dùng nút **Sao chép**; tệp dùng **Chọn tệp…** để thêm và **Lưu bản sao…** để dùng lại.
+Bản 0.8.3 có ngăn **Khay** để giữ chữ, link, ảnh và bản sao tệp khi chuyển giữa các nền tảng. Nội dung được mã hóa trên máy và còn sau khi thoát Gom; có tìm kiếm, ghim và xóa, với khay thường/kín riêng. Gom chỉ đọc clipboard khi bạn bấm **Lấy từ clipboard**. Chữ/link/ảnh dùng nút **Sao chép**; tệp dùng **Chọn tệp…** để thêm và **Lưu bản sao…** để dùng lại.
 
 Mỗi không gian giữ tối đa 100 món, tổng 250 MiB; mỗi tệp/ảnh tối đa 50 MiB và mỗi đoạn chữ tối đa 64 KiB. Khi khóa hoặc đổi không gian, Gom đóng khay và hủy thao tác chưa hoàn tất của không gian cũ. Nội dung đã sao chép hoặc lưu ra ngoài vẫn ở ngoài Gom. Xem [cách dùng Khay](docs/transfer-shelf.md).
 
@@ -108,13 +108,33 @@ Mỗi không gian giữ tối đa 100 món, tổng 250 MiB; mỗi tệp/ảnh t�
 
 Gom có **Nhắc trả lời** để ghi việc cần quay lại, gắn với tài khoản và chọn giờ nhắc. Có giờ nhanh, đổi giờ tùy chỉnh, hoãn 15 phút, hoàn tất và xóa. Nhắc việc thường phát thông báo khi Gom còn chạy; nhắc việc kín chỉ hiện trong danh sách/badge kín. Xem [hướng dẫn](docs/reply-reminders.md). Có từ bản 0.8.2.
 
+### Header gọn
+
+Thanh trên cùng giữ một hàng: nền tảng đang dùng hiện tên, các nền tảng khác giữ logo và số chưa đọc. Nút **+** gom mở nền tảng/website và thêm tài khoản; bấm tên tài khoản để đổi tài khoản hoặc tách chat nổi. Menu **··· Công cụ** chứa Tập trung, đổi sáng/tối, Cài đặt, Tài nguyên và Sao lưu. Chuột phải hoặc **Shift F10** trên tab để ghim/đóng. Xem [hướng dẫn header](docs/header-compact.md).
+
+### Tập trung có hẹn giờ
+
+Vào **Cài đặt → Thông báo → Tập trung có hẹn giờ**, chọn **30 phút**, **1 giờ** hoặc giờ kết thúc trong 24 giờ tới, rồi bấm **Bắt đầu tập trung**. Gom tạm ngưng thông báo mới và hoãn thông báo Nhắc trả lời; huy hiệu chưa đọc tiếp tục cập nhật. Có thể chọn tắt cả âm thanh trang, cập nhật phiên hoặc kết thúc sớm.
+
+Phiên còn hạn tiếp tục sau khi mở lại Gom; khi hết giờ, app giữ nguyên quyền thông báo từng tài khoản và trạng thái tạm dừng thủ công. Bạn cũng có thể bắt đầu/kết thúc từ `⌘/Ctrl K` hoặc menu khay hệ thống. Xem [hướng dẫn Tập trung](docs/timed-focus.md).
+
+### Sao lưu và khôi phục cấu hình
+
+Mở **Cài đặt → Sao lưu** để xuất cấu hình Không gian thường ra tệp, xem trước và khôi phục bằng cách hợp nhất rồi khởi động lại. Có bản cấu hình bảo vệ trước khi áp dụng; giữ tài khoản khác đang có. Tệp mang theo giao diện, tab/ghim, danh sách tài khoản/nền tảng, logo và tùy chọn thông báo; phiên đăng nhập, nội dung chat và cấu hình riêng Không gian kín vẫn ở trên máy. Xem [hướng dẫn](docs/configuration-backup.md).
+
+### Quản lý tài nguyên
+
+Mở **Cài đặt → Tài nguyên** để xem RAM/CPU ước tính của Gom và từng tài khoản khi đo được. Có sắp xếp theo RAM, CPU hoặc tên; bộ đo chỉ chạy khi mục này đang mở và cửa sổ đang hiện.
+
+Bấm **Tạm ngủ** để đóng trang tài khoản ít dùng sau khi xác nhận; **Đánh thức** hoặc chọn lại tài khoản để dùng phiên đã có. Lựa chọn ngủ được giữ qua lần mở lại Gom. Khi ngủ, thông báo nền tảng/số chưa đọc ngừng cập nhật và bản nháp chưa lưu có thể mất. Xem [hướng dẫn Quản lý tài nguyên](docs/resource-management.md).
+
 ### Không gian kín
 
 Gom có **Không gian thường** và **Không gian kín**, mỗi nơi có tài khoản, tab, tab ghim và tài khoản đang chọn riêng. Nhãn trên thanh công cụ cho biết bạn đang ở đâu.
 
-Bấm **Không gian thường** cạnh biểu tượng ổ khóa để đặt mật khẩu (8–256 ký tự) hoặc nhập mật khẩu đã có. Gom chuyển sang **Không gian kín**; nếu chưa có tài khoản kín, không gian này bắt đầu trống. Bấm **Mở nền tảng** hoặc **Thêm tài khoản** để thêm và đăng nhập tài khoản riêng tại đây. Tài khoản thêm trong không gian kín tự thuộc không gian kín.
+Bấm **Thường** cạnh biểu tượng ổ khóa để đặt mật khẩu (8–256 ký tự) hoặc nhập mật khẩu đã có. Gom chuyển sang **Không gian kín**; nếu chưa có tài khoản kín, không gian này bắt đầu trống. Bấm **Mở nền tảng** hoặc **Thêm tài khoản** để thêm và đăng nhập tài khoản riêng tại đây. Tài khoản thêm trong không gian kín tự thuộc không gian kín.
 
-Bấm **Không gian kín** hoặc **⌘/Ctrl Shift L** để khóa và về không gian thường, khôi phục các tab và tài khoản đang dùng trước đó. Gom tự khóa khi ẩn/thu nhỏ cửa sổ, máy ngủ, màn hình khóa hoặc khởi động lại; chuyển sang ứng dụng khác không tự khóa.
+Bấm **Kín** hoặc **⌘/Ctrl Shift L** để khóa và về không gian thường, khôi phục các tab và tài khoản đang dùng trước đó. Gom tự khóa khi ẩn/thu nhỏ cửa sổ, máy ngủ, màn hình khóa hoặc khởi động lại; chuyển sang ứng dụng khác không tự khóa.
 
 Muốn chuyển tài khoản đang có, vào **Cài đặt → Tài khoản**, mở menu thao tác và chọn **Đưa vào không gian kín** hoặc **Chuyển sang không gian thường**. Khi chuyển vào, Gom yêu cầu mật khẩu. Bản 0.7.9 giữ nguyên mật khẩu, phiên đăng nhập và phân loại tài khoản đã có từ 0.7.8; tài khoản thường không tự chuyển vào không gian kín.
 
@@ -154,7 +174,7 @@ Số trên tab dựa vào chỉ báo mà nền tảng cung cấp. Số có dấu
 Mở **Cài đặt → Cập nhật → Kiểm tra cập nhật** để xem phiên bản mới:
 
 - **Windows**: khi có bản tương thích, tải trong app và chọn khởi động lại để cài
-- **Mac**: bản 0.8.2 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
+- **Mac**: bản 0.8.3 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
 
 Lưu hoặc sao chép bản nháp quan trọng trước khi thoát app để cập nhật. Gom dùng lại dữ liệu tài khoản đang có; việc duy trì đăng nhập và khôi phục bản nháp còn phụ thuộc từng nền tảng.
 

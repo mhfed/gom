@@ -95,6 +95,20 @@ export function createCommandPalette(options: PaletteOptions) {
         run: () => options.settings("appearance"),
       },
       {
+        id: "backup",
+        title: "Sao lưu và khôi phục cấu hình",
+        subtitle: "Xuất tệp hoặc khôi phục cấu hình Không gian thường",
+        icon: "file",
+        run: () => options.settings("backup"),
+      },
+      {
+        id: "resources",
+        title: "Quản lý tài nguyên",
+        subtitle: "RAM, CPU và tạm ngủ tài khoản",
+        icon: "desktop",
+        run: () => options.settings("resources"),
+      },
+      {
         id: "notifications",
         title: "Thông báo",
         subtitle: "Cài đặt cho từng tài khoản",
@@ -123,11 +137,53 @@ export function createCommandPalette(options: PaletteOptions) {
             ),
           ),
       },
+      ...[30, 60].map((minutes) => ({
+        id: "focus-" + minutes,
+        title: minutes === 30 ? "Tập trung 30 phút" : "Tập trung 1 giờ",
+        subtitle: "Tạm ngưng thông báo, tự kết thúc khi hết giờ",
+        icon: "moon",
+        run: () =>
+          afterClose(() =>
+            window.desktop.focus("start", {
+              endsAt: Date.now() + minutes * 60_000,
+              muteAudio:
+                options.getState().preferences.focus?.muteAudio ?? false,
+            }),
+          ),
+      })),
+      {
+        id: "focus-settings",
+        title: "Tập trung có hẹn giờ",
+        subtitle: "Chọn giờ kết thúc và tùy chọn âm thanh",
+        icon: "moon",
+        run: () => options.settings("notifications"),
+      },
+      ...(state.preferences.focus
+        ? [
+            {
+              id: "focus-stop",
+              title: "Kết thúc Tập trung",
+              subtitle: "Giữ nguyên quyền thông báo của từng tài khoản",
+              icon: "bell",
+              run: () => afterClose(() => window.desktop.focus("stop")),
+            },
+          ]
+        : []),
     ];
     const words = fold(search.value).trim().split(/\s+/).filter(Boolean);
     entries = all.filter((e) =>
       words.every((w) => fold(e.title + " " + e.subtitle).includes(w)),
     );
+    // Prefer the requested action's title over words found only in help text.
+    const rank = (entry: Entry) => {
+      const title = fold(entry.title);
+      return title === words.join(" ")
+        ? 2
+        : words.every((word) => title.includes(word))
+          ? 1
+          : 0;
+    };
+    entries.sort((a, b) => rank(b) - rank(a));
     const focusedResult =
       (document.activeElement as HTMLElement)?.getAttribute("role") ===
       "option";
@@ -238,6 +294,7 @@ export function createCommandPalette(options: PaletteOptions) {
         state.providers,
         state.presentation.pinned,
         state.preferences.paused,
+        state.preferences.focus,
       ]);
       if (state.commandOpen) {
         if (!dialog.open) {

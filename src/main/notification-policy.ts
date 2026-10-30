@@ -6,7 +6,10 @@ import type {
 } from "../shared.ts";
 import { navigationPolicy } from "./security.ts";
 export function notificationAllowed(p: Preferences, id: AccountId) {
-  return !p.paused && p.notifications[id] === "allow";
+  return !notificationsPaused(p) && p.notifications[id] === "allow";
+}
+export function notificationsPaused(p: Preferences, now = Date.now()) {
+  return p.paused || !!(p.focus && p.focus.endsAt > now);
 }
 export function validNotificationFrame(
   id: ProviderId,

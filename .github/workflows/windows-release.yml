@@ -8,7 +8,7 @@ on:
         required: true
         type: choice
         options:
-          - v0.8.2
+          - v0.8.3
 
 permissions:
   contents: write
@@ -34,7 +34,7 @@ jobs:
         env:
           WORKFLOW_REVISION: ${{ github.sha }}
         run: |
-          git restore --source=$env:WORKFLOW_REVISION -- scripts/verify-release-package.mjs scripts/private-space-check.mjs scripts/floating-chat-check.mjs scripts/shelf-check.mjs scripts/reminders-check.mjs
+          git restore --source=$env:WORKFLOW_REVISION -- scripts/verify-release-package.mjs scripts/private-space-check.mjs scripts/floating-chat-check.mjs scripts/shelf-check.mjs scripts/reminders-check.mjs scripts/header-check.mjs scripts/focus-check.mjs scripts/resources-check.mjs scripts/backup-check.mjs tests/accounts.test.ts tests/chat-drafts.test.ts
           if ($LASTEXITCODE -ne 0) { throw "Could not load release verification tools." }
 
       - uses: actions/setup-node@v4
@@ -48,9 +48,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          if ($env:RELEASE_TAG -ne "v0.8.2") { throw "Only v0.8.2 is supported by this workflow." }
+          if ($env:RELEASE_TAG -ne "v0.8.3") { throw "Only v0.8.3 is supported by this workflow." }
           $version = node -p "require('./package.json').version"
-          if ($version -ne "0.8.2") { throw "Expected package version 0.8.2; found $version." }
+          if ($version -ne "0.8.3") { throw "Expected package version 0.8.3; found $version." }
           $draft = gh release view $env:RELEASE_TAG --repo mhfed/gom --json isDraft --jq .isDraft
           if ($LASTEXITCODE -ne 0 -or $draft -ne "true") { throw "The target GitHub release must already exist as a draft." }
 
@@ -60,8 +60,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Reminders, shelf, floating-chat, private-space and release regression tests
-        run: node --test --experimental-strip-types tests/private-space.test.ts tests/private-state.test.ts tests/workspace-state.test.ts tests/accounts-multi.test.ts tests/notification-click.test.ts tests/update-check.test.ts tests/provider-tabs.test.ts tests/floating-geometry.test.ts tests/floating-layout.test.ts tests/shelf-store.test.ts tests/shelf-service.test.ts tests/shelf-layout.test.ts tests/provider-tab-layout.test.ts tests/reminders.test.ts tests/reminder-service.test.ts
+      - name: Full unit test suite
+        run: npm test
 
       - name: Create Windows x64 Squirrel packages
         run: npm run make:win
@@ -97,13 +97,41 @@ jobs:
           node scripts/reminders-check.mjs
           if ($LASTEXITCODE -ne 0) { throw "Packaged reminders smoke failed." }
 
+      - name: Exercise compact header from packaged ASAR with isolated sessions
+        shell: pwsh
+        run: |
+          $env:GOM_SMOKE_APP_ASAR = (Resolve-Path "out-release/Gom-win32-x64/resources/app.asar").Path
+          node scripts/header-check.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Packaged compact header smoke failed." }
+
+      - name: Exercise timed Focus from packaged ASAR with isolated sessions
+        shell: pwsh
+        run: |
+          $env:GOM_SMOKE_APP_ASAR = (Resolve-Path "out-release/Gom-win32-x64/resources/app.asar").Path
+          node scripts/focus-check.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Packaged timed Focus smoke failed." }
+
+      - name: Exercise resource management from packaged ASAR with isolated sessions
+        shell: pwsh
+        run: |
+          $env:GOM_SMOKE_APP_ASAR = (Resolve-Path "out-release/Gom-win32-x64/resources/app.asar").Path
+          node scripts/resources-check.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Packaged resource management smoke failed." }
+
+      - name: Exercise configuration backup from packaged ASAR with isolated sessions
+        shell: pwsh
+        run: |
+          $env:GOM_SMOKE_APP_ASAR = (Resolve-Path "out-release/Gom-win32-x64/resources/app.asar").Path
+          node scripts/backup-check.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Packaged configuration backup smoke failed." }
+
       - name: Verify package assets and create checksums
         shell: pwsh
         run: |
           $output = Join-Path $PWD "out-release/make/squirrel.windows/x64"
           $files = @(
-            (Join-Path $output "Gom-win32-x64-0.8.2-Setup.exe"),
-            (Join-Path $output "Gom_win32_x64-0.8.2-full.nupkg"),
+            (Join-Path $output "Gom-win32-x64-0.8.3-Setup.exe"),
+            (Join-Path $output "Gom_win32_x64-0.8.3-full.nupkg"),
             (Join-Path $output "RELEASES")
           )
           foreach ($file in $files) {
@@ -122,7 +150,7 @@ jobs:
             $bundleHash = (Get-FileHash "out-release/Gom-win32-x64/resources/app.asar" -Algorithm SHA256).Hash.ToLowerInvariant()
             if ($payloadHash -ne $bundleHash) { throw "The update package ASAR differs from the verified bundle." }
           } finally { $archive.Dispose() }
-          $checksumFile = Join-Path $output "SHA256SUMS-Gom-0.8.2-windows.txt"
+          $checksumFile = Join-Path $output "SHA256SUMS-Gom-0.8.3-windows.txt"
           $checksumLines = foreach ($file in $files) {
             $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $(Split-Path -Leaf $file)"
@@ -143,9 +171,9 @@ jobs:
           $draft = gh release view $env:RELEASE_TAG --repo mhfed/gom --json isDraft --jq .isDraft
           if ($LASTEXITCODE -ne 0 -or $draft -ne "true") { throw "The target GitHub release must still be a draft before uploading assets." }
           gh release upload $env:RELEASE_TAG `
-            (Join-Path $output "Gom-win32-x64-0.8.2-Setup.exe") `
-            (Join-Path $output "Gom_win32_x64-0.8.2-full.nupkg") `
+            (Join-Path $output "Gom-win32-x64-0.8.3-Setup.exe") `
+            (Join-Path $output "Gom_win32_x64-0.8.3-full.nupkg") `
             (Join-Path $output "RELEASES") `
-            (Join-Path $output "SHA256SUMS-Gom-0.8.2-windows.txt") `
+            (Join-Path $output "SHA256SUMS-Gom-0.8.3-windows.txt") `
             --repo mhfed/gom --clobber
           if ($LASTEXITCODE -ne 0) { throw "Could not upload Windows release assets." }

@@ -59,7 +59,14 @@ export function accountPartition(account: Account) {
 export function validateCatalog(raw: unknown): Account[] {
   return readCatalog(raw).accounts;
 }
-function readCatalog(raw: unknown): {
+/** Validate a portable subset without inventing defaults or requiring an active installation. */
+export function validateCatalogSubset(raw: unknown): Account[] {
+  return readCatalog(raw, false).accounts;
+}
+function readCatalog(
+  raw: unknown,
+  complete = true,
+): {
   accounts: Account[];
   providers: ProviderDefinition[];
 } {
@@ -107,13 +114,15 @@ function readCatalog(raw: unknown): {
   });
   // Add newly introduced built-ins to existing catalogs without changing the
   // IDs or partitions of accounts that were already saved.
-  for (const account of defaultAccounts()) {
-    if (!ids.has(account.id)) {
-      accounts.push(account);
-      ids.add(account.id);
+  if (complete) {
+    for (const account of defaultAccounts()) {
+      if (!ids.has(account.id)) {
+        accounts.push(account);
+        ids.add(account.id);
+      }
     }
+    if (!accounts.some((a) => !a.archived)) throw Error("invalid-catalog");
   }
-  if (!accounts.some((a) => !a.archived)) throw Error("invalid-catalog");
   return { accounts, providers };
 }
 export function createAccount(

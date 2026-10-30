@@ -138,7 +138,7 @@
           title="Về trang đầu Gom"
           aria-label="Về trang đầu Gom"
         >
-          <img src="app.png" alt="" draggable="false" /><span>Gom</span>
+          <img src="app.png" alt="" draggable="false" />
         </button>
         <div class="provider-navigation">
           <div id="provider-tab-area">
@@ -165,9 +165,9 @@
             id="provider-add"
             class="icon-button"
             type="button"
-            title="Mở nền tảng hoặc thêm website"
-            aria-label="Mở nền tảng hoặc thêm website"
-            aria-controls="providers-panel"
+            title="Mở nền tảng hoặc thêm tài khoản"
+            aria-label="Mở nền tảng hoặc thêm tài khoản"
+            aria-haspopup="menu"
             aria-expanded="false"
           >
             <svg aria-hidden="true"><use href="#i-plus" /></svg>
@@ -190,30 +190,12 @@
             <span id="account-select-label"></span>
             <svg aria-hidden="true"><use href="#i-down" /></svg>
           </button>
-          <button
-            id="add-account-toolbar"
-            class="icon-button"
-            aria-label="Thêm tài khoản"
-            title="Thêm tài khoản"
-          >
-            <svg aria-hidden="true"><use href="#i-plus" /></svg>
-          </button>
         </div>
-        <button
-          id="float-chat"
-          class="icon-button"
-          type="button"
-          title="Tách tab thành chat nổi"
-          aria-label="Tách tab thành chat nổi"
-          disabled
-        >
-          <svg aria-hidden="true"><use href="#i-float" /></svg>
-        </button>
         <span class="tool-divider" aria-hidden="true"></span>
         <div class="tools">
           <button
             id="shelf-toggle"
-            class="workspace-toggle shelf-toggle"
+            class="icon-button shelf-toggle"
             type="button"
             title="Khay"
             aria-label="Khay"
@@ -221,7 +203,6 @@
             aria-expanded="false"
           >
             <svg aria-hidden="true"><use href="#i-attach" /></svg
-            ><span>Khay</span
             ><span id="shelf-count" class="shelf-count">0</span>
           </button>
           <button
@@ -251,6 +232,17 @@
             <span id="workspace-label">Không gian thường</span>
           </button>
           <button
+            id="focus-open"
+            class="icon-button focus-toolbar"
+            type="button"
+            title="Tập trung có hẹn giờ"
+            aria-label="Tập trung có hẹn giờ"
+            hidden
+          >
+            <svg aria-hidden="true"><use href="#i-moon" /></svg
+            ><span id="focus-toolbar-time"></span>
+          </button>
+          <button
             id="quick-switch"
             class="icon-button"
             aria-label="Chuyển nhanh tài khoản"
@@ -259,27 +251,12 @@
             <svg aria-hidden="true"><use href="#i-search" /></svg>
           </button>
           <button
-            id="theme-toggle"
-            class="icon-button"
-            aria-label="Đổi sáng tối"
-            title="Đổi sáng/tối"
-          >
-            <svg aria-hidden="true"><use href="#i-moon" /></svg>
-          </button>
-          <button
-            id="settings"
-            class="icon-button"
-            aria-label="Cài đặt"
-            title="Cài đặt"
-          >
-            <svg aria-hidden="true"><use href="#i-settings" /></svg>
-          </button>
-          <button
             id="navigation-menu"
             class="icon-button"
-            aria-label="Thao tác với trang chat"
-            title="Thao tác với trang chat"
+            aria-label="Công cụ và cài đặt"
+            title="Công cụ và cài đặt"
             aria-haspopup="menu"
+            aria-expanded="false"
           >
             <svg aria-hidden="true"><use href="#i-more" /></svg>
           </button>
@@ -605,6 +582,27 @@
                 ><span id="platform-tab-label">macOS</span>
               </button>
               <button
+                id="settings-tab-resources"
+                data-tab="resources"
+                role="tab"
+                aria-controls="tab-resources"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                <svg aria-hidden="true"><use href="#i-desktop" /></svg>Tài
+                nguyên
+              </button>
+              <button
+                id="settings-tab-backup"
+                data-tab="backup"
+                role="tab"
+                aria-controls="tab-backup"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                <svg><use href="#i-file" /></svg><span>Sao lưu</span>
+              </button>
+              <button
                 id="settings-tab-updates"
                 data-tab="updates"
                 role="tab"
@@ -831,7 +829,7 @@
                 <label class="setting-row"
                   ><span
                     >Tạm dừng thông báo<small
-                      >Giữ yên lặng cho tất cả tài khoản trong Gom.</small
+                      >Tạm dừng đến khi bạn chủ động bật lại.</small
                     ></span
                   ><input
                     id="pause-notifications"
@@ -839,6 +837,54 @@
                     role="switch"
                 /></label>
               </div>
+              <form id="focus-form" class="settings-group focus-form">
+                <div class="focus-heading">
+                  <h3>Tập trung có hẹn giờ</h3>
+                  <p id="focus-status" role="status">
+                    Chọn khoảng thời gian để tạm ngưng thông báo.
+                  </p>
+                </div>
+                <label class="setting-row" for="focus-duration"
+                  ><span>Thời gian</span>
+                  <select id="focus-duration">
+                    <option value="30">30 phút</option>
+                    <option value="60">1 giờ</option>
+                    <option value="custom">Đến giờ tùy chọn</option>
+                  </select>
+                </label>
+                <label
+                  id="focus-custom"
+                  class="setting-row"
+                  for="focus-until"
+                  hidden
+                  ><span>Kết thúc lúc<small>Trong 24 giờ tới.</small></span
+                  ><input id="focus-until" type="datetime-local" disabled
+                /></label>
+                <label class="setting-row" for="focus-mute-audio"
+                  ><span
+                    >Tắt cả âm thanh trang<small
+                      >Có thể làm im cả cuộc gọi và video trong Gom.</small
+                    ></span
+                  ><input id="focus-mute-audio" type="checkbox" role="switch"
+                /></label>
+                <div class="focus-actions">
+                  <button id="focus-start" class="primary" type="submit">
+                    Bắt đầu tập trung</button
+                  ><button
+                    id="focus-stop"
+                    class="secondary"
+                    type="button"
+                    hidden
+                  >
+                    Kết thúc sớm
+                  </button>
+                </div>
+                <p id="focus-manual-note" class="hint" hidden>
+                  Thông báo đang tạm dừng thủ công; kết thúc Tập trung vẫn giữ
+                  trạng thái này.
+                </p>
+                <p id="focus-feedback" class="hint feedback" role="status"></p>
+              </form>
               <div class="section-heading">
                 <h3>Theo tài khoản</h3>
                 <p>Chọn những tài khoản có thể gửi thông báo.</p>
@@ -864,6 +910,212 @@
                   báo từ Gom; chế độ Tập trung của macOS có thể ẩn thông báo
                   này.
                 </p>
+              </div>
+            </div>
+            <div
+              id="tab-resources"
+              class="settings-pane preference-panel"
+              role="tabpanel"
+              aria-labelledby="settings-tab-resources"
+              tabindex="0"
+              hidden
+            >
+              <div class="resource-overview">
+                <div class="resource-overview-top">
+                  <span class="resource-eyebrow">BỘ NHỚ ĐANG DÙNG</span
+                  ><span class="resource-live"
+                    ><i aria-hidden="true"></i>Trực tiếp</span
+                  >
+                </div>
+                <div class="resource-overview-main">
+                  <strong id="resource-total">—</strong>
+                  <div class="resource-cpu-summary">
+                    <svg aria-hidden="true"><use href="#i-desktop" /></svg>
+                    <div>
+                      <span>CPU toàn Gom</span
+                      ><strong id="resource-total-cpu">—</strong>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  id="resource-distribution"
+                  class="resource-distribution"
+                  role="img"
+                  aria-label="Đang chờ số liệu bộ nhớ"
+                  data-unknown="true"
+                >
+                  <span id="resource-distribution-accounts"></span
+                  ><span id="resource-distribution-other"></span>
+                </div>
+                <div class="resource-legend">
+                  <span
+                    ><i class="resource-dot-accounts" aria-hidden="true"></i>Tài
+                    khoản đang xem<strong id="resource-accounts-total"
+                      >—</strong
+                    ></span
+                  ><span
+                    ><i class="resource-dot-other" aria-hidden="true"></i>Phần
+                    còn lại<strong id="resource-other">—</strong></span
+                  >
+                </div>
+                <div class="resource-overview-bottom">
+                  <div class="resource-counts">
+                    <span
+                      ><i class="running" aria-hidden="true"></i
+                      ><b id="resource-running-count">—</b> đang chạy</span
+                    ><span
+                      ><svg aria-hidden="true"><use href="#i-moon" /></svg
+                      ><b id="resource-sleeping-count">—</b> đang ngủ</span
+                    ><span><b id="resource-idle-count">—</b> chưa mở</span>
+                  </div>
+                  <span id="resource-sample-status" role="status"
+                    >Đang lấy mẫu…</span
+                  >
+                </div>
+              </div>
+              <div class="resource-controls">
+                <div>
+                  <h3>Tài khoản <span id="resource-count">—</span></h3>
+                  <p>
+                    Giữ chạy những tài khoản bạn cần, cho phần còn lại nghỉ.
+                  </p>
+                </div>
+                <label for="resource-sort"
+                  ><span class="sr-only">Sắp xếp tài khoản</span
+                  ><select id="resource-sort">
+                    <option value="memory">RAM cao nhất</option>
+                    <option value="cpu">CPU cao nhất</option>
+                    <option value="name">Tên tài khoản</option>
+                  </select></label
+                >
+              </div>
+              <div class="resource-table-heading" aria-hidden="true">
+                <span>Tài khoản</span><span>RAM</span><span>CPU</span
+                ><span></span>
+              </div>
+              <p id="resource-feedback" class="hint feedback" role="status"></p>
+              <div
+                id="resource-rows"
+                class="settings-group resource-list"
+                role="list"
+                aria-label="Tài nguyên theo tài khoản"
+              ></div>
+              <p id="resource-empty" class="hint"></p>
+              <details class="resource-help">
+                <summary>
+                  <svg aria-hidden="true"><use href="#i-info" /></svg>Cách đọc
+                  số liệu và tạm ngủ
+                </summary>
+                <p>
+                  RAM là bộ nhớ thường trú ước tính; thanh RAM so sánh các tài
+                  khoản trong danh sách. Số theo tài khoản có thể chỉ là một
+                  phần. Phần còn lại gồm Gom và tài nguyên nền chưa quy được vào
+                  các hàng. Dấu — nghĩa là chưa đo được.
+                </p>
+                <p>
+                  Tạm ngủ đóng trang và ngừng thông báo/số chưa đọc của nền
+                  tảng. Bản nháp chưa lưu có thể mất. Nhắc trả lời của Gom vẫn
+                  hoạt động theo cài đặt thông báo.
+                </p>
+              </details>
+            </div>
+            <div
+              id="tab-backup"
+              class="settings-pane preference-panel"
+              role="tabpanel"
+              aria-labelledby="settings-tab-backup"
+              tabindex="0"
+              hidden
+            >
+              <div class="backup-intro">
+                <span class="backup-mark" aria-hidden="true"
+                  ><svg><use href="#i-file" /></svg
+                ></span>
+                <div>
+                  <div class="section-label">CẤU HÌNH CỦA BẠN</div>
+                  <h2>Mang theo cách bạn dùng Gom</h2>
+                  <p>
+                    Giao diện, tài khoản và các tùy chọn của Không gian thường,
+                    trong một tệp.
+                  </p>
+                </div>
+              </div>
+              <div class="backup-includes">
+                <span>Giao diện · Tab · Ghim</span
+                ><span>Tài khoản · Nền tảng · Logo</span
+                ><span>Tùy chọn thông báo</span>
+              </div>
+              <p class="setting-hint">
+                Phiên đăng nhập, nội dung chat, Khay, Nhắc trả lời và dữ liệu
+                riêng của Không gian kín được giữ trên máy. Tài khoản thêm trên
+                máy mới cần đăng nhập lại.
+              </p>
+              <div class="backup-actions">
+                <button class="primary" id="backup-export">Xuất cấu hình</button
+                ><button class="secondary" id="backup-import">
+                  Chọn tệp khôi phục…
+                </button>
+              </div>
+              <p class="setting-hint" id="backup-scope-message"></p>
+              <p
+                id="backup-feedback"
+                class="setting-hint"
+                role="status"
+                aria-live="polite"
+              ></p>
+              <section
+                id="backup-preview"
+                class="backup-preview"
+                aria-label="Xem trước khôi phục"
+                hidden
+              >
+                <div class="section-label">XEM TRƯỚC KHÔI PHỤC</div>
+                <h3 id="backup-file"></h3>
+                <p class="setting-hint">
+                  Tạo lúc <span id="backup-created"></span>
+                </p>
+                <div class="backup-stats">
+                  <div>
+                    <strong id="backup-added">0</strong
+                    ><span>Tài khoản mới</span>
+                  </div>
+                  <div>
+                    <strong id="backup-updated">0</strong><span>Cập nhật</span>
+                  </div>
+                  <div>
+                    <strong id="backup-providers">0</strong
+                    ><span>Nền tảng tự thêm</span>
+                  </div>
+                  <div>
+                    <strong id="backup-logos">0</strong><span>Logo</span>
+                  </div>
+                </div>
+                <details>
+                  <summary>Tài khoản và địa chỉ trong tệp</summary>
+                  <ul id="backup-accounts"></ul>
+                  <ul id="backup-sites"></ul>
+                </details>
+                <p class="setting-hint">
+                  Các tài khoản khác trên máy được giữ nguyên. Gom tự lưu bản
+                  cấu hình hiện tại trước khi áp dụng. Các trang sẽ tải lại; hãy
+                  lưu bản nháp chưa gửi.
+                </p>
+                <div class="backup-actions">
+                  <button class="primary" id="backup-restore">
+                    Khôi phục và khởi động lại</button
+                  ><button class="secondary" id="backup-cancel">Hủy</button>
+                </div>
+              </section>
+              <div class="backup-protection">
+                <div>
+                  <strong>Bản sao trước khi khôi phục</strong>
+                  <p class="setting-hint">
+                    Giữ trên máy để bạn có thể chọn khôi phục lại khi cần.
+                  </p>
+                </div>
+                <button class="secondary" id="backup-folder">
+                  Mở thư mục sao lưu
+                </button>
               </div>
             </div>
             <div

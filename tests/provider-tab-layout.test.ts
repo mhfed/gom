@@ -40,3 +40,33 @@ test("empty tabs and an inactive selection remain deterministic", () => {
     },
   );
 });
+
+test("compact slots fit eight platforms while reserving a readable active provider label", async () => {
+  const { compactProviderWidth } =
+    await import("../src/renderer/provider-tab-layout.ts");
+  const items = Array.from({ length: 8 }, (_, i) => ({
+    id: String(i),
+    width: compactProviderWidth(20, i === 0),
+  }));
+  const result = fitProviderTabs(items, "0", 350);
+  assert.equal(result.visible.length, 8);
+  assert.ok(items[0].width > items[1].width);
+});
+test("a long active custom provider stays visible and bounded when selection changes", async () => {
+  const { compactProviderWidth } =
+    await import("../src/renderer/provider-tab-layout.ts");
+  const items = Array.from({ length: 12 }, (_, i) => ({
+    id: String(i),
+    width: compactProviderWidth(i === 11 ? 800 : 70, i === 11),
+  }));
+  const result = fitProviderTabs(items, "11", 250);
+  assert.ok(result.visible.includes("11"));
+  assert.ok(result.overflow.length > 0);
+  assert.ok(
+    result.visible.reduce((sum, id) => sum + items[Number(id)].width, 0) +
+      (result.visible.length - 1) * 2 +
+      36 <=
+      250,
+  );
+  assert.ok(Number.isFinite(compactProviderWidth(NaN, true)));
+});

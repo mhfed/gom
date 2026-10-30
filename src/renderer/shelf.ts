@@ -461,6 +461,7 @@ export function createShelfUI(options: {
     const open = !!summary?.open;
     setProperty(toggle, "hidden", !summary);
     setProperty($("shelf-count"), "textContent", String(summary?.count ?? 0));
+    setProperty($("shelf-count"), "hidden", !summary?.count);
     setProperty(toggle, "title", `Khay · ${summary?.count ?? 0} món`);
     setAttribute(toggle, "aria-label", toggle.title);
     setProperty(

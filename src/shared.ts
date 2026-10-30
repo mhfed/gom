@@ -1,4 +1,6 @@
+import type { BackupResult } from "./backup-types.ts";
 import type { UpdateState } from "./update-types.ts";
+import type { ResourceState } from "./resource-types.ts";
 import type { ShelfRequest, ShelfResult, ShelfSummary } from "./shelf-types.ts";
 export type BuiltinProviderId =
   | "zalo"
@@ -167,8 +169,13 @@ export interface ShellTheme {
   muted: string;
 }
 export type NotificationChoice = "ask" | "allow" | "mute";
+export interface FocusSession {
+  endsAt: number;
+  muteAudio: boolean;
+}
 export interface Preferences {
   paused: boolean;
+  focus?: FocusSession;
   shortcut: boolean;
   updateChecks: boolean;
   notifications: Record<AccountId, NotificationChoice>;
@@ -199,6 +206,10 @@ export interface ReminderSnapshot {
   error: string;
 }
 export interface AppState {
+  /** Ephemeral interaction fence; never persisted in configuration. */
+  headerRevision: number;
+  backupMessage?: string;
+  resources?: ResourceState;
   shelf?: ShelfSummary;
   reminders?: ReminderSnapshot;
   floating?: {
@@ -241,7 +252,24 @@ export interface AppState {
   version: string;
   updates: UpdateState;
 }
+export type HeaderAction =
+  | "add-account"
+  | "float-chat"
+  | "focus"
+  | "theme"
+  | "settings"
+  | "resources"
+  | "backup";
 export interface DesktopBridge {
+  backup(
+    action: "export" | "preview" | "restore" | "cancel" | "folder",
+    data: { lockVersion: number; token?: string },
+  ): Promise<BackupResult>;
+  resources(
+    action: "surface" | "sleep" | "wake",
+    data: { open?: boolean; accountId?: string; lockVersion: number },
+  ): Promise<AccountResult>;
+  focus(action: "start" | "stop", data?: FocusSession): Promise<AccountResult>;
   shelf(request: ShelfRequest): Promise<ShelfResult>;
   reminder(
     action: "add" | "complete" | "snooze" | "remove" | "open" | "surface",
@@ -274,7 +302,8 @@ export interface DesktopBridge {
     y: number;
     provider?: ProviderId;
     overflow?: ProviderId[];
-  }): Promise<void>;
+    add?: boolean;
+  }): Promise<HeaderAction | void>;
   getProviderLogo(
     provider: ProviderId,
     revision: number,
@@ -287,8 +316,11 @@ export interface DesktopBridge {
   pinProvider(id: ProviderId): Promise<void>;
   closeProvider(id: ProviderId): Promise<AccountResult>;
   addProvider(name: string, url: string): Promise<ProviderResult>;
-  navigationMenu(): Promise<void>;
-  accountMenu(anchor: { x: number; y: number }): Promise<void>;
+  navigationMenu(anchor?: {
+    x: number;
+    y: number;
+  }): Promise<HeaderAction | void>;
+  accountMenu(anchor: { x: number; y: number }): Promise<HeaderAction | void>;
   accountEditor(open: boolean): Promise<void>;
   addAccount(
     provider: ProviderId,
