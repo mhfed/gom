@@ -108,6 +108,12 @@ Mỗi không gian giữ tối đa 100 món, tổng 250 MiB; mỗi tệp/ảnh t�
 
 Gom có **Nhắc trả lời** để ghi việc cần quay lại, gắn với tài khoản và chọn giờ nhắc. Có giờ nhanh, đổi giờ tùy chỉnh, hoãn 15 phút, hoàn tất và xóa. Nhắc việc thường phát thông báo khi Gom còn chạy; nhắc việc kín chỉ hiện trong danh sách/badge kín. Xem [hướng dẫn](docs/reply-reminders.md). Có từ bản 0.8.2.
 
+### Tập trung có hẹn giờ — mã nguồn đang phát triển
+
+Vào **Cài đặt → Thông báo → Tập trung có hẹn giờ**, chọn **30 phút**, **1 giờ** hoặc giờ kết thúc trong 24 giờ tới, rồi bấm **Bắt đầu tập trung**. Gom tạm ngưng thông báo mới và hoãn thông báo Nhắc trả lời; huy hiệu chưa đọc tiếp tục cập nhật. Có thể chọn tắt cả âm thanh trang, cập nhật phiên hoặc kết thúc sớm.
+
+Phiên còn hạn tiếp tục sau khi mở lại Gom; khi hết giờ, app giữ nguyên quyền thông báo từng tài khoản và trạng thái tạm dừng thủ công. Bạn cũng có thể bắt đầu/kết thúc từ `⌘/Ctrl K` hoặc menu khay hệ thống. Tính năng này chưa nằm trong bộ cài 0.8.2 được liên kết ở trên. Xem [hướng dẫn Tập trung](docs/timed-focus.md).
+
 ### Không gian kín
 
 Gom có **Không gian thường** và **Không gian kín**, mỗi nơi có tài khoản, tab, tab ghim và tài khoản đang chọn riêng. Nhãn trên thanh công cụ cho biết bạn đang ở đâu.

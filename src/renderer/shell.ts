@@ -3,6 +3,7 @@ import { createProviderNavigation } from "./provider-navigation.ts";
 import { createPrivateSpaceUI } from "./private-space.ts";
 import { createShelfUI } from "./shelf.ts";
 import { createReminderUI } from "./reminders.ts";
+import { createFocusUI } from "./focus.ts";
 import {
   type Account,
   type AccountId,
@@ -1052,6 +1053,7 @@ function render(state: AppState) {
   privateSpaceUI.sync(state);
   shelfUI.render(state);
   reminderUI.sync(state);
+  focusUI.sync(state);
   const rebuilt = rebuildAccounts(state);
   const settings = state.panel === "settings";
   const library = state.panel === "providers";
@@ -1134,14 +1136,17 @@ function render(state: AppState) {
         $<HTMLButtonElement>("test-" + a.id),
         "disabled",
         state.preferences.paused ||
+          !!state.preferences.focus ||
           state.preferences.notifications[a.id] !== "allow",
       );
       const hint = $("notification-hint-" + a.id);
-      const testHint = state.preferences.paused
-        ? "Bật lại thông báo để gửi thử."
-        : state.preferences.notifications[a.id] !== "allow"
-          ? "Chọn “Cho phép” để gửi thử."
-          : "";
+      const testHint = state.preferences.focus
+        ? "Kết thúc Tập trung để gửi thử."
+        : state.preferences.paused
+          ? "Bật lại thông báo để gửi thử."
+          : state.preferences.notifications[a.id] !== "allow"
+            ? "Chọn “Cho phép” để gửi thử."
+            : "";
       setProperty(hint, "textContent", testHint);
       setProperty(hint, "hidden", !testHint);
     }
@@ -1530,6 +1535,10 @@ const privateSpaceUI = createPrivateSpaceUI({
   getState: () => current,
 });
 const reminderUI = createReminderUI({ getState: () => current });
+const focusUI = createFocusUI(async () => {
+  await window.desktop.settings();
+  showTab("notifications");
+});
 function scrubPrivateUI() {
   privacyGeneration++;
   privateSpaceUI.reset();

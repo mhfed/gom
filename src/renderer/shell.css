@@ -377,6 +377,55 @@ header .icon-button {
   background: var(--selected);
   color: var(--accent);
 }
+header .focus-toolbar {
+  width: auto;
+  gap: 5px;
+  padding: 0 7px;
+  color: var(--accent);
+  background: var(--selected);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.focus-form {
+  margin-top: 18px;
+}
+.focus-heading {
+  padding: 18px 20px 10px;
+}
+.focus-heading h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.focus-heading p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.focus-form[data-active="true"] .focus-heading h3 {
+  color: var(--accent);
+}
+.focus-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+}
+.focus-form > .hint {
+  margin: 0 20px 14px;
+}
+.focus-form > .hint:empty {
+  display: none;
+}
+#focus-until {
+  max-width: 58%;
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  #focus-toolbar-time {
+    display: none;
+  }
+}
 #settings {
   position: relative;
 }

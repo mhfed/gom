@@ -251,6 +251,17 @@
             <span id="workspace-label">Không gian thường</span>
           </button>
           <button
+            id="focus-open"
+            class="icon-button focus-toolbar"
+            type="button"
+            title="Tập trung có hẹn giờ"
+            aria-label="Tập trung có hẹn giờ"
+            hidden
+          >
+            <svg aria-hidden="true"><use href="#i-moon" /></svg
+            ><span id="focus-toolbar-time"></span>
+          </button>
+          <button
             id="quick-switch"
             class="icon-button"
             aria-label="Chuyển nhanh tài khoản"
@@ -831,7 +842,7 @@
                 <label class="setting-row"
                   ><span
                     >Tạm dừng thông báo<small
-                      >Giữ yên lặng cho tất cả tài khoản trong Gom.</small
+                      >Tạm dừng đến khi bạn chủ động bật lại.</small
                     ></span
                   ><input
                     id="pause-notifications"
@@ -839,6 +850,54 @@
                     role="switch"
                 /></label>
               </div>
+              <form id="focus-form" class="settings-group focus-form">
+                <div class="focus-heading">
+                  <h3>Tập trung có hẹn giờ</h3>
+                  <p id="focus-status" role="status">
+                    Chọn khoảng thời gian để tạm ngưng thông báo.
+                  </p>
+                </div>
+                <label class="setting-row" for="focus-duration"
+                  ><span>Thời gian</span>
+                  <select id="focus-duration">
+                    <option value="30">30 phút</option>
+                    <option value="60">1 giờ</option>
+                    <option value="custom">Đến giờ tùy chọn</option>
+                  </select>
+                </label>
+                <label
+                  id="focus-custom"
+                  class="setting-row"
+                  for="focus-until"
+                  hidden
+                  ><span>Kết thúc lúc<small>Trong 24 giờ tới.</small></span
+                  ><input id="focus-until" type="datetime-local" disabled
+                /></label>
+                <label class="setting-row" for="focus-mute-audio"
+                  ><span
+                    >Tắt cả âm thanh trang<small
+                      >Có thể làm im cả cuộc gọi và video trong Gom.</small
+                    ></span
+                  ><input id="focus-mute-audio" type="checkbox" role="switch"
+                /></label>
+                <div class="focus-actions">
+                  <button id="focus-start" class="primary" type="submit">
+                    Bắt đầu tập trung</button
+                  ><button
+                    id="focus-stop"
+                    class="secondary"
+                    type="button"
+                    hidden
+                  >
+                    Kết thúc sớm
+                  </button>
+                </div>
+                <p id="focus-manual-note" class="hint" hidden>
+                  Thông báo đang tạm dừng thủ công; kết thúc Tập trung vẫn giữ
+                  trạng thái này.
+                </p>
+                <p id="focus-feedback" class="hint feedback" role="status"></p>
+              </form>
               <div class="section-heading">
                 <h3>Theo tài khoản</h3>
                 <p>Chọn những tài khoản có thể gửi thông báo.</p>

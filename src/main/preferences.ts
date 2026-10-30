@@ -1,6 +1,7 @@
 import { mkdir, writeFile, rename } from "node:fs/promises";
 import { dirname } from "node:path";
 import { PROVIDER_ORDER, type Preferences } from "../shared.ts";
+import { normalizeFocus } from "./focus.ts";
 export const defaultPreferences = (
   ids: string[] = [...PROVIDER_ORDER],
 ): Preferences => ({
@@ -17,6 +18,8 @@ export function normalizePreferences(
   if (!raw || typeof raw !== "object") return out;
   const r = raw as Record<string, unknown>;
   out.paused = r.paused === true;
+  const focus = normalizeFocus(r.focus);
+  if (focus) out.focus = focus;
   out.shortcut = r.shortcut === true;
   out.updateChecks = r.updateChecks !== false;
   if (

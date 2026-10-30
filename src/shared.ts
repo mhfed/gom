@@ -167,8 +167,13 @@ export interface ShellTheme {
   muted: string;
 }
 export type NotificationChoice = "ask" | "allow" | "mute";
+export interface FocusSession {
+  endsAt: number;
+  muteAudio: boolean;
+}
 export interface Preferences {
   paused: boolean;
+  focus?: FocusSession;
   shortcut: boolean;
   updateChecks: boolean;
   notifications: Record<AccountId, NotificationChoice>;
@@ -242,6 +247,7 @@ export interface AppState {
   updates: UpdateState;
 }
 export interface DesktopBridge {
+  focus(action: "start" | "stop", data?: FocusSession): Promise<AccountResult>;
   shelf(request: ShelfRequest): Promise<ShelfResult>;
   reminder(
     action: "add" | "complete" | "snooze" | "remove" | "open" | "surface",

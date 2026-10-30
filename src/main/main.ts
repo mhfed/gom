@@ -21,6 +21,7 @@ import {
   moveAccount as moveCatalogAccount,
 } from "./accounts.ts";
 import { RecoveryPolicy, type FailureReason } from "./recovery.ts";
+import { FocusSchedule } from "./focus.ts";
 import {
   defaultPreferences,
   normalizePreferences,
@@ -29,6 +30,7 @@ import {
 } from "./preferences.ts";
 import {
   notificationAllowed,
+  notificationsPaused,
   validNotificationFrame,
   hasUnread,
 } from "./notification-policy.ts";
@@ -567,7 +569,7 @@ function hideInactiveWorkspace() {
     const inactive = !accessible(account.id);
     const view = views.peek(account.id);
     if (view && !view.webContents.isDestroyed()) {
-      view.webContents.setAudioMuted(inactive);
+      view.webContents.setAudioMuted(shouldMuteAccount(account.id));
       if (inactive) {
         view.setVisible(false);
         if (account.private) view.webContents.send("gom-private-notifications");
@@ -582,7 +584,7 @@ function hideInactiveWorkspace() {
   for (const popup of popups) {
     if (popup.isDestroyed()) continue;
     const id = popupProviders.get(popup.webContents);
-    popup.webContents.setAudioMuted(!accessible(id));
+    popup.webContents.setAudioMuted(shouldMuteAccount(id));
     if (!accessible(id)) {
       if (findAccount(id, true)?.private)
         popup.webContents.send("gom-private-notifications");
@@ -856,6 +858,44 @@ const statePublisher = new StatePublisher(
 const publish = (force = false) => {
   if (win && !win.isDestroyed()) statePublisher.publish(force);
 };
+function shouldMuteAccount(id: unknown) {
+  const focus = state.preferences.focus;
+  return (
+    !accessible(id) || !!(focus && focus.endsAt > Date.now() && focus.muteAudio)
+  );
+}
+function applyFocusAudio() {
+  for (const [id, view] of views.entries())
+    if (!view.webContents.isDestroyed())
+      view.webContents.setAudioMuted(shouldMuteAccount(id));
+  for (const popup of popups)
+    if (!popup.isDestroyed())
+      popup.webContents.setAudioMuted(
+        shouldMuteAccount(popupProviders.get(popup.webContents)),
+      );
+}
+const focusSchedule = new FocusSchedule((focus) => {
+  state.preferences.focus = focus;
+  applyFocusAudio();
+  if (!closing && win && !win.isDestroyed()) {
+    void persist(true);
+    void reminderService?.tick();
+  }
+});
+async function focusCommand(arg: unknown): Promise<AccountResult> {
+  if (closing || !arg || typeof arg !== "object" || Array.isArray(arg))
+    return { ok: false };
+  const request = arg as Record<string, unknown>;
+  if (request.action === "stop") focusSchedule.stop();
+  else if (request.action !== "start" || !focusSchedule.start(request.data))
+    return {
+      ok: false,
+      message:
+        "Chọn giờ kết thúc trong tương lai, tối đa 24 giờ, và tùy chọn âm thanh hợp lệ.",
+    };
+  await persist(true);
+  return { ok: true };
+}
 function status(id: AccountId, value: ProviderStatus) {
   if (!findAccount(id)) return;
   state.statuses[id] = value;
@@ -930,7 +970,7 @@ function setupSession(ses: Session, id: AccountId) {
         return;
       }
       if (
-        state.preferences.paused ||
+        notificationsPaused(state.preferences) ||
         state.preferences.notifications[id] === "mute"
       ) {
         callback(false);
@@ -1234,6 +1274,7 @@ function guard(contents: WebContents, id: AccountId) {
     const popupContents = popup.webContents;
     popupProviders.set(popupContents, id);
     guard(popup.webContents, id);
+    popup.webContents.setAudioMuted(shouldMuteAccount(id));
     if (!accessible(id)) {
       popup.webContents.setAudioMuted(true);
       popup.hide();
@@ -1263,6 +1304,7 @@ function createView(id: AccountId) {
       backgroundThrottling: false,
     },
   });
+  view.webContents.setAudioMuted(shouldMuteAccount(id));
   backgroundWarmups.set(
     view.webContents,
     limitBackgroundWarmup(view.webContents),
@@ -1365,10 +1407,10 @@ function activate(id: AccountId, focusPage = true) {
   state.commandOpen = false;
   state.panel = "service";
   const view = views.activate(id);
-  view.webContents.setAudioMuted(false);
+  view.webContents.setAudioMuted(shouldMuteAccount(id));
   for (const popup of popups)
     if (!popup.isDestroyed() && popupProviders.get(popup.webContents) === id) {
-      popup.webContents.setAudioMuted(false);
+      popup.webContents.setAudioMuted(shouldMuteAccount(id));
       popup.show();
     }
   if (!win.contentView.children.includes(view))
@@ -1586,6 +1628,7 @@ function goBack() {
 }
 function tick() {
   if (closing || sleeping) return;
+  focusSchedule.refresh();
   void reminderService?.tick();
   const online = isOnline();
   for (const [id] of views.entries()) {
@@ -1674,11 +1717,12 @@ function toggleWindow() {
 }
 function updateTray() {
   if (!tray || tray.isDestroyed()) return;
-  const signature = `${state.preferences.paused}:${hasUnread(state.accounts.filter((a) => !a.archived && !a.private).map((a) => state.unread[a.id]))}:${JSON.stringify(visibleState().accounts)}`;
+  const signature = `${state.preferences.paused}:${JSON.stringify(state.preferences.focus)}:${hasUnread(state.accounts.filter((a) => !a.archived && !a.private).map((a) => state.unread[a.id]))}:${JSON.stringify(visibleState().accounts)}`;
   if (signature === traySignature) return;
   traySignature = signature;
   tray.setToolTip(
     "Gom" +
+      (state.preferences.focus ? " · Đang tập trung" : "") +
       (hasUnread(
         state.accounts
           .filter((a) => !a.archived && !a.private)
@@ -1700,6 +1744,44 @@ function updateTray() {
           },
         })),
       { type: "separator" },
+      {
+        label: state.preferences.focus
+          ? `Đang tập trung đến ${new Date(state.preferences.focus.endsAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`
+          : "Tập trung",
+        submenu: [
+          {
+            label: "30 phút",
+            click: () => {
+              void focusCommand({
+                action: "start",
+                data: {
+                  endsAt: Date.now() + 30 * 60_000,
+                  muteAudio: state.preferences.focus?.muteAudio ?? false,
+                },
+              });
+            },
+          },
+          {
+            label: "1 giờ",
+            click: () => {
+              void focusCommand({
+                action: "start",
+                data: {
+                  endsAt: Date.now() + 60 * 60_000,
+                  muteAudio: state.preferences.focus?.muteAudio ?? false,
+                },
+              });
+            },
+          },
+          {
+            label: "Kết thúc Tập trung",
+            enabled: !!state.preferences.focus,
+            click: () => {
+              void focusCommand({ action: "stop" });
+            },
+          },
+        ],
+      },
       {
         label: "Tạm dừng thông báo",
         type: "checkbox",
@@ -2879,6 +2961,7 @@ function beginAutomaticUpdate() {
 async function quit(installUpdate = false) {
   if (closing) return;
   closing = true;
+  focusSchedule.dispose();
   await reminderService?.close();
   floating?.close();
   clearInterval(poll);
@@ -3062,6 +3145,7 @@ else {
       stored.preferences,
       state.accounts.map((a) => a.id),
     );
+    focusSchedule.restore(state.preferences.focus);
     await privateStore.load(state.accounts.some((a) => a.private));
     await shelfStore.load();
     await reminderStore.load();
@@ -3159,7 +3243,7 @@ else {
       canNotify: (id) =>
         !closing &&
         !sleeping &&
-        !state.preferences.paused &&
+        !notificationsPaused(state.preferences) &&
         publicAccount(id) &&
         accessible(id) &&
         Notification.isSupported(),
@@ -3334,6 +3418,8 @@ else {
           return floatChat();
         case "private-space":
           return privateSpaceCommand(arg);
+        case "focus":
+          return focusCommand(arg);
         case "state":
           return structuredClone(visibleState());
         case "activate":
@@ -3741,6 +3827,7 @@ else {
     });
     powerMonitor.on("resume", () => {
       sleeping = false;
+      focusSchedule.refresh();
       updateSchedule.resume();
       clearTimeout(wakeTimer);
       wakeTimer = setTimeout(tick, 1200);
