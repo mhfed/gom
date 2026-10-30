@@ -233,3 +233,33 @@ test("restoring default logos and public site labels undoes later customizations
     "Original label",
   );
 });
+
+test("portable ordinary subsets can be empty or wholly archived while installation remains valid", () => {
+  const current = source();
+  current.accounts.forEach((a) => (a.archived = true));
+  current.accounts.push({
+    ...createAccount("telegram", "PRIVATE_ACTIVE"),
+    private: true,
+  });
+  const backup = createConfigurationBackup(current, now);
+  assert.equal(backup.accounts.length, 8);
+  assert.ok(backup.accounts.every((a) => a.archived));
+  assert.equal(JSON.stringify(backup).includes("PRIVATE_ACTIVE"), false);
+  current.accounts = current.accounts.filter((a) => a.private);
+  assert.equal(createConfigurationBackup(current, now).accounts.length, 0);
+});
+test("an import which would archive every remaining account is rejected before publication", () => {
+  const origin = source();
+  origin.accounts.forEach((a) => {
+    if (a.id === "tinder") a.private = true;
+    else a.archived = true;
+  });
+  const destination = source();
+  destination.accounts.forEach((a) => (a.archived = a.id !== "zalo"));
+  assert.throws(() =>
+    mergeConfigurationBackup(
+      destination,
+      createConfigurationBackup(origin, now),
+    ),
+  );
+});

@@ -16,7 +16,7 @@ Tính năng có trong mã nguồn phát triển sau 0.8.2; chưa có trong bộ 
 2. Xem ngày tạo, số tài khoản mới/cập nhật, nền tảng và logo. Mở **Tài khoản và địa chỉ trong tệp** để kiểm tra chi tiết. Bấm **Hủy** để giữ nguyên cấu hình.
 3. Lưu các bản nháp chưa gửi. Bấm **Khôi phục và khởi động lại**, rồi xác nhận. Gom lưu bản cấu hình hiện tại trước, thoát bình thường và mở lại để áp dụng.
 
-Tài khoản đã có nhưng không nằm trong tệp được giữ. ID trùng chỉ cập nhật tên/avatar/trạng thái/thứ tự khi vẫn thuộc cùng nền tảng và là tài khoản thường. Không gán ID kín thành thường hoặc đổi URL nền tảng hiện có; khi xung đột, cả lượt nhập được từ chối.
+Tài khoản đã có nhưng không nằm trong tệp được giữ. ID trùng chỉ cập nhật tên/avatar/trạng thái/thứ tự khi vẫn thuộc cùng nền tảng và là tài khoản thường. Không gán ID kín thành thường hoặc đổi URL nền tảng hiện có; khi xung đột, cả lượt nhập được từ chối. Bản sao có thể chứa toàn bộ tài khoản thường đã lưu trữ hoặc danh sách trống; sau hợp nhất, Gom vẫn cần ít nhất một tài khoản chưa lưu trữ trên máy.
 
 Trên máy hiện tại, các account ID/partition còn dùng phiên đã có. Trên máy mới, tệp chỉ dựng danh sách tài khoản và bạn cần đăng nhập lại. Khôi phục không sao chép nội dung hay phiên giữa tài khoản. Các trang được tải lại sau restart, nên bản nháp chưa được website lưu có thể mất.
 

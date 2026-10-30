@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdir, writeFile, rm, realpath } from "node:fs/promises";
 import { renameSync } from "node:fs";
-import { basename, join, relative, isAbsolute } from "node:path";
+import { basename, dirname, join, relative, isAbsolute } from "node:path";
 import type { BackupResult, ConfigurationBackup } from "../backup-types.ts";
 import {
   createConfigurationBackup,
@@ -83,24 +83,39 @@ export class ConfigurationBackupController {
           path = await options.pickExport();
         stale();
         if (!path) return { ok: true, message: "Đã hủy xuất cấu hình." };
-        const inside = relative(options.root, path);
-        if (
-          !inside ||
-          (!inside.startsWith(
-            ".." + (process.platform === "win32" ? "\\" : "/"),
-          ) &&
-            !isAbsolute(inside))
-        )
-          throw Error("internal-backup-path");
-        const temporary = path + "." + randomUUID() + ".tmp";
+        const unchanged = () => {
+          stale();
+          if (revision !== options.revision()) throw Error("changed-backup");
+        };
+        unchanged();
+        const canonicalDestination = async (candidate: string) => {
+          const root = await realpath(options.root),
+            parent = await realpath(dirname(candidate));
+          const inside = relative(root, parent);
+          if (
+            !inside ||
+            (inside !== ".." &&
+              !inside.startsWith(
+                ".." + (process.platform === "win32" ? "\\" : "/"),
+              ) &&
+              !isAbsolute(inside))
+          )
+            throw Error("internal-backup-path");
+          return join(parent, basename(candidate));
+        };
+        const destination = await canonicalDestination(path);
+        unchanged();
+        const temporary = destination + "." + randomUUID() + ".tmp";
         let published = false;
         try {
           await writeFile(temporary, JSON.stringify(document, null, 2), {
             mode: 0o600,
             flag: "wx",
           });
-          stale();
-          renameSync(temporary, path);
+          if ((await canonicalDestination(destination)) !== destination)
+            throw Error("changed-backup");
+          unchanged();
+          renameSync(temporary, destination);
           published = true;
           return {
             ok: true,
@@ -191,11 +206,13 @@ export class ConfigurationBackupController {
           ? "Cấu hình hoặc không gian đã đổi. Chọn tệp để xem trước lại."
           : code === "configuration-conflict"
             ? "Không thể hợp nhất tài khoản hoặc nền tảng trong tệp này. Cấu hình hiện tại được giữ nguyên."
-            : code === "internal-backup-path"
-              ? "Chọn nơi lưu bên ngoài thư mục dữ liệu của Gom."
-              : action === "restore"
-                ? "Chưa lưu được bản bảo vệ hoặc yêu cầu khôi phục. Cấu hình hiện tại được giữ nguyên; kiểm tra quyền ghi và thử lại."
-                : "Chưa đọc hoặc ghi được tệp cấu hình. Kiểm tra tệp đúng định dạng Gom và không quá 8 MiB rồi thử lại.";
+            : code === "configuration-no-active-account"
+              ? "Bản sao sẽ lưu trữ tất cả tài khoản đang dùng. Giữ ít nhất một tài khoản đang dùng ngoài phạm vi nhập rồi thử lại."
+              : code === "internal-backup-path"
+                ? "Chọn nơi lưu bên ngoài thư mục dữ liệu của Gom."
+                : action === "restore"
+                  ? "Chưa lưu được bản bảo vệ hoặc yêu cầu khôi phục. Cấu hình hiện tại được giữ nguyên; kiểm tra quyền ghi và thử lại."
+                  : "Chưa đọc hoặc ghi được tệp cấu hình. Kiểm tra tệp đúng định dạng Gom và không quá 8 MiB rồi thử lại.";
       return { ok: false, message };
     }
   }

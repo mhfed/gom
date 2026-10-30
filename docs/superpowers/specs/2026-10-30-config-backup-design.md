@@ -36,3 +36,7 @@ Chỉ cho journal ghi các filename cố định và ảnh logo có ID/revision 
 
 Unit: lọc private/secret/transient, roundtrip, input hỏng/quá lớn/phiên bản mới, trùng ID, URL khác, giữ private/extras/focus, lỗi ghi backup/pending, hủy theo epoch; transaction rollback/crash recovery với file thật.
 Electron fixture bằng dữ liệu giả: export không có dữ liệu kín/session, preview/cancel không mutation, restore/restart đúng cấu hình và partition/draft tài khoản khác trước restart, stale token/private IPC từ chối, malformed/failed persistence giữ cấu hình, bản bảo vệ đọc lại được, layout sáng/tối ở 940/1280. Không truy cập tài khoản thật.
+
+## Chốt sau rà soát triển khai
+
+Export dùng đường dẫn parent/root canonical để chặn symlink/case alias trỏ vào userData, kiểm tra revision sau dialog và trước rename. Subset thường có thể trống/toàn bộ lưu trữ; không dùng quy tắc installation để từ chối export subset. Catalog hoàn chỉnh sau merge phải qua validator hiện hành và giữ ít nhất một account chưa lưu trữ. Những quyết định này sửa các case biên của cùng phạm vi đã được ủy quyền.

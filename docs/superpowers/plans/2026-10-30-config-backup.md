@@ -27,24 +27,31 @@
 
 Files: `src/backup-types.ts`, `src/main/config-backup.ts`, reuse PNG validator from `src/main/provider-logos.ts`; `tests/config-backup.test.ts`.
 Interfaces: `ConfigurationSource` (accounts/providers/navigation/preferences/logos), `createConfigurationBackup(source, now)`, `parseConfigurationBackup(text)`, `mergeConfigurationBackup(source, backup)`; validated document + summary via shared types.
-- [ ] Write real roundtrip/privacy, malformed/version/size, PNG, conflicts and retention tests; observe missing module RED.
-- [ ] Implement whitelist export, strict input/references, bounded PNG and safe merge; targeted tests GREEN.
-- [ ] Commit portable model and tests.
+
+- [x] Write real roundtrip/privacy, malformed/version/size, PNG, conflicts and retention tests; observe missing module RED.
+- [x] Implement whitelist export, strict input/references, bounded PNG and safe merge; targeted tests GREEN.
+- [x] Commit portable model and tests.
 
 ### Task 2: Durable startup restore
 
 Files: `src/main/config-restore.ts`, `tests/config-restore.test.ts`.
 Interfaces: `ConfigurationRestore(root).queue(document, protection, valid)`, `.startup():Promise<string>`; `ConfigurationTransaction(root).commit(files)` and `.recover()`. Disk data/paths do not cross renderer.
-- [ ] Write real temp-directory tests for pending/protection, canceled or failed writes, partial publication rollback, crash journal, private-field retention and invalid pending; observe RED.
-- [ ] Implement stage/journal/synchronous publication, bounded recovery and startup merge before app reads; targeted tests GREEN.
-- [ ] Commit durable restore and tests.
+
+- [x] Write real temp-directory tests for pending/protection, canceled or failed writes, partial publication rollback, crash journal, private-field retention and invalid pending; observe RED.
+- [x] Implement stage/journal/synchronous publication, bounded recovery and startup merge before app reads; targeted tests GREEN.
+- [x] Commit durable restore and tests.
 
 ### Task 3: UI, guarded IPC and integration
 
 Files: `src/main/main.ts`, `src/main/preload.ts`, `src/shared.ts`, `src/renderer/backup.ts`, `src/renderer/shell.ts`, `src/renderer/command.ts`, `src/renderer/index.html`, `src/renderer/shell.css`, `scripts/backup-check.mjs`, README and user/verification docs.
 Interfaces: `DesktopBridge.backup(action: export|preview|restore|cancel|folder, {lockVersion,token?}) -> BackupResult`; main stores preview token/document/fingerprint, UI resets on workspace epoch changes.
-- [ ] Write isolated Electron fixture first; observe missing bridge RED.
-- [ ] Wire main dialogs, preview, protection backup, queue, restart and pre-catalog recovery. Add settings section, scope card, preview, accessible actions and inline results with existing styles/icons.
-- [ ] Verify fixture export/preview/cancel/restart/retention/private/stale/failure/layout. Typecheck/build/full unit suite/format/diff checks; record legacy native harness limits from Resource verification.
-- [ ] One fresh read-only whole-branch reviewer; fix Important/Critical via RED→GREEN, ledger minors/rulings. No per-task subagents.
-- [ ] Save final source commit, preserve worktree. Deliver concise result with screenshot and evidence.
+
+- [x] Write isolated Electron fixture first; observe missing bridge RED.
+- [x] Wire main dialogs, preview, protection backup, queue, restart and pre-catalog recovery. Add settings section, scope card, preview, accessible actions and inline results with existing styles/icons.
+- [x] Verify fixture export/preview/cancel/restart/retention/private/stale/failure/layout. Typecheck/build/full unit suite/format/diff checks; record legacy native harness limits from Resource verification.
+- [x] One fresh read-only whole-branch reviewer; fix Important/Critical via RED→GREEN, ledger minors/rulings. No per-task subagents.
+- [x] Save final source commit, preserve worktree. Deliver concise result with screenshot and evidence.
+
+## Kết quả thực thi
+
+Ba task đã triển khai trong worktree hiện có. One-review fix pass: canonical destination + revision guard; subset validator và full-catalog validation. Targeted 24/24, full 293/293, typecheck/build/format/diff checks đạt. Backup 8, Resource 13, native-tabs 16 (rerun sau một lỗi focus), Focus 18 đạt. Reviewer không được gọi lần hai; bốn phát hiện đều có RED→GREEN và bằng chứng trong verification-configuration-backup.md. Giữ nhánh cục bộ `codex/config-backup`, không merge/push/phát hành/cài app.

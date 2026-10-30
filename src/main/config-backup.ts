@@ -1,6 +1,6 @@
 import type { Account, Preferences, ProviderDefinition } from "../shared.ts";
 import type { BackupLogo, ConfigurationBackup } from "../backup-types.ts";
-import { validateCatalog } from "./accounts.ts";
+import { validateCatalog, validateCatalogSubset } from "./accounts.ts";
 import {
   customProviderMetadata,
   restoreProviders,
@@ -129,13 +129,11 @@ export function parseConfigurationBackup(text: string): ConfigurationBackup {
     keys(a, ["id", "provider", "name", "avatar", "archived"]);
   for (const p of raw.providers) keys(p, ["id", "label", "entry"]);
   const ids = new Set<string>(raw.accounts.map((a: any) => a.id));
-  // Catalog normalization adds new built-ins; a portable subset must not invent
-  // ordinary accounts for IDs that may belong to the private workspace.
-  const accounts = validateCatalog({
+  const accounts = validateCatalogSubset({
     version: 2,
     accounts: raw.accounts,
     providers: raw.providers,
-  }).filter((a) => ids.has(a.id));
+  });
   const providers = restoreProviders(raw.providers),
     providerIds = new Set<string>(accounts.map((a) => a.provider));
   if (raw.providers.some((p: any) => !providerIds.has(p.id)))
@@ -266,6 +264,13 @@ export function mergeConfigurationBackup(
   ].map((a) => ({ ...a }));
   if (accounts.length > 104 || providers.filter((p) => p.custom).length > 100)
     throw Error("configuration-limit");
+  if (!accounts.some((a) => !a.archived))
+    throw Error("configuration-no-active-account");
+  validateCatalog({
+    version: 2,
+    accounts,
+    providers: customProviderMetadata(providers),
+  });
   const navigation = normalizeWorkspaceNavigation(
     {
       ...document.navigation,
