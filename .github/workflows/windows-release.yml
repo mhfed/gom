@@ -34,7 +34,7 @@ jobs:
         env:
           WORKFLOW_REVISION: ${{ github.sha }}
         run: |
-          git restore --source=$env:WORKFLOW_REVISION -- scripts/verify-release-package.mjs scripts/private-space-check.mjs scripts/floating-chat-check.mjs scripts/shelf-check.mjs scripts/reminders-check.mjs scripts/header-check.mjs scripts/focus-check.mjs scripts/resources-check.mjs scripts/backup-check.mjs
+          git restore --source=$env:WORKFLOW_REVISION -- scripts/verify-release-package.mjs scripts/private-space-check.mjs scripts/floating-chat-check.mjs scripts/shelf-check.mjs scripts/reminders-check.mjs scripts/header-check.mjs scripts/focus-check.mjs scripts/resources-check.mjs scripts/backup-check.mjs tests/accounts.test.ts tests/chat-drafts.test.ts
           if ($LASTEXITCODE -ne 0) { throw "Could not load release verification tools." }
 
       - uses: actions/setup-node@v4
