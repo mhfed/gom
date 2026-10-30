@@ -95,6 +95,13 @@ export function createCommandPalette(options: PaletteOptions) {
         run: () => options.settings("appearance"),
       },
       {
+        id: "resources",
+        title: "Quản lý tài nguyên",
+        subtitle: "RAM, CPU và tạm ngủ tài khoản",
+        icon: "desktop",
+        run: () => options.settings("resources"),
+      },
+      {
         id: "notifications",
         title: "Thông báo",
         subtitle: "Cài đặt cho từng tài khoản",

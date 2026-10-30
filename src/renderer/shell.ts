@@ -4,6 +4,7 @@ import { createPrivateSpaceUI } from "./private-space.ts";
 import { createShelfUI } from "./shelf.ts";
 import { createReminderUI } from "./reminders.ts";
 import { createFocusUI } from "./focus.ts";
+import { createResourcesUI } from "./resources.ts";
 import {
   type Account,
   type AccountId,
@@ -81,6 +82,10 @@ const settingsSections: Record<string, { title: string; description: string }> =
     updates: {
       title: "Cập nhật",
       description: "Phiên bản mới, khi bạn sẵn sàng.",
+    },
+    resources: {
+      title: "Tài nguyên",
+      description: "Xem mức sử dụng và chọn tài khoản cần giữ chạy.",
     },
   };
 function setProperty<T, K extends keyof T>(node: T, key: K, value: T[K]) {
@@ -397,6 +402,7 @@ function showTab(tab: string) {
   if (!section) return;
   const changed = activeTab !== tab;
   activeTab = tab;
+  resourcesUI.updateSurface();
   for (const b of document.querySelectorAll<HTMLElement>("[data-tab]")) {
     const selected = b.dataset.tab === tab;
     setAttribute(b, "aria-selected", String(selected));
@@ -1054,6 +1060,7 @@ function render(state: AppState) {
   shelfUI.render(state);
   reminderUI.sync(state);
   focusUI.sync(state);
+  resourcesUI.sync(state);
   const rebuilt = rebuildAccounts(state);
   const settings = state.panel === "settings";
   const library = state.panel === "providers";
@@ -1535,6 +1542,12 @@ const privateSpaceUI = createPrivateSpaceUI({
   getState: () => current,
 });
 const reminderUI = createReminderUI({ getState: () => current });
+const resourcesUI = createResourcesUI({
+  getState: () => current,
+  activeTab: () => activeTab,
+  logo: providerLogo,
+  icon,
+});
 const focusUI = createFocusUI(async () => {
   await window.desktop.settings();
   showTab("notifications");
@@ -1543,6 +1556,7 @@ function scrubPrivateUI() {
   privacyGeneration++;
   privateSpaceUI.reset();
   reminderUI.reset();
+  resourcesUI.reset();
   command.reset();
   providerNavigation.reset();
   for (const id of ["account-editor", "provider-logo-editor"]) {

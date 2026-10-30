@@ -22,6 +22,9 @@ import {
 } from "./accounts.ts";
 import { RecoveryPolicy, type FailureReason } from "./recovery.ts";
 import { FocusSchedule } from "./focus.ts";
+import { SleepStore, AccountSleepService } from "./account-sleep.ts";
+import { ResourceProjector, ResourceSampler } from "./resources.ts";
+import type { ResourceSnapshot } from "../resource-types.ts";
 import {
   defaultPreferences,
   normalizePreferences,
@@ -201,6 +204,12 @@ const permissionPrompts = new Set<AccountId>();
 const locationPermissionGrants = new Set<AccountId>();
 const closingProviders = new Set<ProviderId>();
 const testAlerts = new Map<AccountId, Notification>();
+const activeDownloads = new Map<AccountId, Set<object>>();
+let resourceSurfaceOpen = false;
+let resourceSnapshot: ResourceSnapshot | null = null;
+let resourceError = "";
+let activationVersion = 0;
+const pendingWakes = new Map<AccountId, Promise<AccountResult>>();
 const SHORTCUT = "CommandOrControl+Shift+Space";
 const SHORTCUT_DISPLAY =
   process.platform === "win32" ? "Ctrl+Shift+Space" : "Cmd+Shift+Space";
@@ -327,6 +336,9 @@ const state: AppState = {
 };
 const settingsPath = join(app.getPath("userData"), "window.json");
 const settingsWriter = new SettingsWriter(settingsPath);
+const sleepStore = new SleepStore(
+  join(app.getPath("userData"), "resource-sleep.json"),
+);
 const catalogStore = new AccountCatalogStore(
   join(app.getPath("userData"), "accounts.json"),
 );
@@ -504,6 +516,23 @@ function publicAccount(id: unknown): boolean {
   return !!account && !account.private;
 }
 function visibleState(): AppState {
+  state.resources = {
+    open: resourceSurfaceOpen,
+    sleeping: sleepStore.snapshot(),
+    busy: accountSleep.busy(),
+    blocked: resourceSurfaceOpen
+      ? Object.fromEntries(
+          state.accounts
+            .filter((a) => !a.archived)
+            .map((a) => [a.id, sleepBlocker(a.id)]),
+        )
+      : {},
+    snapshot: resourceSnapshot,
+    unavailable: sleepStore.unavailable,
+    error: sleepStore.unavailable
+      ? "Chưa đọc hoặc ghi được trạng thái ngủ. Dữ liệu cũ được giữ nguyên."
+      : resourceError,
+  };
   state.floating = floating?.snapshot();
   state.reminders = reminderService?.snapshot();
   state.privateSpace = {
@@ -553,6 +582,8 @@ function restoreWorkspace() {
     lastAccounts.set(provider as ProviderId, id);
 }
 function resetWorkspaceInteractions() {
+  resourceSurfaceOpen = false;
+  resourceSampler.configure(false);
   privacyGeneration++;
   shelfService.close();
   privacyDialogs.abort();
@@ -603,6 +634,8 @@ function switchWorkspace(toPrivate: boolean) {
   privateUnlocked = toPrivate;
   if (changed) restoreWorkspace();
   hideInactiveWorkspace();
+  if (changed && state.panel === "service" && isAsleep(state.active))
+    state.panel = "welcome";
   if (changed && state.panel === "service" && accessible(state.active))
     activate(state.active, false);
   layout();
@@ -815,6 +848,7 @@ function isCurrent(id: AccountId, contents: WebContents) {
 const partition = (id: AccountId) =>
   session.fromPartition(accountPartition(findAccount(id, true)!));
 function initializeAccount(a: Account) {
+  sleepStore.register(a.id);
   state.themes[a.id] ??= null;
   state.statuses[a.id] ??= "idle";
   state.connections[a.id] ??= {
@@ -856,8 +890,158 @@ const statePublisher = new StatePublisher(
   },
 );
 const publish = (force = false) => {
+  updateResourceSampling();
   if (win && !win.isDestroyed()) statePublisher.publish(force);
 };
+function isAsleep(id: string) {
+  return sleepStore.has(id) && !views.peek(id);
+}
+function sleepBlocker(id: string): string {
+  if (closing || state.importing || state.accountBusy || accountEditorOpen)
+    return "Đợi thao tác hiện tại hoàn tất.";
+  if (floating?.accountId === id)
+    return "Đưa chat nổi về Gom trước khi tạm ngủ.";
+  if (
+    [...popups].some(
+      (p) => !p.isDestroyed() && popupProviders.get(p.webContents) === id,
+    )
+  )
+    return "Đóng cửa sổ phụ của tài khoản trước khi tạm ngủ.";
+  if (activeDownloads.get(id)?.size)
+    return "Đợi tải tệp hoàn tất trước khi tạm ngủ.";
+  const contents = views.peek(id)?.webContents;
+  if (contents && !contents.isDestroyed() && contents.isCurrentlyAudible())
+    return "Dừng âm thanh hoặc cuộc gọi trước khi tạm ngủ.";
+  return "";
+}
+const resourceProjector = new ResourceProjector();
+const resourceSampler = new ResourceSampler({
+  reset: () => resourceProjector.reset(),
+  read: () => {
+    const owners = new Map<number, Set<string>>();
+    const add = (contents: WebContents, id: string) => {
+      if (contents.isDestroyed()) return;
+      const pid = contents.getOSProcessId();
+      if (pid > 0) {
+        const ids = owners.get(pid) ?? new Set<string>();
+        ids.add(id);
+        owners.set(pid, ids);
+      }
+    };
+    for (const [id, view] of views.entries()) add(view.webContents, id);
+    for (const popup of popups)
+      if (!popup.isDestroyed()) {
+        const id = popupProviders.get(popup.webContents);
+        if (id) add(popup.webContents, id);
+      }
+    return resourceProjector.project(
+      app.getAppMetrics(),
+      owners,
+      state.accounts
+        .filter((a) => !a.archived && accessible(a.id))
+        .map((a) => a.id),
+      Date.now(),
+    );
+  },
+  changed: (snapshot, error) => {
+    resourceSnapshot = snapshot;
+    resourceError = error;
+    if (!closing) statePublisher.schedule();
+  },
+});
+function updateResourceSampling() {
+  resourceSampler.configure(
+    !!win &&
+      !win.isDestroyed() &&
+      !closing &&
+      !sleeping &&
+      resourceSurfaceOpen &&
+      state.panel === "settings" &&
+      !state.commandOpen &&
+      win.isVisible() &&
+      !win.isMinimized(),
+  );
+}
+const accountSleep = new AccountSleepService({
+  store: sleepStore,
+  epoch: () => privacyGeneration,
+  accessible: (id) =>
+    !closing && !state.accountBusy && !state.importing && accessible(id),
+  view: (id) => {
+    const contents = views.peek(id)?.webContents;
+    return contents && !contents.isDestroyed()
+      ? `${contents.id}:${epochs.get(id) ?? 0}`
+      : undefined;
+  },
+  blocked: sleepBlocker,
+  confirm: async (id) =>
+    (
+      await privacyMessageBox({
+        type: "question",
+        message: "Tạm ngủ tài khoản này?",
+        detail:
+          accountLabel(id) +
+          "\nTrang sẽ đóng và ngừng cập nhật thông báo/số chưa đọc. Bản nháp chưa được nền tảng lưu có thể mất.",
+        buttons: ["Giữ tài khoản chạy", "Tạm ngủ"],
+        defaultId: 0,
+        cancelId: 0,
+      })
+    ).response === 1,
+  flush: async (id) => {
+    const ses = partition(id);
+    ses.flushStorageData();
+    await ses.cookies.flushStore();
+  },
+  close: (id) => {
+    epochs.set(id, (epochs.get(id) ?? 0) + 1);
+    const view = views.remove(id);
+    if (view) {
+      win.contentView.removeChildView(view);
+      if (!view.webContents.isDestroyed()) view.webContents.close();
+    }
+    recovery.reset(id);
+    navigationFailed.delete(id);
+    testAlerts.get(id)?.close();
+    testAlerts.delete(id);
+    state.statuses[id] = "idle";
+    state.unread[id] = normalizeUnread({
+      global: null,
+      loaded: null,
+      kind: unreadKind(providerFor(id)),
+    });
+    state.connections[id] = {
+      phase: "connecting",
+      reason: null,
+      retryAt: null,
+    };
+    if (state.active === id) state.panel = "settings";
+    layout();
+  },
+  activate: (id) => {
+    const view = views.activate(id);
+    if (!win.contentView.children.includes(view))
+      win.contentView.addChildView(view);
+    layout();
+  },
+  changed: () => {
+    if (!closing) {
+      resourceSampler.refresh();
+      publish(true);
+    }
+  },
+});
+function wakePage(
+  id: string,
+  epoch = privacyGeneration,
+): Promise<AccountResult> {
+  const previous = pendingWakes.get(id);
+  if (previous) return previous;
+  const pending = accountSleep
+    .wake(id, epoch)
+    .finally(() => pendingWakes.delete(id));
+  pendingWakes.set(id, pending);
+  return pending;
+}
 function shouldMuteAccount(id: unknown) {
   const focus = state.preferences.focus;
   return (
@@ -1067,6 +1251,15 @@ function setupSession(ses: Session, id: AccountId) {
     item.setSaveDialogOptions({
       title: "Lưu tệp từ " + providerDefinition(providerFor(id)).label,
     });
+    const downloads = activeDownloads.get(id) ?? new Set<object>();
+    downloads.add(item);
+    activeDownloads.set(id, downloads);
+    item.once("done", () => {
+      downloads.delete(item);
+      if (!downloads.size) activeDownloads.delete(id);
+      if (!closing) publish();
+    });
+    publish();
   });
 }
 function guard(contents: WebContents, id: AccountId) {
@@ -1388,6 +1581,23 @@ function layout() {
     win.webContents.focus();
 }
 function activate(id: AccountId, focusPage = true) {
+  const version = ++activationVersion;
+  if (isAsleep(id)) {
+    if (!accessible(id) || accountEditorOpen || reminderSurfaceOpen) return;
+    return wakePage(id).then((result) => {
+      if (result.ok && version === activationVersion && accessible(id))
+        activateAwake(id, focusPage);
+      else if (!result.ok) {
+        state.notice = result.message || "Chưa đánh thức được tài khoản.";
+        publish();
+      }
+      return result;
+    });
+  }
+  accountSleep.cancel(id);
+  activateAwake(id, focusPage);
+}
+function activateAwake(id: AccountId, focusPage = true) {
   if (accountEditorOpen || reminderSurfaceOpen) return;
   const account = findAccount(id);
   if (
@@ -1661,7 +1871,7 @@ function showWindow() {
     !shelfCoversPage() &&
     floating?.accountId !== state.active
   )
-    views.activate(state.active).webContents.focus();
+    views.peek(state.active)?.webContents.focus();
   else win.webContents.focus();
 }
 function showSettings() {
@@ -2866,6 +3076,7 @@ async function changeAccount(
             if (
               accessible(state.active) &&
               !views.peek(state.active) &&
+              !isAsleep(state.active) &&
               (state.panel === "service" ||
                 !providerDefinition(
                   findAccount(state.active, true)?.provider || "zalo",
@@ -2877,6 +3088,7 @@ async function changeAccount(
         if (
           command === "account-restore" &&
           accessible(id) &&
+          !isAsleep(id) &&
           !providerDefinition(providerFor(id)).custom
         ) {
           const view = views.activate(id);
@@ -2961,6 +3173,9 @@ function beginAutomaticUpdate() {
 async function quit(installUpdate = false) {
   if (closing) return;
   closing = true;
+  resourceSampler.dispose();
+  privacyDialogs.abort();
+  await accountSleep.close();
   focusSchedule.dispose();
   await reminderService?.close();
   floating?.close();
@@ -3109,6 +3324,7 @@ else {
       }
     }
     state.accounts = catalog.accounts;
+    await sleepStore.load(new Set(state.accounts.map((a) => a.id)));
     const knownProviderIds = new Set(
       catalog.providers.map((provider) => provider.id),
     );
@@ -3258,7 +3474,13 @@ else {
             ok: false,
             message: "Đóng hộp thoại hiện tại trước khi mở tài khoản.",
           };
-        activate(id);
+        const activation = await activate(id);
+        if (activation && !activation.ok) return activation;
+        if (closing || !accessible(id))
+          return {
+            ok: false,
+            message: "Không gian đã đổi. Chưa mở được tài khoản.",
+          };
         showWindow();
         return { ok: true, accountId: id };
       },
@@ -3345,6 +3567,31 @@ else {
       if (providerId !== undefined && !accessibleProvider(providerId))
         return { ok: false };
       switch (command) {
+        case "resources": {
+          const data = arg?.data;
+          if (
+            !data ||
+            data.lockVersion !== privacyGeneration ||
+            !Number.isSafeInteger(data.lockVersion)
+          )
+            return {
+              ok: false,
+              message: "Không gian đã đổi. Mở lại Tài nguyên để thử lại.",
+            };
+          if (arg.action === "surface" && typeof data.open === "boolean") {
+            resourceSurfaceOpen = data.open && state.panel === "settings";
+            updateResourceSampling();
+            publish();
+            return { ok: true };
+          }
+          if (typeof data.accountId !== "string" || !accessible(data.accountId))
+            return { ok: false };
+          if (arg.action === "sleep")
+            return accountSleep.sleep(data.accountId, data.lockVersion);
+          if (arg.action === "wake" && isAsleep(data.accountId))
+            return wakePage(data.accountId, data.lockVersion);
+          return { ok: false };
+        }
         case "shelf": {
           if (
             arg?.action === "surface" &&
@@ -3423,7 +3670,7 @@ else {
         case "state":
           return structuredClone(visibleState());
         case "activate":
-          if (findAccount(arg)) activate(arg);
+          if (findAccount(arg)) return activate(arg);
           return;
         case "activate-provider":
           if (
@@ -3671,6 +3918,11 @@ else {
               : "messenger";
           const target = findAccount(targetId);
           const targetProvider = target?.provider;
+          if (isAsleep(targetId))
+            return {
+              ok: false,
+              message: "Đánh thức tài khoản trước khi nhập phiên.",
+            };
           if (
             typeof sourceId === "string" &&
             sourceId.length < 100 &&
@@ -3776,6 +4028,8 @@ else {
       scheduleSave();
     });
     win.on("move", scheduleSave);
+    win.on("show", updateResourceSampling);
+    win.on("restore", updateResourceSampling);
     win.on("hide", lockPrivateSpace);
     win.on("minimize", lockPrivateSpace);
     powerMonitor.on("lock-screen", () => {
@@ -3791,12 +4045,18 @@ else {
     });
     await win.loadFile(join(__dirname, "index.html"));
     if (
+      !isAsleep(state.active) &&
+      !sleepStore.unavailable &&
       state.providerTabs.open.includes(
         findAccount(state.active, true)?.provider || "zalo",
       )
     )
       activate(state.active);
-    else if (state.providerTabs.open.length)
+    else if (
+      !isAsleep(state.active) &&
+      !sleepStore.unavailable &&
+      state.providerTabs.open.length
+    )
       activateProvider(state.providerTabs.open[0]);
     state.panel = "welcome";
     layout();
@@ -3808,7 +4068,11 @@ else {
       (a) =>
         !a.archived && !a.private && !providerDefinition(a.provider).custom,
     )) {
-      if (!views.ids().includes(id))
+      if (
+        !sleepStore.has(id) &&
+        !sleepStore.unavailable &&
+        !views.ids().includes(id)
+      )
         win.contentView.addChildView(views.activate(id));
     }
     layout();

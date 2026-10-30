@@ -30,6 +30,20 @@ export function privateState(state: AppState, unlocked: boolean): AppState {
   return {
     ...state,
     accounts,
+    resources: state.resources
+      ? {
+          ...state.resources,
+          sleeping: state.resources.sleeping.filter((id) => ids.has(id)),
+          busy: state.resources.busy.filter((id) => ids.has(id)),
+          blocked: pick(state.resources.blocked),
+          snapshot: state.resources.snapshot
+            ? {
+                ...state.resources.snapshot,
+                accounts: pick(state.resources.snapshot.accounts),
+              }
+            : null,
+        }
+      : undefined,
     reminders: state.reminders
       ? {
           ...state.reminders,

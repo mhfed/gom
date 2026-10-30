@@ -616,6 +616,17 @@
                 ><span id="platform-tab-label">macOS</span>
               </button>
               <button
+                id="settings-tab-resources"
+                data-tab="resources"
+                role="tab"
+                aria-controls="tab-resources"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                <svg aria-hidden="true"><use href="#i-desktop" /></svg>Tài
+                nguyên
+              </button>
+              <button
                 id="settings-tab-updates"
                 data-tab="updates"
                 role="tab"
@@ -924,6 +935,113 @@
                   này.
                 </p>
               </div>
+            </div>
+            <div
+              id="tab-resources"
+              class="settings-pane preference-panel"
+              role="tabpanel"
+              aria-labelledby="settings-tab-resources"
+              tabindex="0"
+              hidden
+            >
+              <div class="resource-overview">
+                <div class="resource-overview-top">
+                  <span class="resource-eyebrow">BỘ NHỚ ĐANG DÙNG</span
+                  ><span class="resource-live"
+                    ><i aria-hidden="true"></i>Trực tiếp</span
+                  >
+                </div>
+                <div class="resource-overview-main">
+                  <strong id="resource-total">—</strong>
+                  <div class="resource-cpu-summary">
+                    <svg aria-hidden="true"><use href="#i-desktop" /></svg>
+                    <div>
+                      <span>CPU toàn Gom</span
+                      ><strong id="resource-total-cpu">—</strong>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  id="resource-distribution"
+                  class="resource-distribution"
+                  role="img"
+                  aria-label="Đang chờ số liệu bộ nhớ"
+                  data-unknown="true"
+                >
+                  <span id="resource-distribution-accounts"></span
+                  ><span id="resource-distribution-other"></span>
+                </div>
+                <div class="resource-legend">
+                  <span
+                    ><i class="resource-dot-accounts" aria-hidden="true"></i>Tài
+                    khoản đang xem<strong id="resource-accounts-total"
+                      >—</strong
+                    ></span
+                  ><span
+                    ><i class="resource-dot-other" aria-hidden="true"></i>Phần
+                    còn lại<strong id="resource-other">—</strong></span
+                  >
+                </div>
+                <div class="resource-overview-bottom">
+                  <div class="resource-counts">
+                    <span
+                      ><i class="running" aria-hidden="true"></i
+                      ><b id="resource-running-count">—</b> đang chạy</span
+                    ><span
+                      ><svg aria-hidden="true"><use href="#i-moon" /></svg
+                      ><b id="resource-sleeping-count">—</b> đang ngủ</span
+                    ><span><b id="resource-idle-count">—</b> chưa mở</span>
+                  </div>
+                  <span id="resource-sample-status" role="status"
+                    >Đang lấy mẫu…</span
+                  >
+                </div>
+              </div>
+              <div class="resource-controls">
+                <div>
+                  <h3>Tài khoản <span id="resource-count">—</span></h3>
+                  <p>
+                    Giữ chạy những tài khoản bạn cần, cho phần còn lại nghỉ.
+                  </p>
+                </div>
+                <label for="resource-sort"
+                  ><span class="sr-only">Sắp xếp tài khoản</span
+                  ><select id="resource-sort">
+                    <option value="memory">RAM cao nhất</option>
+                    <option value="cpu">CPU cao nhất</option>
+                    <option value="name">Tên tài khoản</option>
+                  </select></label
+                >
+              </div>
+              <div class="resource-table-heading" aria-hidden="true">
+                <span>Tài khoản</span><span>RAM</span><span>CPU</span
+                ><span></span>
+              </div>
+              <p id="resource-feedback" class="hint feedback" role="status"></p>
+              <div
+                id="resource-rows"
+                class="settings-group resource-list"
+                role="list"
+                aria-label="Tài nguyên theo tài khoản"
+              ></div>
+              <p id="resource-empty" class="hint"></p>
+              <details class="resource-help">
+                <summary>
+                  <svg aria-hidden="true"><use href="#i-info" /></svg>Cách đọc
+                  số liệu và tạm ngủ
+                </summary>
+                <p>
+                  RAM là bộ nhớ thường trú ước tính; thanh RAM so sánh các tài
+                  khoản trong danh sách. Số theo tài khoản có thể chỉ là một
+                  phần. Phần còn lại gồm Gom và tài nguyên nền chưa quy được vào
+                  các hàng. Dấu — nghĩa là chưa đo được.
+                </p>
+                <p>
+                  Tạm ngủ đóng trang và ngừng thông báo/số chưa đọc của nền
+                  tảng. Bản nháp chưa lưu có thể mất. Nhắc trả lời của Gom vẫn
+                  hoạt động theo cài đặt thông báo.
+                </p>
+              </details>
             </div>
             <div
               id="tab-macos"

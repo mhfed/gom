@@ -1,4 +1,5 @@
 import type { UpdateState } from "./update-types.ts";
+import type { ResourceState } from "./resource-types.ts";
 import type { ShelfRequest, ShelfResult, ShelfSummary } from "./shelf-types.ts";
 export type BuiltinProviderId =
   | "zalo"
@@ -204,6 +205,7 @@ export interface ReminderSnapshot {
   error: string;
 }
 export interface AppState {
+  resources?: ResourceState;
   shelf?: ShelfSummary;
   reminders?: ReminderSnapshot;
   floating?: {
@@ -247,6 +249,10 @@ export interface AppState {
   updates: UpdateState;
 }
 export interface DesktopBridge {
+  resources(
+    action: "surface" | "sleep" | "wake",
+    data: { open?: boolean; accountId?: string; lockVersion: number },
+  ): Promise<AccountResult>;
   focus(action: "start" | "stop", data?: FocusSession): Promise<AccountResult>;
   shelf(request: ShelfRequest): Promise<ShelfResult>;
   reminder(

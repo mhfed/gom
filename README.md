@@ -114,6 +114,12 @@ Vào **Cài đặt → Thông báo → Tập trung có hẹn giờ**, chọn **3
 
 Phiên còn hạn tiếp tục sau khi mở lại Gom; khi hết giờ, app giữ nguyên quyền thông báo từng tài khoản và trạng thái tạm dừng thủ công. Bạn cũng có thể bắt đầu/kết thúc từ `⌘/Ctrl K` hoặc menu khay hệ thống. Tính năng này chưa nằm trong bộ cài 0.8.2 được liên kết ở trên. Xem [hướng dẫn Tập trung](docs/timed-focus.md).
 
+### Quản lý tài nguyên — mã nguồn đang phát triển
+
+Mở **Cài đặt → Tài nguyên** để xem RAM/CPU ước tính của Gom và từng tài khoản khi đo được. Có sắp xếp theo RAM, CPU hoặc tên; bộ đo chỉ chạy khi mục này đang mở và cửa sổ đang hiện.
+
+Bấm **Tạm ngủ** để đóng trang tài khoản ít dùng sau khi xác nhận; **Đánh thức** hoặc chọn lại tài khoản để dùng phiên đã có. Lựa chọn ngủ được giữ qua lần mở lại Gom. Khi ngủ, thông báo nền tảng/số chưa đọc ngừng cập nhật và bản nháp chưa lưu có thể mất. Tính năng chưa có trong bộ cài 0.8.2 được liên kết ở trên. Xem [hướng dẫn Quản lý tài nguyên](docs/resource-management.md).
+
 ### Không gian kín
 
 Gom có **Không gian thường** và **Không gian kín**, mỗi nơi có tài khoản, tab, tab ghim và tài khoản đang chọn riêng. Nhãn trên thanh công cụ cho biết bạn đang ở đâu.
