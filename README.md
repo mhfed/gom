@@ -108,6 +108,10 @@ Mỗi không gian giữ tối đa 100 món, tổng 250 MiB; mỗi tệp/ảnh t�
 
 Gom có **Nhắc trả lời** để ghi việc cần quay lại, gắn với tài khoản và chọn giờ nhắc. Có giờ nhanh, đổi giờ tùy chỉnh, hoãn 15 phút, hoàn tất và xóa. Nhắc việc thường phát thông báo khi Gom còn chạy; nhắc việc kín chỉ hiện trong danh sách/badge kín. Xem [hướng dẫn](docs/reply-reminders.md). Có từ bản 0.8.2.
 
+### Header gọn — mã nguồn đang phát triển
+
+Thanh trên cùng giữ một hàng: nền tảng đang dùng hiện tên, các nền tảng khác giữ logo và số chưa đọc. Nút **+** gom mở nền tảng/website và thêm tài khoản; bấm tên tài khoản để đổi tài khoản hoặc tách chat nổi. Menu **··· Công cụ** chứa Tập trung, đổi sáng/tối, Cài đặt, Tài nguyên và Sao lưu. Chuột phải hoặc **Shift F10** trên tab để ghim/đóng. Chưa có trong bộ cài 0.8.2. Xem [hướng dẫn header](docs/header-compact.md).
+
 ### Tập trung có hẹn giờ — mã nguồn đang phát triển
 
 Vào **Cài đặt → Thông báo → Tập trung có hẹn giờ**, chọn **30 phút**, **1 giờ** hoặc giờ kết thúc trong 24 giờ tới, rồi bấm **Bắt đầu tập trung**. Gom tạm ngưng thông báo mới và hoãn thông báo Nhắc trả lời; huy hiệu chưa đọc tiếp tục cập nhật. Có thể chọn tắt cả âm thanh trang, cập nhật phiên hoặc kết thúc sớm.

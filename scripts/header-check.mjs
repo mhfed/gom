@@ -18,6 +18,15 @@ await writeFile(
   `
 const e=require('electron');e.app.setPath('appData',${JSON.stringify(root)});require('node:os').homedir=()=>${JSON.stringify(root)};process.env.LOCALAPPDATA=${JSON.stringify(root)};
 globalThis.headerFixture={sessions:new Map(),menu:null,closedMenu:null};
+const handle=e.ipcMain.handle.bind(e.ipcMain);
+e.ipcMain.handle=(channel,listener)=>handle(channel,async(...args)=>{
+ const result=await listener(...args);
+ if(channel==='desktop' && args[1]==='navigation-menu' && headerFixture.holdResponse){
+   headerFixture.heldAction=result;
+   return new Promise(resolve=>{headerFixture.releaseResponse=()=>{headerFixture.holdResponse=false;delete headerFixture.releaseResponse;resolve(result);};});
+ }
+ return result;
+});
 e.Menu.prototype.popup=function(options){if(headerFixture.menu)throw Error('duplicate native menu');headerFixture.menu={menu:this,options};};
 e.Menu.prototype.closePopup=function(){const m=headerFixture.menu;if(m?.menu===this){headerFixture.menu=null;headerFixture.closedMenu=m;m.options.callback?.();}};
 e.dialog.showMessageBox=async()=>({response:1});e.shell.openExternal=async()=>{throw Error('Unexpected external navigation');};
@@ -397,6 +406,36 @@ try {
         false,
         "editor round trip invalidates the old account choice",
       );
+    },
+  );
+  await run(
+    "renderer rejects an already-dismissed menu response after a context round trip",
+    async () => {
+      const theme = (await state()).presentation.theme;
+      await client.evaluate(() => {
+        headerFixture.holdResponse = true;
+      });
+      await openMenu("#navigation-menu");
+      await selectMenu("header-theme");
+      await eventually("native choice held after dismissal", () =>
+        client.evaluate(() => !!headerFixture.releaseResponse),
+      );
+      assert.equal(
+        await client.evaluate(() => headerFixture.heldAction),
+        "theme",
+      );
+      await page.evaluate(async () => {
+        await window.desktop.activate("telegram");
+        await window.desktop.activate("zalo");
+      });
+      await client.evaluate(() => headerFixture.releaseResponse());
+      await page.waitForFunction(
+        () =>
+          document
+            .querySelector("#navigation-menu")
+            .getAttribute("aria-expanded") === "false",
+      );
+      assert.equal((await state()).presentation.theme, theme);
     },
   );
   await run(

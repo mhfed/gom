@@ -294,6 +294,12 @@ try {
           ),
           true,
         );
+        // Theme changes revoke configuration-bound previews. Refresh through
+        // the real import control before taking each layout snapshot.
+        if (!(await page.locator("#backup-preview").isVisible())) {
+          await page.locator("#backup-import").click();
+          await page.locator("#backup-preview").waitFor({ state: "visible" });
+        }
         await page.screenshot({
           path: join(output, `backup-${width}-${theme}.png`),
           animations: "disabled",

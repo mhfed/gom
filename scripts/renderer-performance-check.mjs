@@ -21,7 +21,10 @@ const browser = await chromium.launch({
 try {
   const page = await browser.newPage({ bypassCSP: true });
   const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => {
+    errors.push(error.message);
+    console.error("Renderer fixture:", error.message);
+  });
   await page.setContent(await readFile(source + "index.html", "utf8"));
   await page.evaluate(() => {
     const accounts = ["zalo", "messenger", "telegram"].map((id) => ({
@@ -39,6 +42,33 @@ try {
       presentation: { sidebarWidth: 224, theme: "light", pinned: [] },
       commandOpen: false,
       accounts,
+      providers: [
+        {
+          id: "zalo",
+          label: "Zalo",
+          entry: "https://chat.zalo.me/",
+          hosts: ["chat.zalo.me"],
+          color: "#0068ff",
+          custom: false,
+        },
+        {
+          id: "messenger",
+          label: "Messenger",
+          entry: "https://www.facebook.com/messages/",
+          hosts: ["www.facebook.com"],
+          color: "#0084ff",
+          custom: false,
+        },
+        {
+          id: "telegram",
+          label: "Telegram",
+          entry: "https://web.telegram.org/",
+          hosts: ["web.telegram.org"],
+          color: "#229ed9",
+          custom: false,
+        },
+      ],
+      providerTabs: { open: ["zalo", "telegram", "messenger"], pinned: [] },
       accountBusy: false,
       catalogWarning: "",
       preferences: {
@@ -73,6 +103,7 @@ try {
         window.sendState = () => callback(structuredClone(window.fixture));
       },
       commandRequested: () => {},
+      onProviderLogoEditor: () => {},
       commandClosed: async () => {},
       accountMenu: async () => {},
     };
@@ -115,16 +146,16 @@ try {
       attributes: true,
       characterData: true,
     });
-    const icon = document.querySelector("#theme-toggle svg");
+    const icon = document.querySelector("#navigation-menu svg");
     window.sendState();
     await Promise.resolve();
     observer.disconnect();
     return {
       mutations: mutations.length,
-      sameThemeIcon: icon === document.querySelector("#theme-toggle svg"),
+      sameToolsIcon: icon === document.querySelector("#navigation-menu svg"),
     };
   });
-  assert.deepEqual(unchanged, { mutations: 0, sameThemeIcon: true });
+  assert.deepEqual(unchanged, { mutations: 0, sameToolsIcon: true });
 
   const changed = await page.evaluate(async () => {
     const unchangedTab = document.querySelector("#platform-telegram");
@@ -163,17 +194,17 @@ try {
       account: document.querySelector("#account-select").value,
       dot: document.querySelector("#active-account-status").className,
       theme: document.documentElement.dataset.theme,
-      icon: document.querySelector("#theme-toggle use").getAttribute("href"),
+      icon: document.querySelector("#navigation-menu use").getAttribute("href"),
     };
   });
   assert.equal(changed.unrelatedTabMutations, 0);
   assert.equal(changed.unreadHidden, false);
-  assert.match(changed.title, /Có tin chưa đọc/);
+  assert.match(changed.title, /4\+ chưa đọc/);
   assert.equal(changed.selected, "true");
   assert.equal(changed.account, "messenger");
   assert.equal(changed.dot, "account-status dot needs-login");
   assert.equal(changed.theme, "dark");
-  assert.equal(changed.icon, "#i-sun");
+  assert.equal(changed.icon, "#i-more");
 
   const settings = await page.evaluate(() => {
     window.fixture.panel = "settings";

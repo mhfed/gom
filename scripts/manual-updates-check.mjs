@@ -1,3 +1,4 @@
+import { nativeHeaderChoice } from "./native-menu-fixture.mjs";
 // Run after `npm run build`. All accounts and HTTP pages belong to this fresh
 // fixture profile; the GitHub API is stubbed in Node and no browser is opened.
 import assert from "node:assert/strict";
@@ -140,8 +141,11 @@ async function views() {
   return client.evaluate(async ({ BrowserWindow }) => {
     const fixture = globalThis.manualUpdatesFixture;
     return Promise.all(
-      BrowserWindow.getAllWindows()[0].contentView.children.map(
-        async (view) => ({
+      BrowserWindow.getAllWindows()[0]
+        .contentView.children.filter((view) =>
+          fixture.sessions.has(view.webContents.session),
+        )
+        .map(async (view) => ({
           id: view.webContents.id,
           partition: fixture.sessions.get(view.webContents.session),
           requests:
@@ -150,8 +154,7 @@ async function views() {
           ...(await view.webContents.executeJavaScript(
             `({fixture:document.documentElement.dataset.updateFixture==='true',token:document.documentElement.dataset.documentToken,draft:document.querySelector('#draft')?.value})`,
           )),
-        }),
-      ),
+        })),
     );
   });
 }
@@ -200,9 +203,9 @@ async function checkPhase(expected) {
   );
   assert.equal(
     await page
-      .locator("#settings")
+      .locator("#navigation-menu")
       .evaluate((node) => node.classList.contains("has-update")),
-    expected === "available",
+    ["available", "downloading", "downloaded", "error"].includes(expected),
   );
 }
 async function menuCheck() {
@@ -230,12 +233,16 @@ try {
       await eventually("all synthetic pages ready", async () => {
         const all = await views();
         return (
-          all.length === 3 && all.every((view) => view.fixture && view.token)
+          all.length === 8 && all.every((view) => view.fixture && view.token)
         );
       });
       await client.evaluate(async ({ BrowserWindow }) => {
-        for (const view of BrowserWindow.getAllWindows()[0].contentView
-          .children)
+        for (const view of BrowserWindow.getAllWindows()[0].contentView.children.filter(
+          (view) =>
+            globalThis.manualUpdatesFixture.sessions.has(
+              view.webContents.session,
+            ),
+        ))
           await view.webContents.executeJavaScript(
             `document.querySelector('#draft').value='Bản nháp riêng '+${view.webContents.id};`,
           );
@@ -252,7 +259,7 @@ try {
   await check(
     "actual settings bridge coalesces checks and displays safe release notes",
     async () => {
-      await page.locator("#settings").click();
+      await nativeHeaderChoice(client, page, "header-settings");
       await page.locator('[data-tab="updates"]').click();
       assert.equal(
         await page.locator("#update-current").textContent(),
@@ -296,7 +303,7 @@ try {
       assert.equal(await page.locator("#download-update").isVisible(), true);
       assert.equal(
         await page
-          .locator("#settings")
+          .locator("#navigation-menu")
           .evaluate((node) => node.classList.contains("has-update")),
         true,
       );
@@ -435,7 +442,12 @@ try {
     "update menu preserves an unfinished account form and all native drafts",
     async () => {
       await page.locator("#platform-telegram").click();
-      await page.locator("#add-account-toolbar").click();
+      await nativeHeaderChoice(
+        client,
+        page,
+        "header-add-account",
+        "#provider-add",
+      );
       await page.locator("#account-editor").waitFor({ state: "visible" });
       await page.locator("#account-name").fill("Tên đang soạn, chưa lưu");
       const before = await requests();
@@ -490,7 +502,7 @@ try {
     "normal quit and relaunch preserve the disabled automatic-check preference",
     async () => {
       assert.equal((await state()).preferences.updateChecks, false);
-      await page.locator("#settings").click();
+      await nativeHeaderChoice(client, page, "header-settings");
       await page.locator('[data-tab="updates"]').click();
       assert.equal(
         await page.locator("#auto-check-updates").isChecked(),

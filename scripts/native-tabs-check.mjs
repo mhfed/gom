@@ -1,3 +1,4 @@
+import { nativeHeaderChoice } from "./native-menu-fixture.mjs";
 // Run after `npm run build`. This owns only an isolated Electron fixture:
 // fresh appData, fake Chrome home, synthetic HTTPS, and no real account access.
 import assert from "node:assert/strict";
@@ -276,7 +277,7 @@ async function openAccountMenu({ keyboard = false } = {}) {
     };
   });
   assert.deepEqual(
-    menu.entries,
+    menu.entries.filter((item) => item.id?.startsWith("account-")),
     before.accounts
       .filter((account) => !account.archived && account.provider === provider)
       .map((account) => ({
@@ -286,6 +287,8 @@ async function openAccountMenu({ keyboard = false } = {}) {
         enabled: true,
       })),
   );
+  assert.ok(menu.entries.some((item) => item.id === "header-account-add"));
+  assert.ok(menu.entries.some((item) => item.id === "header-account-float"));
   assert.equal(menu.correctWindow, true);
   assert.ok(
     Number.isInteger(menu.x) && Math.abs(menu.x - anchor.x) <= 1,
@@ -613,27 +616,44 @@ try {
         await page
           .locator('[role="tab"][id^="platform-"]:visible')
           .evaluateAll((nodes) => nodes.map((node) => node.id)),
-        ["platform-zalo", "platform-telegram", "platform-messenger"],
-        "1280px header keeps other supported providers in the overflow menu",
+        [
+          "zalo",
+          "telegram",
+          "messenger",
+          "gmail",
+          "instagram",
+          "discord",
+          "slack",
+          "tinder",
+        ].map((id) => `platform-${id}`),
+        "1280px compact header shows all eight supported providers",
       );
-      for (let [from, key, expected] of [
-        ["zalo", "ArrowRight", "telegram"],
-        ["telegram", "ArrowRight", "messenger"],
-        ["messenger", "ArrowRight", second.accountId],
-        ["zalo", "ArrowLeft", "messenger"],
-        ["messenger", "Home", second.accountId],
-        ["zalo", "End", "messenger"],
+      for (const [from, key] of [
+        ["zalo", "ArrowRight"],
+        ["telegram", "ArrowRight"],
+        ["messenger", "ArrowRight"],
+        ["zalo", "ArrowLeft"],
+        ["messenger", "Home"],
+        ["zalo", "End"],
+        ["tinder", "ArrowRight"],
       ]) {
-        if (key === "ArrowLeft" || key === "End") {
-          // The selected account caption changes available tab width. Wrap
-          // through the actual visible order, including two-tab layouts.
-          const last = await page
-            .locator('[role="tab"][id^="platform-"]:visible')
-            .last()
-            .getAttribute("id");
-          const provider = last.replace("platform-", "");
-          expected = provider === "zalo" ? second.accountId : provider;
-        }
+        const visible = await page
+          .locator('[role="tab"][id^="platform-"]:visible')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => node.id.replace("platform-", "")),
+          );
+        const index = visible.indexOf(from);
+        assert.ok(index >= 0);
+        const provider =
+          key === "Home"
+            ? visible[0]
+            : key === "End"
+              ? visible.at(-1)
+              : visible[
+                  (index + (key === "ArrowRight" ? 1 : visible.length - 1)) %
+                    visible.length
+                ];
+        const expected = provider === "zalo" ? second.accountId : provider;
         await shellKey(`#platform-${from}`, key);
         await active(expected, { focus: false });
         assert.equal(
@@ -668,7 +688,7 @@ try {
     async () => {
       await page.evaluate(() => window.desktop.activate("telegram"));
       await active("telegram");
-      await page.locator("#settings").click();
+      await nativeHeaderChoice(client, page, "header-settings");
       await eventually(
         "settings visible",
         async () => (await state()).panel === "settings",
@@ -696,7 +716,12 @@ try {
     async () => {
       await page.locator("#platform-telegram").click();
       await active("telegram");
-      await page.locator("#add-account-toolbar").click();
+      await nativeHeaderChoice(
+        client,
+        page,
+        "header-add-account",
+        "#provider-add",
+      );
       await page.locator("#account-editor").waitFor({ state: "visible" });
       assert.equal(
         await page.locator("#account-provider").inputValue(),
@@ -757,17 +782,19 @@ try {
           visibleTabs.includes("platform-telegram"),
           "selected provider remains visible at narrower widths",
         );
+        const hasOverflow = (await state()).providerTabs.open.some(
+          (id) => !visibleTabs.includes(`platform-${id}`),
+        );
         assert.equal(
           await page.locator("#provider-overflow").isVisible(),
-          true,
+          hasOverflow,
         );
         for (const id of [
           ...visibleTabs,
-          "provider-overflow",
+          ...(hasOverflow ? ["provider-overflow"] : []),
+          "provider-add",
           "account-select",
-          "add-account-toolbar",
           "quick-switch",
-          "settings",
           "navigation-menu",
         ]) {
           const rect = await page.locator(`#${id}`).boundingBox();
@@ -908,7 +935,12 @@ try {
   await check(
     "platform menu shortcuts cannot cover an open account editor",
     async () => {
-      await page.locator("#add-account-toolbar").click();
+      await nativeHeaderChoice(
+        client,
+        page,
+        "header-add-account",
+        "#provider-add",
+      );
       await page.locator("#account-editor").waitFor({ state: "visible" });
       await page.locator("#account-name").fill("Tên đang nhập, chưa lưu");
       await client.evaluate(({ Menu }) => {
@@ -954,7 +986,12 @@ try {
         "archived platform removed from tabs",
         async () => (await page.locator("#platform-messenger").count()) === 0,
       );
-      await page.locator("#provider-add").click();
+      await nativeHeaderChoice(
+        client,
+        page,
+        "header-add-provider",
+        "#provider-add",
+      );
       await page.locator("#open-provider-messenger").click();
       await page.locator("#account-editor").waitFor({ state: "visible" });
       assert.equal(

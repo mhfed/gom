@@ -215,10 +215,7 @@ try {
     await page.locator("#private-password-confirm").inputValue(),
     "",
   );
-  assert.equal(
-    await page.locator("#workspace-label").innerText(),
-    "Không gian kín",
-  );
+  assert.equal(await page.locator("#workspace-label").innerText(), "Kín");
   assert.equal(
     await page.locator("#welcome-title").innerText(),
     "Không gian kín của bạn.",
@@ -274,10 +271,7 @@ try {
     /SECRET_FIXTURE_NAME/,
   );
   await page.evaluate(() => window.lock());
-  assert.equal(
-    await page.locator("#workspace-label").innerText(),
-    "Không gian thường",
-  );
+  assert.equal(await page.locator("#workspace-label").innerText(), "Thường");
   assert.equal(
     await page.evaluate(() =>
       document.body.innerHTML.includes("SECRET_FIXTURE"),
@@ -296,12 +290,12 @@ try {
       window.fixture.panel = "providers";
       window.emit();
     };
-    window.desktop.closeProvider = () =>
+    window.desktop.providerMenu = () =>
       new Promise((resolve) => {
         window.finishClose = resolve;
       });
   });
-  await page.locator("#close-provider-web_secret").click();
+  await page.locator("#platform-web_secret").click({ button: "right" });
   await page.evaluate(async () => {
     window.lock();
     window.finishClose({ ok: false, message: "PRIVATE_CLOSE_FAILURE" });

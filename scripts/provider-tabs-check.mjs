@@ -1,3 +1,4 @@
+import { nativeHeaderChoice } from "./native-menu-fixture.mjs";
 // Run after `npm run build`. All pages and data are isolated fixtures. The
 // built-in services are synthetic and custom sites use an ephemeral HTTP server.
 import assert from "node:assert/strict";
@@ -85,7 +86,7 @@ e.session.fromPartition=(...args)=>{
     fixture.sessions.set(ses,args[0]);
     ses.webRequest.onBeforeRequest((details,callback)=>{
       const url=new URL(details.url);
-      const allowed=url.origin===${JSON.stringify(origin)}||url.protocol==='https:'&&['chat.zalo.me','web.telegram.org','www.facebook.com'].includes(url.hostname);
+      const allowed=url.origin===${JSON.stringify(origin)}||url.protocol==='https:'&&['chat.zalo.me','web.telegram.org','www.facebook.com','mail.google.com','www.instagram.com','discord.com','slack.com','tinder.com'].includes(url.hostname);
       if(!allowed)fixture.blocked.push(details.url);
       callback({cancel:!allowed});
     });
@@ -141,15 +142,19 @@ async function quit() {
 }
 async function views() {
   return client.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].contentView.children.map((view) => ({
-      id: view.webContents.id,
-      partition: globalThis.providerTabsFixture.sessions.get(
-        view.webContents.session,
-      ),
-      url: view.webContents.getURL(),
-      visible: view.getVisible(),
-      bounds: view.getBounds(),
-    })),
+    BrowserWindow.getAllWindows()[0]
+      .contentView.children.filter((view) =>
+        globalThis.providerTabsFixture.sessions.has(view.webContents.session),
+      )
+      .map((view) => ({
+        id: view.webContents.id,
+        partition: globalThis.providerTabsFixture.sessions.get(
+          view.webContents.session,
+        ),
+        url: view.webContents.getURL(),
+        visible: view.getVisible(),
+        bounds: view.getBounds(),
+      })),
   );
 }
 async function remote(accountId, code) {
@@ -192,7 +197,12 @@ async function active(accountId) {
 }
 async function openLibrary() {
   if ((await state()).panel !== "providers")
-    await page.locator("#provider-add").click();
+    await nativeHeaderChoice(
+      client,
+      page,
+      "header-add-provider",
+      "#provider-add",
+    );
   await page.locator("#providers-panel").waitFor({ state: "visible" });
   await eventually(
     "provider library panel",
@@ -454,7 +464,13 @@ async function settingsClose() {
   );
   await page.evaluate(() => window.desktop.settings());
   await page.locator("#settings-panel").waitFor({ state: "visible" });
-  await page.locator(`#close-provider-${custom.provider.id}`).click();
+  await nativeHeaderChoice(
+    client,
+    page,
+    "provider-close",
+    `#platform-${custom.provider.id}`,
+    "right",
+  );
   await eventually(
     "close custom from Settings",
     async () => !(await state()).providerTabs.open.includes(custom.provider.id),
@@ -538,7 +554,7 @@ async function emptySettingsBack() {
   assert.deepEqual((await state()).providerTabs, { open: [], pinned: [] });
   assert.equal((await state()).panel, "providers");
   assert.deepEqual(await customContents(custom.provider.id), []);
-  await page.locator("#settings").click();
+  await nativeHeaderChoice(client, page, "header-settings");
   await page.locator("#settings-panel").waitFor({ state: "visible" });
   await page.locator("#close-settings").click();
   await eventually(
@@ -572,7 +588,7 @@ async function archivedProviderBack() {
       (await page.evaluate((id) => window.desktop.closeProvider(id), id)).ok,
       true,
     );
-  await page.locator("#settings").click();
+  await nativeHeaderChoice(client, page, "header-settings");
   assert.equal(
     (
       await page.evaluate(
@@ -582,7 +598,11 @@ async function archivedProviderBack() {
     ).ok,
     true,
   );
-  assert.deepEqual((await state()).providerTabs.open, [archived.provider.id]);
+  assert.deepEqual(
+    (await state()).providerTabs.open,
+    [],
+    "Archiving the last account removes its open tab",
+  );
   await page.locator("#close-settings").click();
   const unavailable = await state();
   await page.waitForFunction(
@@ -603,7 +623,7 @@ async function archivedProviderBack() {
     "Usable later Back fixture",
     "/usable-provider-back",
   );
-  await page.locator("#settings").click();
+  await nativeHeaderChoice(client, page, "header-settings");
   assert.equal(
     (
       await page.evaluate(
@@ -614,7 +634,7 @@ async function archivedProviderBack() {
     true,
   );
   await page.evaluate(() => window.desktop.activateProvider("zalo"));
-  await page.locator("#settings").click();
+  await nativeHeaderChoice(client, page, "header-settings");
   assert.equal(
     (await page.evaluate(() => window.desktop.closeProvider("zalo"))).ok,
     true,
@@ -623,19 +643,16 @@ async function archivedProviderBack() {
     (id) => window.desktop.pinProvider(id),
     usable.provider.id,
   );
-  await page.locator("#settings").click();
+  await nativeHeaderChoice(client, page, "header-settings");
   await page.locator("#settings-panel").waitFor({ state: "visible" });
   const before = await state();
-  assert.deepEqual(before.providerTabs.open, [
-    archived.provider.id,
-    usable.provider.id,
-  ]);
+  assert.deepEqual(before.providerTabs.open, [usable.provider.id]);
   assert.equal(
     before.providerTabs.open.includes(
       before.accounts.find((account) => account.id === before.active).provider,
     ),
-    false,
-    "Pin opens a later usable tab without activating it before Back",
+    true,
+    "Pinning the only usable tab selects an account from that open provider",
   );
   await page.locator("#close-settings").click();
   const available = await state();
@@ -651,17 +668,17 @@ async function archivedProviderBack() {
     {
       unavailable: {
         panel: "providers",
-        open: [archived.provider.id],
+        open: [],
         customContents: [],
         libraryBackHidden: true,
       },
       laterUsable: {
         panel: "service",
         provider: usable.provider.id,
-        open: [archived.provider.id, usable.provider.id],
+        open: [usable.provider.id],
       },
     },
-    "Back skips open providers without a live account and hides library Back when no target is usable",
+    "Archived providers leave open tabs and library Back stays hidden until a usable tab exists",
   );
   await active(usable.account.id);
   assert.deepEqual(await customContents(archived.provider.id), []);
@@ -698,8 +715,18 @@ try {
         assert.deepEqual((await state()).profiles, []);
         assert.deepEqual(
           (await state()).providers.map((provider) => provider.id),
-          ["zalo", "telegram", "messenger"],
+          [
+            "zalo",
+            "telegram",
+            "messenger",
+            "gmail",
+            "instagram",
+            "discord",
+            "slack",
+            "tinder",
+          ],
         );
+        await page.evaluate(() => window.desktop.activate("zalo"));
         await active("zalo");
       },
     );
@@ -814,7 +841,12 @@ try {
     await check(
       "accounts and custom providers on the same origin have separate cookies and storage",
       async () => {
-        await page.locator("#add-account-toolbar").click();
+        await nativeHeaderChoice(
+          client,
+          page,
+          "header-add-account",
+          "#provider-add",
+        );
         await page.locator("#account-editor").waitFor({ state: "visible" });
         await page.locator("#account-provider").selectOption(first.provider.id);
         await page.locator("#account-name").fill("Công việc riêng");
@@ -879,6 +911,10 @@ try {
           .locator(`#platform-${first.provider.id}`)
           .click({ button: "right" });
         const pinMenu = await menu();
+        assert.ok(
+          pinMenu.items.some((item) => item.id === "provider-pin"),
+          JSON.stringify(pinMenu),
+        );
         assert.equal(
           pinMenu.items.find((item) => item.id === "provider-pin").label,
           "Bỏ ghim tab",
@@ -894,7 +930,13 @@ try {
           .click();
         await active(secondAccount.id);
         const ids = (await state()).accounts.map((account) => account.id);
-        await page.locator(`#close-provider-${first.provider.id}`).click();
+        await nativeHeaderChoice(
+          client,
+          page,
+          "provider-close",
+          `#platform-${first.provider.id}`,
+          "right",
+        );
         await eventually(
           "custom tab closed",
           async () =>
@@ -1095,6 +1137,15 @@ try {
         assert.deepEqual(settings.providerTabs, before.providerTabs);
         const previousRequests = Object.fromEntries(requests);
         await launch();
+        assert.equal(
+          (await state()).active,
+          secondAccount.id,
+          "Startup retains the selected account metadata before choosing it from Welcome",
+        );
+        await page.evaluate(
+          (id) => window.desktop.activate(id),
+          secondAccount.id,
+        );
         await active(secondAccount.id);
         const after = await state();
         assert.deepEqual(after.providers, before.providers);
@@ -1160,7 +1211,11 @@ try {
         await quit();
         const before = Object.fromEntries(requests);
         await launch();
-        await page.locator("#providers-panel").waitFor({ state: "visible" });
+        assert.deepEqual((await state()).providerTabs, {
+          open: [],
+          pinned: [],
+        });
+        await openLibrary();
         assert.deepEqual((await state()).providerTabs, {
           open: [],
           pinned: [],

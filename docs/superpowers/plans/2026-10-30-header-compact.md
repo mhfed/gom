@@ -31,25 +31,25 @@
 Files: src/renderer/provider-tab-layout.ts, provider-navigation.ts, shell.css; tests/provider-tab-layout.test.ts.
 Interface: compactProviderWidth(measuredLabelWidth:number, active:boolean):number; existing fitProviderTabs contract unchanged.
 
-- [ ] Test eight-provider fit and active/custom fit at constrained widths; observe RED.
-- [ ] Implement 34px icon slots and bounded active labels, update widths on selection without rebuilding; remove close buttons and preserve context-menu/keyboard management.
-- [ ] Targeted tests GREEN, typecheck; commit.
+- [x] Test eight-provider fit and active/custom fit at constrained widths; observe RED.
+- [x] Implement 34px icon slots and bounded active labels, update widths on selection without rebuilding; remove close buttons and preserve context-menu/keyboard management.
+- [x] Targeted tests GREEN, typecheck; commit.
 
 ### Task 2: Menus and toolbar
 
 Files: src/shared.ts, src/main/main.ts, src/renderer/shell.ts, focus.ts, index.html; scripts/header-check.mjs.
 Interface: HeaderAction union; providerMenu/accountMenu/navigationMenu return Promise<HeaderAction|void>. providerMenu accepts add?:boolean. Menu handlers use existing renderer helpers after guarded dismissal.
 
-- [ ] Write synthetic Electron fixture and observe missing compact header/menu RED.
-- [ ] Implement native add/account/tools choices; epoch/context guard; replace removed DOM handler endpoints with helper functions; keep active Focus and update badge.
-- [ ] Verify layout, actions, stale callbacks, privacy/empty/sleeping scenarios, native view/draft identity and screenshots.
-- [ ] Commit implementation + fixture.
+- [x] Write synthetic Electron fixture and observe missing compact header/menu RED.
+- [x] Implement native add/account/tools choices; epoch/context guard; replace removed DOM handler endpoints with helper functions; keep active Focus and update badge.
+- [x] Verify layout, actions, stale callbacks, privacy/empty/sleeping scenarios, native view/draft identity and screenshots.
+- [x] Commit implementation + fixture.
 
 ### Task 3: Verify and deliver
 
 Files: relevant old fixtures, README, docs/header-compact.md and docs/verification-header-compact.md.
 
-- [ ] Migrate fixture entry points to real menu interactions, not hidden button stubs.
-- [ ] Full unit suite/typecheck/build/format + header/native/Focus/resource/backup/floating checks; record existing OS-focus harness instability where observed.
-- [ ] One fresh read-only reviewer; fix Important/Critical with RED→GREEN; record rulings/minors.
-- [ ] Save final local source commit, preserve worktree and hand over screenshot.
+- [x] Migrate fixture entry points to real menu interactions, not hidden button stubs.
+- [x] Full unit suite/typecheck/build/format + header/native/Focus/resource/backup/floating checks; record existing OS-focus harness instability where observed.
+- [x] One fresh read-only reviewer; fix Important/Critical with RED→GREEN; record rulings/minors.
+- [x] Save final local source commit, preserve worktree and hand over screenshot.
