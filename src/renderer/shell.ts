@@ -1359,10 +1359,22 @@ async function headerAction(action: HeaderAction) {
 async function nativeHeaderAction(request: () => Promise<HeaderAction | void>) {
   const generation = privacyGeneration,
     id = current.active,
-    panel = current.panel;
-  const action = await request();
+    panel = current.panel,
+    lockVersion = current.privateSpace?.lockVersion;
+  const before = await window.desktop.state();
   if (
-    action &&
+    generation !== privacyGeneration ||
+    before.active !== id ||
+    before.panel !== panel ||
+    before.privateSpace?.lockVersion !== lockVersion
+  )
+    return;
+  const revision = before.headerRevision;
+  const action = await request();
+  if (!action) return;
+  const latest = await window.desktop.state();
+  if (
+    latest.headerRevision === revision &&
     generation === privacyGeneration &&
     current.active === id &&
     current.panel === panel

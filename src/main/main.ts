@@ -295,6 +295,7 @@ const updateSchedule = new UpdateSchedule(() =>
   automaticUpdateActive ? Promise.resolve() : updateChecker.check(),
 );
 const state: AppState = {
+  headerRevision: 0,
   providers: defaultProviders(),
   providerTabs: normalizeProviderTabs(undefined, [...PROVIDER_ORDER]),
   presentation: normalizePresentation(undefined, []),
@@ -519,7 +520,28 @@ function publicAccount(id: unknown): boolean {
   const account = findAccount(id);
   return !!account && !account.private;
 }
+let headerContextSignature = "";
+function refreshHeaderRevision() {
+  const signature = JSON.stringify([
+    privacyGeneration,
+    state.active,
+    state.panel,
+    epochs.get(state.active),
+    accountEditorOpen,
+    reminderSurfaceOpen,
+    state.commandOpen,
+    state.accountBusy,
+    state.importing,
+    closing,
+  ]);
+  if (signature !== headerContextSignature) {
+    headerContextSignature = signature;
+    state.headerRevision++;
+  }
+  return state.headerRevision;
+}
 function visibleState(): AppState {
+  refreshHeaderRevision();
   state.resources = {
     open: resourceSurfaceOpen,
     sleeping: sleepStore.snapshot(),
@@ -895,6 +917,7 @@ const statePublisher = new StatePublisher(
   },
 );
 const publish = (force = false) => {
+  refreshHeaderRevision();
   updateResourceSampling();
   if (win && !win.isDestroyed()) statePublisher.publish(force);
 };
@@ -2745,7 +2768,8 @@ async function showProviderMenu(request: unknown) {
     return;
   const selectedAccount = state.active,
     panel = state.panel,
-    generation = privacyGeneration;
+    generation = privacyGeneration,
+    interaction = refreshHeaderRevision();
   let headerAction: HeaderAction | undefined;
   let selected: (() => void | Promise<unknown>) | undefined;
   const items: Electron.MenuItemConstructorOptions[] = [];
@@ -2856,6 +2880,7 @@ async function showProviderMenu(request: unknown) {
         if (
           closing ||
           generation !== privacyGeneration ||
+          interaction !== refreshHeaderRevision() ||
           accountEditorOpen ||
           reminderSurfaceOpen ||
           state.commandOpen ||
@@ -2889,12 +2914,14 @@ async function showNavigationMenu(
   const id = state.active,
     panel = state.panel,
     generation = privacyGeneration,
+    interaction = refreshHeaderRevision(),
     viewEpoch = epochs.get(id),
     account = findAccount(id),
     contents = views.peek(id)?.webContents;
   const current = () =>
     !closing &&
     generation === privacyGeneration &&
+    interaction === refreshHeaderRevision() &&
     state.active === id &&
     state.panel === panel &&
     !accountEditorOpen &&
@@ -3052,6 +3079,7 @@ async function showAccountMenu(anchor: unknown) {
   if (!active) return;
   const panel = state.panel,
     generation = privacyGeneration,
+    interaction = refreshHeaderRevision(),
     viewEpoch = epochs.get(active.id);
   let action: HeaderAction | undefined;
   const page = views.peek(active.id)?.webContents;
@@ -3113,6 +3141,7 @@ async function showAccountMenu(anchor: unknown) {
         if (
           !closing &&
           generation === privacyGeneration &&
+          interaction === refreshHeaderRevision() &&
           !accountEditorOpen &&
           !reminderSurfaceOpen &&
           !state.commandOpen &&

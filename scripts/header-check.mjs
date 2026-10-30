@@ -299,13 +299,11 @@ try {
           panel: (await state()).panel,
           active: (await state()).active,
           pages: await client.evaluate(({ webContents }) =>
-            webContents
-              .getAllWebContents()
-              .map((w) => ({
-                id: w.id,
-                url: w.getURL(),
-                crashed: w.isCrashed(),
-              })),
+            webContents.getAllWebContents().map((w) => ({
+              id: w.id,
+              url: w.getURL(),
+              crashed: w.isCrashed(),
+            })),
           ),
         }),
       );
@@ -352,6 +350,53 @@ try {
       await page.evaluate(() => window.desktop.privateSpace("lock"));
       await page.waitForTimeout(100);
       assert.equal((await state()).presentation.theme, before);
+    },
+  );
+  await run(
+    "context round trips permanently revoke tools, provider and account menu choices",
+    async () => {
+      await page.evaluate(() => window.desktop.activate("zalo"));
+      await page.locator("#settings-panel").waitFor({ state: "hidden" });
+      const theme = (await state()).presentation.theme;
+      await openMenu("#navigation-menu");
+      await selectMenu("header-theme", false);
+      await page.evaluate(async () => {
+        await window.desktop.activate("telegram");
+        await window.desktop.activate("zalo");
+      });
+      await dismiss();
+      await page.waitForTimeout(100);
+      assert.equal(
+        (await state()).presentation.theme,
+        theme,
+        "account round trip invalidates the old theme choice",
+      );
+      await openMenu("#provider-add");
+      await selectMenu("header-add-account", false);
+      await page.evaluate(async () => {
+        await window.desktop.settings();
+        await window.desktop.activate("zalo");
+      });
+      await dismiss();
+      await page.waitForTimeout(100);
+      assert.equal(
+        await page.locator("#account-editor").evaluate((d) => d.open),
+        false,
+        "panel round trip invalidates the old add choice",
+      );
+      await openMenu("#account-select");
+      await selectMenu("header-account-add", false);
+      await page.evaluate(async () => {
+        await window.desktop.accountEditor(true);
+        await window.desktop.accountEditor(false);
+      });
+      await dismiss();
+      await page.waitForTimeout(100);
+      assert.equal(
+        await page.locator("#account-editor").evaluate((d) => d.open),
+        false,
+        "editor round trip invalidates the old account choice",
+      );
     },
   );
   await run(

@@ -97,6 +97,14 @@ export function createProviderNavigation(options: {
       context = options.getState();
     attr(button, "aria-expanded", "true");
     try {
+      const before = await window.desktop.state();
+      if (
+        !valid() ||
+        before.active !== context.active ||
+        before.panel !== context.panel ||
+        before.privateSpace?.lockVersion !== context.privateSpace?.lockVersion
+      )
+        return;
       const action = await window.desktop.providerMenu({
         ...(position || { x: rect.left, y: rect.bottom + 5 }),
         ...(addMenu
@@ -105,9 +113,11 @@ export function createProviderNavigation(options: {
             ? { provider }
             : { overflow: hidden }),
       });
+      if (!action) return;
+      const latest = await window.desktop.state();
       const current = options.getState();
       if (
-        action &&
+        latest.headerRevision === before.headerRevision &&
         valid() &&
         current.active === context.active &&
         current.panel === context.panel

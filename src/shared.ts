@@ -206,6 +206,8 @@ export interface ReminderSnapshot {
   error: string;
 }
 export interface AppState {
+  /** Ephemeral interaction fence; never persisted in configuration. */
+  headerRevision: number;
   backupMessage?: string;
   resources?: ResourceState;
   shelf?: ShelfSummary;

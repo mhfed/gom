@@ -31,6 +31,7 @@ function fixture(): AppState {
     },
   ];
   return {
+    headerRevision: 0,
     accounts,
     providers: [
       ...defaultProviders(),
