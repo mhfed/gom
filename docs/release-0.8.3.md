@@ -1,5 +1,7 @@
 # Gom 0.8.3 — Tập trung, tài nguyên và cấu hình
 
+[Gom 0.8.3](https://github.com/mhfed/gom/releases/tag/v0.8.3) đã phát hành ngày **30/10/2026** cho Mac Apple Silicon và Windows x64.
+
 Bản này bổ sung Tập trung có hẹn giờ, Quản lý tài nguyên, Sao lưu cấu hình và header gọn một hàng.
 
 ## Tập trung có hẹn giờ
