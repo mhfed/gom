@@ -66,7 +66,7 @@ export function createConfigurationBackup(
       archived,
     }));
   const ids = new Set(accounts.map((a) => a.id)),
-    providerIds = new Set(accounts.map((a) => a.provider));
+    providerIds = new Set<string>(accounts.map((a) => a.provider));
   const navigation = normalizeWorkspaceNavigation(
     { ...source.navigation, panel: "welcome" },
     accounts,
@@ -137,7 +137,7 @@ export function parseConfigurationBackup(text: string): ConfigurationBackup {
     providers: raw.providers,
   }).filter((a) => ids.has(a.id));
   const providers = restoreProviders(raw.providers),
-    providerIds = new Set(accounts.map((a) => a.provider));
+    providerIds = new Set<string>(accounts.map((a) => a.provider));
   if (raw.providers.some((p: any) => !providerIds.has(p.id)))
     throw Error("unreferenced-backup-provider");
   const preference = keys(raw.preferences, [
