@@ -6,6 +6,9 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { _electron } from "playwright-core";
 import executablePath from "electron";
+const entry = process.env.GOM_SMOKE_APP_ASAR
+  ? join(process.env.GOM_SMOKE_APP_ASAR, "dist/main.cjs")
+  : fileURLToPath(new URL("../dist/main.cjs", import.meta.url));
 const project = fileURLToPath(new URL("..", import.meta.url)),
   root = await mkdtemp(join(tmpdir(), "gom-header-")),
   output = join(project, "outputs/header-check"),
@@ -33,7 +36,7 @@ e.dialog.showMessageBox=async()=>({response:1});e.shell.openExternal=async()=>{t
 e.Notification.isSupported=()=>true;e.Notification.prototype.show=function(){this.emit('show')};e.Notification.prototype.close=function(){this.emit('close')};
 e.safeStorage.isAsyncEncryptionAvailable=async()=>true;e.safeStorage.encryptStringAsync=async t=>Buffer.from(t);e.safeStorage.decryptStringAsync=async b=>({result:b.toString(),shouldReEncrypt:false});
 const from=e.session.fromPartition.bind(e.session);e.session.fromPartition=(...args)=>{const s=from(...args);if(!headerFixture.sessions.has(s)){headerFixture.sessions.set(s,args[0]);s.protocol.handle('https',()=>new Response('<!doctype html><html><head><title>Trang kiểm thử</title><style>body{font:14px -apple-system,sans-serif;background:#f7f7f2;color:#172e2c;margin:0;display:flex;height:100vh}aside{width:230px;padding:24px;background:#fff;border-right:1px solid #d7e3dc}h2{font-size:18px}.chat{padding:22px 0;font-size:13px}main{padding:25px 34px;flex:1}textarea{display:block;margin-top:120px;width:80%;height:64px;font:inherit;padding:14px;border:1px solid #d7e3dc;border-radius:10px}.bubble{padding:15px 20px;background:#fff;border:1px solid #d7e3dc;border-radius:12px;display:inline-block;margin-top:32px}small{color:#586e67;display:block;line-height:1.7}</style></head><body><aside><h2>Tin nhắn</h2><div class="chat">Nhóm kiểm thử<small>Trang giả, không có tài khoản thật</small></div></aside><main><strong>Nhóm kiểm thử giao diện</strong><small>Chuyển tab và menu giữ nguyên các trang đang mở.</small><div class="bubble">Header gọn hơn, cuộc trò chuyện vẫn ở đây.</div><textarea id="draft" placeholder="Bản nháp kiểm thử"></textarea></main><script>window.fixtureToken=crypto.randomUUID()</script></body></html>',{headers:{'content-type':'text/html; charset=utf-8'}}));}return s;};
-require(${JSON.stringify(join(project, "dist/main.cjs"))});
+require(${JSON.stringify(entry)});
 `,
 );
 const state = () => page.evaluate(() => window.desktop.state());
@@ -538,20 +541,23 @@ try {
           (theme) => document.documentElement.dataset.theme === theme,
           theme,
         );
-        const problem = await page.locator("header").evaluate((header) => {
-          const r = header.getBoundingClientRect();
-          return [...header.querySelectorAll("button")]
-            .filter((b) => b.getClientRects().length)
-            .filter((b) => {
-              const q = b.getBoundingClientRect();
-              return (
-                q.right > r.right + 1 ||
-                q.left < 94 - 1 ||
-                q.bottom > r.bottom + 1
-              );
-            })
-            .map((b) => b.id);
-        });
+        const problem = await page.locator("header").evaluate(
+          (header, inset) => {
+            const r = header.getBoundingClientRect();
+            return [...header.querySelectorAll("button")]
+              .filter((b) => b.getClientRects().length)
+              .filter((b) => {
+                const q = b.getBoundingClientRect();
+                return (
+                  q.right > r.right + 1 ||
+                  q.left < inset - 1 ||
+                  q.bottom > r.bottom + 1
+                );
+              })
+              .map((b) => b.id);
+          },
+          process.platform === "darwin" ? 94 : 8,
+        );
         assert.deepEqual(problem, []);
         assert.equal(
           await page.locator("#shelf-toggle > svg").isVisible(),

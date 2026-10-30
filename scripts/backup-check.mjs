@@ -13,6 +13,9 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { _electron } from "playwright-core";
 import executablePath from "electron";
+const entry = process.env.GOM_SMOKE_APP_ASAR
+  ? join(process.env.GOM_SMOKE_APP_ASAR, "dist/main.cjs")
+  : fileURLToPath(new URL("../dist/main.cjs", import.meta.url));
 const project = fileURLToPath(new URL("..", import.meta.url)),
   root = await mkdtemp(join(tmpdir(), "gom-backup-")),
   output = join(project, "outputs/backup-check");
@@ -34,9 +37,9 @@ e.dialog.showMessageBox=async()=>({response:backupFixture.confirm?1:0});
 e.Notification.isSupported=()=>true;e.Notification.prototype.show=function(){this.emit('show')};e.Notification.prototype.close=function(){this.emit('close')};
 e.safeStorage.isAsyncEncryptionAvailable=async()=>true;e.safeStorage.encryptStringAsync=async text=>Buffer.from(text);e.safeStorage.decryptStringAsync=async bytes=>({result:bytes.toString(),shouldReEncrypt:false});
 e.shell.openExternal=async()=>{throw Error('Unexpected external navigation')};e.shell.openPath=async()=>'';
-const fs=require('node:fs/promises'),write=fs.writeFile.bind(fs);fs.writeFile=async(path,...args)=>{if(backupFixture.failProtection&&String(path).includes('configuration-backups/'))throw Error('fixture protection write failure');return write(path,...args);};
+const fs=require('node:fs/promises'),write=fs.writeFile.bind(fs);fs.writeFile=async(path,...args)=>{if(backupFixture.failProtection&&require('node:path').basename(require('node:path').dirname(String(path)))==='configuration-backups')throw Error('fixture protection write failure');return write(path,...args);};
 const from=e.session.fromPartition.bind(e.session);e.session.fromPartition=(...args)=>{const s=from(...args);if(!backupFixture.sessions.has(s)){backupFixture.sessions.set(s,args[0]);s.protocol.handle('https',()=>new Response('<!doctype html><html><body><h1>Backup fixture</h1><textarea id="draft"></textarea><script>window.fixtureToken=crypto.randomUUID()</script></body></html>',{headers:{'content-type':'text/html; charset=utf-8'}}));}return s;};
-require(${JSON.stringify(join(project, "dist/main.cjs"))});
+require(${JSON.stringify(entry)});
 `,
 );
 const state = () => page.evaluate(() => window.desktop.state());

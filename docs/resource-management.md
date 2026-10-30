@@ -1,6 +1,6 @@
 # Quản lý tài nguyên
 
-Tính năng trong mã nguồn đang phát triển, chưa có trong bộ cài 0.8.2.
+Có từ Gom 0.8.3.
 
 ## Xem mức sử dụng
 

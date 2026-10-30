@@ -1,6 +1,6 @@
 # Header B — Một hàng gọn
 
-Thay đổi trong mã nguồn, chưa nằm trong bộ cài 0.8.2. Không cần thay đổi tài khoản hay đăng nhập lại.
+Có từ Gom 0.8.3. Không cần thay đổi tài khoản hay đăng nhập lại.
 
 Thanh trên cùng giữ chiều cao 52 px. Nền tảng đang dùng hiện tên và logo, kể cả khi ghim; những nền tảng khác chỉ hiện logo và số chưa đọc. Tên dài có tooltip đầy đủ. Khi thiếu chỗ, tab đang chọn vẫn hiện và các tab còn lại vào menu tab ẩn. Thứ tự ghim và phím điều hướng vẫn được giữ.
 

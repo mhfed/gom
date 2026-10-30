@@ -6,6 +6,9 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { _electron } from "playwright-core";
 import executablePath from "electron";
+const entry = process.env.GOM_SMOKE_APP_ASAR
+  ? join(process.env.GOM_SMOKE_APP_ASAR, "dist/main.cjs")
+  : fileURLToPath(new URL("../dist/main.cjs", import.meta.url));
 const project = fileURLToPath(new URL("..", import.meta.url));
 const root = await mkdtemp(join(tmpdir(), "gom-resources-"));
 const output = join(project, "outputs/resources-check"),
@@ -54,7 +57,7 @@ e.session.fromPartition=(...args)=>{
  }
  return s;
 };
-require(${JSON.stringify(join(project, "dist/main.cjs"))});
+require(${JSON.stringify(entry)});
 `,
 );
 const state = () => page.evaluate(() => window.desktop.state());

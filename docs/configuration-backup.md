@@ -1,6 +1,6 @@
 # Sao lưu và khôi phục cấu hình
 
-Tính năng có trong mã nguồn phát triển sau 0.8.2; chưa có trong bộ cài 0.8.2 trên README.
+Có từ Gom 0.8.3.
 
 ## Xuất cấu hình
 
