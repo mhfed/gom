@@ -3979,3 +3979,27 @@ dialog::backdrop {
   line-height: 1.65;
   margin: 10px 0;
 }
+/* Compact provider strip: readable active label, logo slots for other tabs. */
+.provider-tab:not(.is-active) .provider-tab-label {
+  display: none;
+}
+.provider-tab:not(.is-active) .provider-tab-button {
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+.provider-tab.is-active .provider-tab-button {
+  padding: 0 8px;
+}
+.provider-tab.is-pinned.is-active .provider-tab-label {
+  display: block;
+}
+.provider-tab:not(.is-active) .platform-unread {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.provider-tab.is-active .platform-unread {
+  position: static;
+  max-width: 30px;
+}

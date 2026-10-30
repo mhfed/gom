@@ -5,7 +5,10 @@ import type {
   UnreadInfo,
 } from "../shared.ts";
 import { badgeText } from "../main/unread.ts";
-import { fitProviderTabs } from "./provider-tab-layout.ts";
+import {
+  fitProviderTabs,
+  compactProviderWidth,
+} from "./provider-tab-layout.ts";
 
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -166,23 +169,6 @@ export function createProviderNavigation(options: {
         );
         wrapper.dataset.provider = id;
         wrapper.setAttribute("role", "presentation");
-        const unreadSpace = provider.custom ? 0 : 30;
-        const width = pin
-          ? 34
-          : Math.ceil(
-              Math.min(
-                156 + unreadSpace,
-                Math.max(
-                  96 + unreadSpace,
-                  (canvas?.measureText(provider.label).width ||
-                    provider.label.length * 7) +
-                    62 +
-                    unreadSpace,
-                ),
-              ),
-            );
-        widths.set(id, width);
-        wrapper.style.width = width + "px";
         const button = create("button", "provider-tab-button");
         button.type = "button";
         button.id = "platform-" + id;
@@ -232,16 +218,6 @@ export function createProviderNavigation(options: {
           void menu(button, id, { x: event.clientX, y: event.clientY });
         };
         wrapper.append(button);
-        if (!pin) {
-          const closeButton = create("button", "provider-tab-close");
-          closeButton.type = "button";
-          closeButton.id = "close-provider-" + id;
-          closeButton.title = "Đóng tab " + provider.label;
-          closeButton.setAttribute("aria-label", closeButton.title);
-          closeButton.append(options.icon("close"));
-          closeButton.onclick = () => void close(id);
-          wrapper.append(closeButton);
-        }
         nodes.push(wrapper);
       }
       tabs.replaceChildren(...nodes);
@@ -276,6 +252,19 @@ export function createProviderNavigation(options: {
             })
           : "";
       const selected = active === id;
+      const width = compactProviderWidth(
+        canvas?.measureText(provider.label).width ?? provider.label.length * 7,
+        selected,
+      );
+      widths.set(id, width);
+      const wrapper = button.parentElement!;
+      if (wrapper.style.width !== width + "px")
+        wrapper.style.width = width + "px";
+      attr(
+        button,
+        "aria-description",
+        "Shift F10 hoặc nhấp chuột phải để quản lý tab.",
+      );
       attr(button, "aria-selected", String(selected));
       prop(button, "tabIndex", selected ? 0 : -1);
       const unreadBadge =
