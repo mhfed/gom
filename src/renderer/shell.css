@@ -426,10 +426,7 @@ header .focus-toolbar {
     display: none;
   }
 }
-#settings {
-  position: relative;
-}
-#settings.has-update::after {
+#navigation-menu.has-update::after {
   content: "";
   position: absolute;
   top: 3px;
@@ -4002,4 +3999,59 @@ dialog::backdrop {
 .provider-tab.is-active .platform-unread {
   position: static;
   max-width: 30px;
+}
+/* Header B keeps the native content offset while grouping secondary actions. */
+.toolbar-brand {
+  padding-right: 0;
+}
+.account-picker {
+  gap: 0;
+}
+#account-select {
+  max-width: min(128px, 18vw);
+}
+header .icon-button {
+  width: 32px;
+  height: 32px;
+}
+header #provider-add {
+  width: 30px;
+}
+header .shelf-toggle {
+  position: relative;
+  padding: 0;
+  color: var(--muted);
+  border: 0;
+}
+header .shelf-count {
+  position: absolute;
+  right: -1px;
+  top: 0;
+  min-width: 13px;
+  height: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 0 3px;
+  border: 1px solid var(--cream);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 8px;
+  font-weight: 650;
+  line-height: 1;
+}
+#navigation-menu {
+  position: relative;
+}
+header .focus-toolbar {
+  width: auto;
+  min-width: 72px;
+}
+
+header .shelf-toggle > svg {
+  display: block;
+}
+header #focus-toolbar-time {
+  display: inline;
 }

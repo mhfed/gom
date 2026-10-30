@@ -17,7 +17,8 @@ const bridge: DesktopBridge = {
   activate: (id) => ipcRenderer.invoke("desktop", "activate", id),
   activateProvider: (provider, focusPage = true) =>
     ipcRenderer.invoke("desktop", "activate-provider", { provider, focusPage }),
-  navigationMenu: () => ipcRenderer.invoke("desktop", "navigation-menu"),
+  navigationMenu: (anchor) =>
+    ipcRenderer.invoke("desktop", "navigation-menu", anchor),
   accountMenu: (anchor) =>
     ipcRenderer.invoke("desktop", "account-menu", anchor),
   providerLibrary: (open) =>

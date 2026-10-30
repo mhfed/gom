@@ -1,3 +1,4 @@
+import type { HeaderAction } from "../shared.ts";
 import { PROVIDER_TAB_DEFAULTS_VERSION } from "./provider-tabs.ts";
 import { ConfigurationBackupController } from "./config-backup-controller.ts";
 import { ConfigurationRestore } from "./config-restore.ts";
@@ -2725,6 +2726,7 @@ async function showProviderMenu(request: unknown) {
   if (
     closing ||
     accountEditorOpen ||
+    reminderSurfaceOpen ||
     state.commandOpen ||
     state.accountBusy ||
     state.importing
@@ -2742,7 +2744,9 @@ async function showProviderMenu(request: unknown) {
   )
     return;
   const selectedAccount = state.active,
-    panel = state.panel;
+    panel = state.panel,
+    generation = privacyGeneration;
+  let headerAction: HeaderAction | undefined;
   let selected: (() => void | Promise<unknown>) | undefined;
   const items: Electron.MenuItemConstructorOptions[] = [];
   if ("provider" in request && accessibleProvider(request.provider)) {
@@ -2791,6 +2795,26 @@ async function showProviderMenu(request: unknown) {
         },
       },
     );
+  } else if ("add" in request && request.add === true) {
+    items.push(
+      {
+        id: "header-add-provider",
+        label: "Mở nền tảng / website…",
+        click: () => {
+          selected = showProviderLibrary;
+        },
+      },
+      {
+        id: "header-add-account",
+        label: "Thêm tài khoản…",
+        enabled: !state.catalogWarning,
+        click: () => {
+          selected = () => {
+            headerAction = "add-account";
+          };
+        },
+      },
+    );
   } else if ("overflow" in request && Array.isArray(request.overflow)) {
     const ids = [
       ...new Set(
@@ -2823,7 +2847,7 @@ async function showProviderMenu(request: unknown) {
   } else return;
   const nativeMenu = Menu.buildFromTemplate(items);
   const [width, height] = win.getContentSize();
-  await new Promise<void>((resolve) =>
+  return new Promise<HeaderAction | void>((resolve) =>
     privacyMenu(nativeMenu, {
       window: win,
       x: Math.max(0, Math.min(width - 1, Math.round(request.x as number))),
@@ -2831,7 +2855,9 @@ async function showProviderMenu(request: unknown) {
       callback: () => {
         if (
           closing ||
+          generation !== privacyGeneration ||
           accountEditorOpen ||
+          reminderSurfaceOpen ||
           state.commandOpen ||
           state.accountBusy ||
           state.importing ||
@@ -2843,64 +2869,174 @@ async function showProviderMenu(request: unknown) {
         }
         Promise.resolve(selected?.())
           .catch(() => {})
-          .finally(resolve);
+          .finally(() => resolve(headerAction));
       },
     }),
   );
 }
-function showNavigationMenu() {
-  if (closing || state.panel !== "service" || state.commandOpen) return;
-  const id = state.active;
-  const account = findAccount(id);
-  const contents = views.peek(id)?.webContents;
-  if (!account || !contents || contents.isDestroyed()) return;
-  // A notification or account change while the native menu is open must not
-  // redirect an action to a different account or a replaced view.
+async function showNavigationMenu(
+  anchor?: unknown,
+): Promise<HeaderAction | void> {
+  if (
+    closing ||
+    accountEditorOpen ||
+    reminderSurfaceOpen ||
+    state.commandOpen ||
+    state.accountBusy ||
+    state.importing
+  )
+    return;
+  const id = state.active,
+    panel = state.panel,
+    generation = privacyGeneration,
+    viewEpoch = epochs.get(id),
+    account = findAccount(id),
+    contents = views.peek(id)?.webContents;
   const current = () =>
     !closing &&
+    generation === privacyGeneration &&
     state.active === id &&
-    state.panel === "service" &&
+    state.panel === panel &&
+    !accountEditorOpen &&
+    !reminderSurfaceOpen &&
     !state.commandOpen &&
+    !state.accountBusy &&
+    !state.importing;
+  const pageCurrent = () =>
+    current() &&
+    panel === "service" &&
+    !!account &&
+    !!contents &&
     !contents.isDestroyed() &&
-    isCurrent(id, contents);
-  privacyMenu(
-    Menu.buildFromTemplate([
+    !contents.isCrashed() &&
+    isCurrent(id, contents) &&
+    epochs.get(id) === viewEpoch;
+  let selected: (() => HeaderAction | void) | undefined;
+  const choose = (action: HeaderAction) => () => {
+    selected = () =>
+      action === "float-chat" && !pageCurrent() ? undefined : action;
+  };
+  const items: Electron.MenuItemConstructorOptions[] = [
+    {
+      id: "header-focus",
+      label: state.preferences.focus
+        ? "Tập trung đến " +
+          new Date(state.preferences.focus.endsAt).toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }) +
+          "…"
+        : "Tập trung…",
+      click: choose("focus"),
+    },
+    {
+      id: "header-float",
+      label: "Tách thành chat nổi",
+      enabled: pageCurrent(),
+      click: choose("float-chat"),
+    },
+    { type: "separator" },
+    { id: "header-theme", label: "Đổi sáng / tối", click: choose("theme") },
+    {
+      id: "header-settings",
+      label:
+        state.updates.phase === "available"
+          ? "Cài đặt · Có bản cập nhật…"
+          : "Cài đặt…",
+      click: choose("settings"),
+    },
+    {
+      id: "header-resources",
+      label: "Quản lý tài nguyên",
+      click: choose("resources"),
+    },
+    {
+      id: "header-backup",
+      label: "Sao lưu cấu hình",
+      enabled: !privateUnlocked,
+      click: choose("backup"),
+    },
+  ];
+  if (pageCurrent())
+    items.push(
+      { type: "separator" },
       {
+        id: "header-page-back",
         label: "Quay lại",
         accelerator: "CmdOrCtrl+[",
-        enabled: contents.navigationHistory.canGoBack(),
+        enabled: contents!.navigationHistory.canGoBack(),
         click: () => {
-          if (current() && contents.navigationHistory.canGoBack())
-            contents.navigationHistory.goBack();
+          selected = () => {
+            if (pageCurrent() && contents!.navigationHistory.canGoBack())
+              contents!.navigationHistory.goBack();
+          };
         },
       },
       {
+        id: "header-page-home",
         label: "Trang đầu nền tảng",
         click: () => {
-          if (current()) reloadProvider(id, true, true);
+          selected = () => {
+            if (pageCurrent()) reloadProvider(id, true, true);
+          };
         },
       },
       {
+        id: "header-page-reload",
         label: "Tải lại nền tảng",
         accelerator: "CmdOrCtrl+R",
         click: () => {
-          if (current()) reloadProvider(id, true);
+          selected = () => {
+            if (pageCurrent()) reloadProvider(id, true);
+          };
         },
       },
-      { type: "separator" },
       {
+        id: "header-page-browser",
         label: "Mở trong trình duyệt",
         click: () => {
-          if (current())
-            void external(providerDefinition(account.provider).entry);
+          selected = () => {
+            if (pageCurrent())
+              void external(providerDefinition(account!.provider).entry);
+          };
         },
       },
-    ]),
-    { window: win },
+    );
+  const position = anchor as { x?: unknown; y?: unknown } | null;
+  const [width, height] = win.getContentSize();
+  const coordinates =
+    position &&
+    typeof position.x === "number" &&
+    Number.isFinite(position.x) &&
+    typeof position.y === "number" &&
+    Number.isFinite(position.y)
+      ? {
+          x: Math.max(0, Math.min(width - 1, Math.round(position.x))),
+          y: Math.max(0, Math.min(height - 1, Math.round(position.y))),
+        }
+      : {};
+  return new Promise((resolve) =>
+    privacyMenu(Menu.buildFromTemplate(items), {
+      window: win,
+      ...coordinates,
+      callback: () => {
+        if (!current()) {
+          resolve();
+          return;
+        }
+        try {
+          resolve(selected?.());
+        } catch {
+          resolve();
+        }
+      },
+    }),
   );
 }
+
 async function showAccountMenu(anchor: unknown) {
-  if (closing || accountEditorOpen || state.commandOpen) return;
+  if (closing || accountEditorOpen || reminderSurfaceOpen || state.commandOpen)
+    return;
   if (
     !anchor ||
     typeof anchor !== "object" ||
@@ -2914,7 +3050,18 @@ async function showAccountMenu(anchor: unknown) {
     return;
   const active = findAccount(state.active);
   if (!active) return;
-  const panel = state.panel;
+  const panel = state.panel,
+    generation = privacyGeneration,
+    viewEpoch = epochs.get(active.id);
+  let action: HeaderAction | undefined;
+  const page = views.peek(active.id)?.webContents;
+  const canFloat = () =>
+    state.panel === "service" &&
+    !!page &&
+    !page.isDestroyed() &&
+    !page.isCrashed() &&
+    isCurrent(active.id, page) &&
+    epochs.get(active.id) === viewEpoch;
   const peers = state.accounts.filter(
     (account) =>
       account.provider === active.provider &&
@@ -2925,18 +3072,36 @@ async function showAccountMenu(anchor: unknown) {
   const x = Math.max(0, Math.min(width - 1, Math.round(anchor.x)));
   const y = Math.max(0, Math.min(height - 1, Math.round(anchor.y)));
   let selected: AccountId | null = null;
-  const menu = Menu.buildFromTemplate(
-    peers.map((account) => ({
-      id: "account-" + account.id,
-      label: account.name,
-      type: "radio" as const,
-      checked: account.id === active.id,
+  const items: Electron.MenuItemConstructorOptions[] = peers.map((account) => ({
+    id: "account-" + account.id,
+    label: account.name,
+    type: "radio" as const,
+    checked: account.id === active.id,
+    click: () => {
+      selected = account.id;
+    },
+  }));
+  items.push(
+    { type: "separator" },
+    {
+      id: "header-account-add",
+      label: "Thêm tài khoản…",
+      enabled: !state.accountBusy && !state.importing && !state.catalogWarning,
       click: () => {
-        selected = account.id;
+        action = "add-account";
       },
-    })),
+    },
+    {
+      id: "header-account-float",
+      label: "Tách thành chat nổi",
+      enabled: canFloat() && !state.accountBusy && !state.importing,
+      click: () => {
+        action = "float-chat";
+      },
+    },
   );
-  await new Promise<void>((resolve) => {
+  const menu = Menu.buildFromTemplate(items);
+  return new Promise<HeaderAction | void>((resolve) => {
     privacyMenu(menu, {
       window: win,
       x,
@@ -2947,13 +3112,23 @@ async function showAccountMenu(anchor: unknown) {
         // back from the newly selected conversation.
         if (
           !closing &&
+          generation === privacyGeneration &&
           !accountEditorOpen &&
+          !reminderSurfaceOpen &&
           !state.commandOpen &&
+          !state.accountBusy &&
+          !state.importing &&
           state.active === active.id &&
-          state.panel === panel &&
-          target?.provider === active.provider
-        )
-          activate(target.id);
+          state.panel === panel
+        ) {
+          if (action) {
+            resolve(
+              action === "float-chat" && !canFloat() ? undefined : action,
+            );
+            return;
+          }
+          if (target?.provider === active.provider) activate(target.id);
+        }
         resolve();
       },
     });
@@ -3816,8 +3991,7 @@ else {
             activateProvider(arg.provider, arg.focusPage);
           return;
         case "navigation-menu":
-          showNavigationMenu();
-          return;
+          return showNavigationMenu(arg);
         case "account-menu":
           return showAccountMenu(arg);
         case "provider-library":

@@ -226,9 +226,7 @@ export function createPrivateSpaceUI(options: { getState(): AppState }) {
       $("private-space-toggle").title = label;
       $("private-space-toggle").setAttribute("aria-label", label);
       $("private-space-toggle").classList.toggle("active", unlocked);
-      $("workspace-label").textContent = unlocked
-        ? "Không gian kín"
-        : "Không gian thường";
+      $("workspace-label").textContent = unlocked ? "Kín" : "Thường";
       document.documentElement.dataset.workspace = unlocked
         ? "private"
         : "normal";

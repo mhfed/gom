@@ -1,3 +1,4 @@
+import type { HeaderAction } from "../shared.ts";
 import type {
   AppState,
   ProviderDefinition,
@@ -37,6 +38,7 @@ const attr = (node: Element, key: string, value: string) => {
 export function createProviderNavigation(options: {
   getState(): AppState;
   select(provider: ProviderId, focusPage?: boolean): Promise<void>;
+  onAction(action: HeaderAction): void | Promise<void>;
   logo(provider: ProviderDefinition): HTMLElement;
   icon(name: string): SVGSVGElement;
 }) {
@@ -83,36 +85,34 @@ export function createProviderNavigation(options: {
       );
     };
   };
-  const close = async (id: ProviderId) => {
-    const isCurrent = workspaceGuard();
-    try {
-      const result = await window.desktop.closeProvider(id);
-      if (!isCurrent()) return;
-      if (!result.ok) {
-        await window.desktop.providerLibrary(true);
-        if (!isCurrent()) return;
-        report(result.message || "Chưa đóng được tab. Bạn thử lại nhé.");
-      }
-    } catch {
-      if (!isCurrent()) return;
-      await window.desktop.providerLibrary(true);
-      if (!isCurrent()) return;
-      report("Chưa đóng được tab. Bạn thử lại nhé.");
-    }
-  };
   const menu = async (
     button: HTMLElement,
     provider?: ProviderId,
     position?: { x: number; y: number },
+    addMenu = false,
   ) => {
     if (button.getAttribute("aria-expanded") === "true") return;
-    const rect = button.getBoundingClientRect();
+    const rect = button.getBoundingClientRect(),
+      valid = workspaceGuard(),
+      context = options.getState();
     attr(button, "aria-expanded", "true");
     try {
-      await window.desktop.providerMenu({
+      const action = await window.desktop.providerMenu({
         ...(position || { x: rect.left, y: rect.bottom + 5 }),
-        ...(provider ? { provider } : { overflow: hidden }),
+        ...(addMenu
+          ? { add: true }
+          : provider
+            ? { provider }
+            : { overflow: hidden }),
       });
+      const current = options.getState();
+      if (
+        action &&
+        valid() &&
+        current.active === context.active &&
+        current.panel === context.panel
+      )
+        await options.onAction(action);
     } finally {
       attr(button, "aria-expanded", "false");
     }
@@ -278,12 +278,8 @@ export function createProviderNavigation(options: {
       attr(button, "aria-label", label);
       prop(button, "title", label + " · Nhấp chuột phải để quản lý tab");
       button.parentElement?.classList.toggle("is-active", selected);
-      const closeButton = $<HTMLButtonElement>("close-provider-" + id);
-      if (closeButton)
-        prop(closeButton, "disabled", state.accountBusy || state.importing);
     }
     add.classList.toggle("active", state.panel === "providers");
-    attr(add, "aria-expanded", String(state.panel === "providers"));
     fit();
   }
   function filterLibrary() {
@@ -454,7 +450,7 @@ export function createProviderNavigation(options: {
   };
   $<HTMLInputElement>("provider-url").oninput = () => report("");
   search.oninput = filterLibrary;
-  add.onclick = () => void window.desktop.providerLibrary(true);
+  add.onclick = () => void menu(add, undefined, undefined, true);
   overflow.onclick = () => void menu(overflow);
   overflow.onkeydown = (event) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {

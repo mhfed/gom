@@ -1,3 +1,4 @@
+import type { HeaderAction } from "../shared.ts";
 import { createBackupUI } from "./backup.ts";
 import { createCommandPalette } from "./command.ts";
 import { createProviderNavigation } from "./provider-navigation.ts";
@@ -436,18 +437,20 @@ function renderUpdates(state: AppState) {
     "downloaded",
     "error",
   ].includes(updates?.phase ?? "");
-  setClass($("settings"), "has-update", hasUpdate);
+  setClass($("navigation-menu"), "has-update", hasUpdate);
   setProperty(
-    $("settings"),
+    $("navigation-menu"),
     "title",
     hasUpdate
-      ? "Cài đặt · Có bản cập nhật mới"
-      : `Cài đặt (${SHORTCUT_MODIFIER},)`,
+      ? "Công cụ và cài đặt · Có bản cập nhật mới"
+      : `Công cụ và cài đặt · ${SHORTCUT_MODIFIER},`,
   );
   setAttribute(
-    $("settings"),
+    $("navigation-menu"),
     "aria-label",
-    hasUpdate ? "Cài đặt · Có bản cập nhật mới" : "Cài đặt",
+    hasUpdate
+      ? "Công cụ và cài đặt · Có bản cập nhật mới"
+      : "Công cụ và cài đặt",
   );
   setProperty(
     $<HTMLInputElement>("auto-check-updates"),
@@ -837,20 +840,12 @@ function rebuildAccounts(state: AppState) {
 const providerNavigation = createProviderNavigation({
   getState: () => current,
   select: selectProvider,
+  onAction: headerAction,
   logo: providerLogo,
   icon,
 });
 function renderToolbar(state: AppState, active: Account | undefined) {
   providerNavigation.sync(state);
-  const float = $<HTMLButtonElement>("float-chat");
-  float.disabled =
-    !active ||
-    state.panel !== "service" ||
-    state.accountBusy ||
-    state.importing ||
-    state.commandOpen ||
-    floatingBusy;
-  float.classList.toggle("active", state.floating?.detached === true);
   const select = $<HTMLButtonElement>("account-select");
   select.disabled = !active;
   if (!active) {
@@ -859,7 +854,6 @@ function renderToolbar(state: AppState, active: Account | undefined) {
     select.setAttribute("aria-label", "Chọn tài khoản");
     select.title = "Chọn tài khoản";
     $("active-account-status").className = "account-status dot idle";
-    $("add-account-toolbar").title = "Thêm tài khoản";
     return;
   }
   setProperty(select, "value", active.id);
@@ -874,11 +868,6 @@ function renderToolbar(state: AppState, active: Account | undefined) {
     $("active-account-status"),
     "className",
     "account-status dot " + state.statuses[active.id],
-  );
-  setProperty(
-    $("add-account-toolbar"),
-    "title",
-    "Thêm tài khoản " + providerOf(active.provider).label,
   );
   setProperty(
     $("quick-switch"),
@@ -1004,7 +993,9 @@ async function openAccountMenu() {
   const rect = picker.getBoundingClientRect();
   setAttribute(picker, "aria-expanded", "true");
   try {
-    await window.desktop.accountMenu({ x: rect.left, y: rect.bottom + 5 });
+    await nativeHeaderAction(() =>
+      window.desktop.accountMenu({ x: rect.left, y: rect.bottom + 5 }),
+    );
   } finally {
     setAttribute(picker, "aria-expanded", "false");
   }
@@ -1017,12 +1008,23 @@ $("account-select").onkeydown = (event) => {
     void openAccountMenu();
   }
 };
-$("navigation-menu").onclick = () => void window.desktop.navigationMenu();
-$("float-chat").onclick = async () => {
+$("navigation-menu").onclick = async () => {
+  const button = $("navigation-menu"),
+    rect = button.getBoundingClientRect();
+  if (button.getAttribute("aria-expanded") === "true") return;
+  setAttribute(button, "aria-expanded", "true");
+  try {
+    await nativeHeaderAction(() =>
+      window.desktop.navigationMenu({ x: rect.left, y: rect.bottom + 5 }),
+    );
+  } finally {
+    setAttribute(button, "aria-expanded", "false");
+  }
+};
+async function floatCurrentChat() {
   if (floatingBusy) return;
   const generation = privacyGeneration;
   floatingBusy = true;
-  $<HTMLButtonElement>("float-chat").disabled = true;
   try {
     const result = await window.desktop.floatChat();
     if (generation !== privacyGeneration || result.ok) return;
@@ -1046,8 +1048,8 @@ $("float-chat").onclick = async () => {
         current.accounts.find((a) => a.id === current.active),
       );
   }
-};
-$("floating-show").onclick = () => $("float-chat").click();
+}
+$("floating-show").onclick = () => void floatCurrentChat();
 $("floating-bring-back").onclick = () => {
   if (current?.active) void window.desktop.activate(current.active);
 };
@@ -1110,12 +1112,6 @@ function render(state: AppState) {
     ))
       setAttribute(b, "aria-pressed", String(b.dataset.themeChoice === choice));
   }
-  if (themeChanged || !previous)
-    $("theme-toggle").replaceChildren(icon(mode === "dark" ? "sun" : "moon"));
-  const themeToggleLabel =
-    mode === "dark" ? "Chuyển sang sáng" : "Chuyển sang tối";
-  setProperty($("theme-toggle"), "title", themeToggleLabel);
-  setAttribute($("theme-toggle"), "aria-label", themeToggleLabel);
   renderToolbar(state, active);
   renderWelcome(state);
   renderUpdates(state);
@@ -1164,7 +1160,7 @@ function render(state: AppState) {
       setProperty(hint, "hidden", !testHint);
     }
   }
-  setClass($("settings"), "active", settings);
+  setClass($("navigation-menu"), "active", settings);
   setProperty(
     $("account-count"),
     "textContent",
@@ -1318,7 +1314,7 @@ function render(state: AppState) {
     previous?.catalogWarning !== state.catalogWarning
   )
     for (const b of document.querySelectorAll<HTMLButtonElement>(
-      ".account-actions button,#archived-accounts button,#add-account-settings,#add-account-toolbar,#account-editor-save",
+      ".account-actions button,#archived-accounts button,#add-account-settings,#account-editor-save",
     ))
       setProperty(
         b,
@@ -1336,10 +1332,43 @@ function render(state: AppState) {
   );
   if (!previous) showTab(activeTab);
 }
-$("settings").onclick = () => {
-  if (current.updates?.phase === "available") showTab("updates");
-  void window.desktop.settings();
-};
+async function headerAction(action: HeaderAction) {
+  if (action === "add-account") {
+    await openEditor();
+    return;
+  }
+  if (action === "float-chat") {
+    await floatCurrentChat();
+    return;
+  }
+  if (action === "focus") {
+    await focusUI.open();
+    return;
+  }
+  if (action === "theme") {
+    await window.desktop.setTheme(
+      document.documentElement.dataset.theme === "dark" ? "light" : "dark",
+    );
+    return;
+  }
+  if (action === "settings" && current.updates?.phase === "available")
+    showTab("updates");
+  await window.desktop.settings();
+  if (action === "resources" || action === "backup") showTab(action);
+}
+async function nativeHeaderAction(request: () => Promise<HeaderAction | void>) {
+  const generation = privacyGeneration,
+    id = current.active,
+    panel = current.panel;
+  const action = await request();
+  if (
+    action &&
+    generation === privacyGeneration &&
+    current.active === id &&
+    current.panel === panel
+  )
+    await headerAction(action);
+}
 $("welcome-home").onclick = () => void window.desktop.welcome();
 $("welcome-open-providers").onclick = () =>
   void window.desktop.providerLibrary(true);
@@ -1394,7 +1423,6 @@ $("pause-notifications").onchange = (e) =>
   );
 $("notification-settings").onclick = () =>
   void window.desktop.notificationSettings();
-$("add-account-toolbar").onclick = () => void openEditor();
 $("add-account-settings").onclick = () => void openEditor();
 $("account-editor").onclose = () => void window.desktop.accountEditor(false);
 $("account-editor-cancel").onclick = () =>
@@ -1611,10 +1639,6 @@ window.desktop.updatesRequested?.(() => {
   if (!$<HTMLDialogElement>("account-editor").open) showTab("updates");
 });
 $("quick-switch").onclick = requestCommand;
-$("theme-toggle").onclick = () =>
-  void window.desktop.setTheme(
-    document.documentElement.dataset.theme === "dark" ? "light" : "dark",
-  );
 $<HTMLSelectElement>("theme-mode").onchange = (e) =>
   void window.desktop.setTheme(
     (e.target as HTMLSelectElement).value as AppState["presentation"]["theme"],

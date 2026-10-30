@@ -250,6 +250,14 @@ export interface AppState {
   version: string;
   updates: UpdateState;
 }
+export type HeaderAction =
+  | "add-account"
+  | "float-chat"
+  | "focus"
+  | "theme"
+  | "settings"
+  | "resources"
+  | "backup";
 export interface DesktopBridge {
   backup(
     action: "export" | "preview" | "restore" | "cancel" | "folder",
@@ -292,7 +300,8 @@ export interface DesktopBridge {
     y: number;
     provider?: ProviderId;
     overflow?: ProviderId[];
-  }): Promise<void>;
+    add?: boolean;
+  }): Promise<HeaderAction | void>;
   getProviderLogo(
     provider: ProviderId,
     revision: number,
@@ -305,8 +314,11 @@ export interface DesktopBridge {
   pinProvider(id: ProviderId): Promise<void>;
   closeProvider(id: ProviderId): Promise<AccountResult>;
   addProvider(name: string, url: string): Promise<ProviderResult>;
-  navigationMenu(): Promise<void>;
-  accountMenu(anchor: { x: number; y: number }): Promise<void>;
+  navigationMenu(anchor?: {
+    x: number;
+    y: number;
+  }): Promise<HeaderAction | void>;
+  accountMenu(anchor: { x: number; y: number }): Promise<HeaderAction | void>;
   accountEditor(open: boolean): Promise<void>;
   addAccount(
     provider: ProviderId,
