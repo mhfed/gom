@@ -58,6 +58,11 @@ test("queues a valid restore only after a readable protection backup exists, the
       await readFile(join(root, "accounts.json"), "utf8"),
     );
     assert.equal(catalog.accounts[0].name, "Restored");
+    assert.equal(
+      JSON.parse(await readFile(join(root, "window.json"), "utf8"))
+        .providerTabDefaultsVersion,
+      2,
+    );
     await assert.rejects(
       readFile(join(root, "configuration-restore.pending.json")),
     );
@@ -199,5 +204,63 @@ test("invalid pending does not alter metadata and is preserved for inspection", 
       (await readdir(root)).some((name) =>
         name.startsWith("configuration-restore.failed-"),
       ),
+    );
+  }));
+
+test("oversized pending is rejected without preventing normal startup", () =>
+  fixture(async (root) => {
+    await writeFile(
+      join(root, "configuration-restore.pending.json"),
+      " ".repeat(8 * 1024 * 1024 + 1),
+    );
+    assert.match(await new ConfigurationRestore(root).startup(), /chưa/i);
+    await assert.rejects(readFile(join(root, "accounts.json")));
+  }));
+
+test("startup imports a validated PNG into a new revision and restores defaults only inside imported scope", () =>
+  fixture(async (root) => {
+    const sharp = (await import("sharp")).default;
+    const png = await sharp({
+      create: { width: 64, height: 64, channels: 4, background: "#087f7a" },
+    })
+      .png()
+      .toBuffer();
+    const document = backup();
+    document.logos.zalo = {
+      kind: "image",
+      dataUrl: "data:image/png;base64," + png.toString("base64"),
+    };
+    const privateProvider = "web_00000000-0000-4000-8000-000000000001";
+    await writeFile(
+      join(root, "provider-logos.json"),
+      JSON.stringify({
+        version: 1,
+        logos: {
+          messenger: { kind: "builtin", providerId: "gmail" },
+          [privateProvider]: { kind: "builtin", providerId: "telegram" },
+        },
+      }),
+    );
+    const service = new ConfigurationRestore(root);
+    await service.queue(document, backup("Before"), () => true);
+    await service.startup();
+    const metadata = JSON.parse(
+      await readFile(join(root, "provider-logos.json"), "utf8"),
+    );
+    assert.equal(metadata.logos.messenger, undefined);
+    assert.deepEqual(metadata.logos[privateProvider], {
+      kind: "builtin",
+      providerId: "telegram",
+    });
+    assert.equal(metadata.logos.zalo.kind, "image");
+    assert.deepEqual(
+      await readFile(
+        join(
+          root,
+          "provider-logos",
+          `zalo-${metadata.logos.zalo.revision}.png`,
+        ),
+      ),
+      png,
     );
   }));

@@ -233,9 +233,19 @@ export function mergeConfigurationBackup(
   const providers = [...current.providers];
   for (const provider of imported) {
     const existing = providers.find((p) => p.id === provider.id);
+    if (
+      existing?.custom &&
+      !current.accounts.some((a) => a.provider === existing.id && !a.private)
+    )
+      throw Error("configuration-conflict");
     if (existing && existing.entry !== provider.entry)
       throw Error("configuration-conflict");
     if (!existing) providers.push(provider);
+    else if (provider.custom)
+      providers[providers.indexOf(existing)] = {
+        ...existing,
+        label: provider.label,
+      };
   }
   const byId = new Map(current.accounts.map((a) => [a.id, a]));
   for (const account of document.accounts) {
@@ -247,6 +257,9 @@ export function mergeConfigurationBackup(
       throw Error("configuration-conflict");
   }
   const importedIds = new Set(document.accounts.map((a) => a.id));
+  const importedProviders = new Set<string>(
+    document.accounts.map((a) => a.provider),
+  );
   const accounts = [
     ...document.accounts,
     ...current.accounts.filter((a) => !importedIds.has(a.id)),
@@ -260,13 +273,17 @@ export function mergeConfigurationBackup(
         open: [
           ...new Set([
             ...document.navigation.providerTabs.open,
-            ...current.navigation.providerTabs.open,
+            ...current.navigation.providerTabs.open.filter(
+              (id) => !importedProviders.has(id),
+            ),
           ]),
         ],
         pinned: [
           ...new Set([
             ...document.navigation.providerTabs.pinned,
-            ...current.navigation.providerTabs.pinned,
+            ...current.navigation.providerTabs.pinned.filter(
+              (id) => !importedProviders.has(id),
+            ),
           ]),
         ],
       },
@@ -295,6 +312,13 @@ export function mergeConfigurationBackup(
         ...document.preferences.notifications,
       },
     },
-    logos: { ...current.logos, ...document.logos },
+    logos: {
+      ...Object.fromEntries(
+        Object.entries(current.logos).filter(
+          ([id]) => !importedProviders.has(id),
+        ),
+      ),
+      ...document.logos,
+    },
   };
 }

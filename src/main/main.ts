@@ -1,3 +1,7 @@
+import { PROVIDER_TAB_DEFAULTS_VERSION } from "./provider-tabs.ts";
+import { ConfigurationBackupController } from "./config-backup-controller.ts";
+import { ConfigurationRestore } from "./config-restore.ts";
+import type { ConfigurationSource } from "./config-backup.ts";
 import { PrivateSpaceStore } from "./private-space.ts";
 import { privateState } from "./private-state.ts";
 import { FloatingChat } from "./floating-chat.ts";
@@ -223,7 +227,6 @@ function automaticUpdatesAvailable() {
     (process.platform === "win32" || process.platform === "darwin")
   );
 }
-const PROVIDER_TAB_DEFAULTS_VERSION = 2;
 const BUILTIN_PROVIDER_TABS_BY_VERSION: Record<number, ProviderId[]> = {
   1: ["gmail", "instagram"],
   2: ["discord", "slack"],
@@ -582,6 +585,7 @@ function restoreWorkspace() {
     lastAccounts.set(provider as ProviderId, id);
 }
 function resetWorkspaceInteractions() {
+  configurationBackup.reset();
   resourceSurfaceOpen = false;
   resourceSampler.configure(false);
   privacyGeneration++;
@@ -3110,6 +3114,116 @@ async function changeAccount(
     }) ?? { ok: false, message: "App đang xử lý tài khoản." }
   );
 }
+function configurationRevision() {
+  rememberWorkspace();
+  return JSON.stringify({
+    accounts: state.accounts,
+    providers: state.providers,
+    navigation: workspaces.normal,
+    preferences: state.preferences,
+  });
+}
+async function configurationSource(): Promise<ConfigurationSource> {
+  rememberWorkspace();
+  const source: ConfigurationSource = structuredClone({
+    accounts: state.accounts,
+    providers: state.providers,
+    navigation: workspaces.normal,
+    preferences: state.preferences,
+    logos: {},
+  });
+  const visibleProviders = new Set(
+    source.accounts.filter((a) => !a.private).map((a) => a.provider),
+  );
+  for (const provider of source.providers) {
+    if (!visibleProviders.has(provider.id) || !provider.logo) continue;
+    if (provider.logo.kind === "builtin")
+      source.logos[provider.id] = provider.logo;
+    else {
+      const dataUrl = await providerLogoStore.get(
+        provider.id,
+        provider.logo.revision,
+      );
+      if (!dataUrl) throw Error("logo-unavailable");
+      source.logos[provider.id] = { kind: "image", dataUrl };
+    }
+  }
+  return source;
+}
+const configurationBackup = new ConfigurationBackupController({
+  root: app.getPath("userData"),
+  epoch: () => privacyGeneration,
+  available: () =>
+    !closing &&
+    !privateUnlocked &&
+    !state.importing &&
+    !state.catalogWarning &&
+    !automaticUpdateActive &&
+    !accountSleep.busy().length,
+  revision: configurationRevision,
+  source: configurationSource,
+  pickExport: async () => {
+    const answer = await dialog.showSaveDialog(win, {
+      title: "Xuất cấu hình Gom",
+      defaultPath: join(
+        app.getPath("documents"),
+        `Gom-cau-hinh-${new Date().toISOString().slice(0, 10)}.gom-config.json`,
+      ),
+      filters: [{ name: "Cấu hình Gom", extensions: ["json"] }],
+    });
+    return answer.canceled ? undefined : answer.filePath;
+  },
+  pickImport: async () => {
+    const answer = await dialog.showOpenDialog(win, {
+      title: "Chọn cấu hình Gom",
+      properties: ["openFile"],
+      filters: [{ name: "Cấu hình Gom", extensions: ["json"] }],
+    });
+    return answer.canceled ? undefined : answer.filePaths[0];
+  },
+  confirm: async () => {
+    const result = await privacyMessageBox({
+      type: "warning",
+      message: "Khôi phục cấu hình và khởi động lại Gom?",
+      detail:
+        "Gom sẽ lưu bản cấu hình hiện tại trước khi hợp nhất. Các trang sẽ tải lại; hãy lưu bản nháp chưa gửi trước khi tiếp tục. Phiên đăng nhập và Không gian kín được giữ trên máy.",
+      buttons: ["Hủy", "Khôi phục và khởi động lại"],
+      defaultId: 0,
+      cancelId: 0,
+    });
+    return result.response === 1;
+  },
+  restart: () => {
+    void quit(false, true);
+  },
+  openFolder: (path) => shell.openPath(path),
+});
+async function backupCommand(arg: unknown) {
+  if (
+    closing ||
+    state.accountBusy ||
+    state.importing ||
+    accountEditorOpen ||
+    reminderSurfaceOpen
+  )
+    return {
+      ok: false,
+      message: "Đợi thao tác hiện tại hoàn tất rồi thử lại.",
+    };
+  const request = arg as { action?: unknown; data?: unknown } | null;
+  return (
+    accountOps.run(async () => {
+      state.accountBusy = true;
+      publish();
+      try {
+        return await configurationBackup.run(request?.action, request?.data);
+      } finally {
+        state.accountBusy = false;
+        publish();
+      }
+    }) ?? { ok: false, message: "Đợi thao tác hiện tại hoàn tất rồi thử lại." }
+  );
+}
 async function save() {
   if (!win || win.isDestroyed()) return;
   rememberWorkspace();
@@ -3170,7 +3284,7 @@ function beginAutomaticUpdate() {
     showAutomaticUpdateError();
   }
 }
-async function quit(installUpdate = false) {
+async function quit(installUpdate = false, restart = false) {
   if (closing) return;
   closing = true;
   resourceSampler.dispose();
@@ -3210,7 +3324,10 @@ async function quit(installUpdate = false) {
   closed = true;
   win.destroy();
   if (installUpdate) autoUpdater.quitAndInstall();
-  else app.quit();
+  else {
+    if (restart) app.relaunch();
+    app.quit();
+  }
 }
 if (squirrelStartupHandled) app.quit();
 else if (!app.requestSingleInstanceLock()) app.quit();
@@ -3273,6 +3390,20 @@ else {
     }
     // Also supplies the native macOS About icon when running in development.
     app.dock?.setIcon(appIconPath);
+    try {
+      state.backupMessage = await new ConfigurationRestore(
+        app.getPath("userData"),
+      ).startup();
+    } catch {
+      await dialog.showMessageBox({
+        type: "error",
+        message: "Chưa phục hồi được giao dịch cấu hình bị gián đoạn.",
+        detail:
+          "Gom sẽ đóng để giữ nguyên dữ liệu. Kiểm tra dung lượng và quyền ghi thư mục dữ liệu rồi mở lại.",
+      });
+      app.quit();
+      return;
+    }
     let stored: Record<string, unknown> = {};
     try {
       const value = JSON.parse(await readFile(settingsPath, "utf8"));
@@ -3567,6 +3698,8 @@ else {
       if (providerId !== undefined && !accessibleProvider(providerId))
         return { ok: false };
       switch (command) {
+        case "backup":
+          return backupCommand(arg);
         case "resources": {
           const data = arg?.data;
           if (

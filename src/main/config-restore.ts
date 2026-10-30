@@ -1,3 +1,4 @@
+import { PROVIDER_TAB_DEFAULTS_VERSION } from "./provider-tabs.ts";
 import {
   mkdir,
   readFile,
@@ -199,12 +200,12 @@ export class ConfigurationRestore {
   async startup(): Promise<string> {
     const transaction = new ConfigurationTransaction(this.root),
       recovered = await transaction.recover();
-    const pending = await optional(join(this.root, PENDING));
-    if (!pending)
-      return recovered
-        ? "Đã phục hồi cấu hình trước thao tác bị gián đoạn."
-        : "";
     try {
+      const pending = await optional(join(this.root, PENDING));
+      if (!pending)
+        return recovered
+          ? "Đã phục hồi cấu hình trước thao tác bị gián đoạn."
+          : "";
       const document = parseConfigurationBackup(pending.toString("utf8"));
       // A privacy transition must finish through its existing guarded startup path.
       if (
@@ -265,6 +266,8 @@ export class ConfigurationRestore {
         throw Error("invalid-logo-metadata");
       const logos = { ...metadata.logos },
         files: Record<string, string | Buffer | null> = {};
+      for (const id of new Set(document.accounts.map((a) => a.provider)))
+        delete logos[id];
       let index = 0;
       for (const [id, logo] of Object.entries(document.logos)) {
         if (logo.kind === "builtin") logos[id] = logo;
@@ -286,6 +289,12 @@ export class ConfigurationRestore {
       }
       const navigation = merged.navigation;
       const nextWindow = {
+        providerTabDefaultsVersion: Math.max(
+          Number.isSafeInteger(stored.providerTabDefaultsVersion)
+            ? stored.providerTabDefaultsVersion
+            : 0,
+          PROVIDER_TAB_DEFAULTS_VERSION,
+        ),
         ...stored,
         active:
           merged.accounts.find((a) => a.id === navigation.active)?.provider ||

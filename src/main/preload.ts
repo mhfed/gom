@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge, AppState, ProviderId } from "../shared.ts";
 const bridge: DesktopBridge = {
+  backup: (action, data) =>
+    ipcRenderer.invoke("desktop", "backup", { action, data }),
   resources: (action, data) =>
     ipcRenderer.invoke("desktop", "resources", { action, data }),
   focus: (action, data) =>

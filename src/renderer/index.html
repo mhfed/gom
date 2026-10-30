@@ -627,6 +627,16 @@
                 nguyên
               </button>
               <button
+                id="settings-tab-backup"
+                data-tab="backup"
+                role="tab"
+                aria-controls="tab-backup"
+                aria-selected="false"
+                tabindex="-1"
+              >
+                <svg><use href="#i-file" /></svg><span>Sao lưu</span>
+              </button>
+              <button
                 id="settings-tab-updates"
                 data-tab="updates"
                 role="tab"
@@ -1042,6 +1052,105 @@
                   hoạt động theo cài đặt thông báo.
                 </p>
               </details>
+            </div>
+            <div
+              id="tab-backup"
+              class="settings-pane preference-panel"
+              role="tabpanel"
+              aria-labelledby="settings-tab-backup"
+              tabindex="0"
+              hidden
+            >
+              <div class="backup-intro">
+                <span class="backup-mark" aria-hidden="true"
+                  ><svg><use href="#i-file" /></svg
+                ></span>
+                <div>
+                  <div class="section-label">CẤU HÌNH CỦA BẠN</div>
+                  <h2>Mang theo cách bạn dùng Gom</h2>
+                  <p>
+                    Giao diện, tài khoản và các tùy chọn của Không gian thường,
+                    trong một tệp.
+                  </p>
+                </div>
+              </div>
+              <div class="backup-includes">
+                <span>Giao diện · Tab · Ghim</span
+                ><span>Tài khoản · Nền tảng · Logo</span
+                ><span>Tùy chọn thông báo</span>
+              </div>
+              <p class="setting-hint">
+                Phiên đăng nhập, nội dung chat, Khay, Nhắc trả lời và dữ liệu
+                riêng của Không gian kín được giữ trên máy. Tài khoản thêm trên
+                máy mới cần đăng nhập lại.
+              </p>
+              <div class="backup-actions">
+                <button class="primary" id="backup-export">Xuất cấu hình</button
+                ><button class="secondary" id="backup-import">
+                  Chọn tệp khôi phục…
+                </button>
+              </div>
+              <p class="setting-hint" id="backup-scope-message"></p>
+              <p
+                id="backup-feedback"
+                class="setting-hint"
+                role="status"
+                aria-live="polite"
+              ></p>
+              <section
+                id="backup-preview"
+                class="backup-preview"
+                aria-label="Xem trước khôi phục"
+                hidden
+              >
+                <div class="section-label">XEM TRƯỚC KHÔI PHỤC</div>
+                <h3 id="backup-file"></h3>
+                <p class="setting-hint">
+                  Tạo lúc <span id="backup-created"></span>
+                </p>
+                <div class="backup-stats">
+                  <div>
+                    <strong id="backup-added">0</strong
+                    ><span>Tài khoản mới</span>
+                  </div>
+                  <div>
+                    <strong id="backup-updated">0</strong><span>Cập nhật</span>
+                  </div>
+                  <div>
+                    <strong id="backup-providers">0</strong
+                    ><span>Nền tảng tự thêm</span>
+                  </div>
+                  <div>
+                    <strong id="backup-logos">0</strong><span>Logo</span>
+                  </div>
+                </div>
+                <details>
+                  <summary>Tài khoản và địa chỉ trong tệp</summary>
+                  <ul id="backup-accounts"></ul>
+                  <ul id="backup-sites"></ul>
+                </details>
+                <p class="setting-hint">
+                  Các tài khoản khác trên máy được giữ nguyên. Gom tự lưu bản
+                  cấu hình hiện tại trước khi áp dụng. Các trang sẽ tải lại; hãy
+                  lưu bản nháp chưa gửi.
+                </p>
+                <div class="backup-actions">
+                  <button class="primary" id="backup-restore">
+                    Khôi phục và khởi động lại</button
+                  ><button class="secondary" id="backup-cancel">Hủy</button>
+                </div>
+              </section>
+              <div class="backup-protection">
+                <div>
+                  <strong>Bản sao trước khi khôi phục</strong>
+                  <p class="setting-hint">
+                    Giữ trên máy để bạn có thể chọn khôi phục lại khi cần.
+                  </p>
+                </div>
+                <button class="secondary" id="backup-folder">
+                  Mở thư mục sao lưu
+                </button>
+              </div>
             </div>
             <div
               id="tab-macos"

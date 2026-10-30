@@ -1,3 +1,4 @@
+import { createBackupUI } from "./backup.ts";
 import { createCommandPalette } from "./command.ts";
 import { createProviderNavigation } from "./provider-navigation.ts";
 import { createPrivateSpaceUI } from "./private-space.ts";
@@ -82,6 +83,10 @@ const settingsSections: Record<string, { title: string; description: string }> =
     updates: {
       title: "Cập nhật",
       description: "Phiên bản mới, khi bạn sẵn sàng.",
+    },
+    backup: {
+      title: "Sao lưu",
+      description: "Giữ cấu hình quen thuộc, mang sang máy mới.",
     },
     resources: {
       title: "Tài nguyên",
@@ -1061,6 +1066,7 @@ function render(state: AppState) {
   reminderUI.sync(state);
   focusUI.sync(state);
   resourcesUI.sync(state);
+  backupUI.sync(state);
   const rebuilt = rebuildAccounts(state);
   const settings = state.panel === "settings";
   const library = state.panel === "providers";
@@ -1542,6 +1548,7 @@ const privateSpaceUI = createPrivateSpaceUI({
   getState: () => current,
 });
 const reminderUI = createReminderUI({ getState: () => current });
+const backupUI = createBackupUI({ getState: () => current });
 const resourcesUI = createResourcesUI({
   getState: () => current,
   activeTab: () => activeTab,
@@ -1557,6 +1564,7 @@ function scrubPrivateUI() {
   privateSpaceUI.reset();
   reminderUI.reset();
   resourcesUI.reset();
+  backupUI.reset();
   command.reset();
   providerNavigation.reset();
   for (const id of ["account-editor", "provider-logo-editor"]) {

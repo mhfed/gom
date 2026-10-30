@@ -184,3 +184,52 @@ test("merge rejects private identity and provider URL/identity conflicts without
   mismatch.accounts[0].provider = "telegram";
   assert.throws(() => parseConfigurationBackup(JSON.stringify(mismatch)));
 });
+
+test("a private-only custom provider cannot be rebound into an ordinary backup", () => {
+  const current = source(),
+    site = createCustomProvider("PRIVATE_SITE", "https://secret.example/");
+  current.providers.push(site);
+  current.accounts.push({
+    ...createAccount(site.id, "PRIVATE_NAME"),
+    private: true,
+  });
+  const other = source();
+  other.providers.push(site);
+  other.accounts.push(createAccount(site.id, "Public copy"));
+  assert.throws(() =>
+    mergeConfigurationBackup(current, createConfigurationBackup(other, now)),
+  );
+});
+
+test("restoring tabs honors closed and unpinned providers covered by the backup", () => {
+  const current = source(),
+    incoming = source();
+  current.navigation.providerTabs.pinned = ["telegram"];
+  incoming.navigation.providerTabs = { open: ["zalo"], pinned: [] };
+  incoming.navigation.active = "zalo";
+  const merged = mergeConfigurationBackup(
+    current,
+    createConfigurationBackup(incoming, now),
+  );
+  assert.deepEqual(merged.navigation.providerTabs, {
+    open: ["zalo"],
+    pinned: [],
+  });
+});
+
+test("restoring default logos and public site labels undoes later customizations", () => {
+  const current = source(),
+    site = createCustomProvider("Changed label", "https://work.example/");
+  current.providers.push(site);
+  current.accounts.push(createAccount(site.id, "Work"));
+  current.logos.zalo = { kind: "builtin", providerId: "messenger" };
+  const document = createConfigurationBackup(current, now);
+  document.providers[0].label = "Original label";
+  document.logos = {};
+  const merged = mergeConfigurationBackup(current, document);
+  assert.equal(merged.logos.zalo, undefined);
+  assert.equal(
+    merged.providers.find((p) => p.id === site.id)?.label,
+    "Original label",
+  );
+});

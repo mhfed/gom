@@ -95,6 +95,13 @@ export function createCommandPalette(options: PaletteOptions) {
         run: () => options.settings("appearance"),
       },
       {
+        id: "backup",
+        title: "Sao lưu và khôi phục cấu hình",
+        subtitle: "Xuất tệp hoặc khôi phục cấu hình Không gian thường",
+        icon: "file",
+        run: () => options.settings("backup"),
+      },
+      {
         id: "resources",
         title: "Quản lý tài nguyên",
         subtitle: "RAM, CPU và tạm ngủ tài khoản",

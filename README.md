@@ -114,6 +114,10 @@ Vào **Cài đặt → Thông báo → Tập trung có hẹn giờ**, chọn **3
 
 Phiên còn hạn tiếp tục sau khi mở lại Gom; khi hết giờ, app giữ nguyên quyền thông báo từng tài khoản và trạng thái tạm dừng thủ công. Bạn cũng có thể bắt đầu/kết thúc từ `⌘/Ctrl K` hoặc menu khay hệ thống. Tính năng này chưa nằm trong bộ cài 0.8.2 được liên kết ở trên. Xem [hướng dẫn Tập trung](docs/timed-focus.md).
 
+### Sao lưu và khôi phục cấu hình — mã nguồn đang phát triển
+
+Mở **Cài đặt → Sao lưu** để xuất cấu hình Không gian thường ra tệp, xem trước và khôi phục bằng cách hợp nhất rồi khởi động lại. Có bản cấu hình bảo vệ trước khi áp dụng; giữ tài khoản khác đang có. Tệp mang theo giao diện, tab/ghim, danh sách tài khoản/nền tảng, logo và tùy chọn thông báo; phiên đăng nhập, nội dung chat và cấu hình riêng Không gian kín vẫn ở trên máy. Chưa có trong bộ cài 0.8.2. Xem [hướng dẫn](docs/configuration-backup.md).
+
 ### Quản lý tài nguyên — mã nguồn đang phát triển
 
 Mở **Cài đặt → Tài nguyên** để xem RAM/CPU ước tính của Gom và từng tài khoản khi đo được. Có sắp xếp theo RAM, CPU hoặc tên; bộ đo chỉ chạy khi mục này đang mở và cửa sổ đang hiện.

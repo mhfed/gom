@@ -1,3 +1,4 @@
+import type { BackupResult } from "./backup-types.ts";
 import type { UpdateState } from "./update-types.ts";
 import type { ResourceState } from "./resource-types.ts";
 import type { ShelfRequest, ShelfResult, ShelfSummary } from "./shelf-types.ts";
@@ -205,6 +206,7 @@ export interface ReminderSnapshot {
   error: string;
 }
 export interface AppState {
+  backupMessage?: string;
   resources?: ResourceState;
   shelf?: ShelfSummary;
   reminders?: ReminderSnapshot;
@@ -249,6 +251,10 @@ export interface AppState {
   updates: UpdateState;
 }
 export interface DesktopBridge {
+  backup(
+    action: "export" | "preview" | "restore" | "cancel" | "folder",
+    data: { lockVersion: number; token?: string },
+  ): Promise<BackupResult>;
   resources(
     action: "surface" | "sleep" | "wake",
     data: { open?: boolean; accountId?: string; lockVersion: number },
