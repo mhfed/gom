@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://vidongls.github.io/gom/">Website</a> ·
   <a href="#tải-gom">Tải Gom</a> ·
   <a href="#cài-đặt">Cài đặt</a> ·
   <a href="#bắt-đầu-sử-dụng">Bắt đầu sử dụng</a> ·

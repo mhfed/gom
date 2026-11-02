@@ -1,5 +1,17 @@
 # Kiểm chứng landing page Gom — 02/11/2026
 
+## Fork cá nhân đã xuất bản — 02/11/2026
+
+- Repository: `vidongls/gom`, có quyền quản trị.
+- URL: <https://vidongls.github.io/gom/>, HTTP 200; Pages báo `built`.
+- Nguồn: `gh-pages`, thư mục gốc; chỉ chứa website và `.nojekyll`.
+- Luồng Pages tích hợp thành công: <https://github.com/vidongls/gom/actions/runs/41385815357>.
+- Đã đối chiếu HTML công khai với source: SHA-256 `4fceda70db7bec49f651447304700b6e799e33b7943b1aad2fbf3fb52111f187`.
+- Workflow tự viết bị tài khoản khóa runner do billing; đã tắt riêng workflow đó. Pages tích hợp từ nhánh tĩnh vẫn triển khai thành công.
+- Xem `github-pages.md` để cập nhật website từ `main` qua `git subtree push --prefix=website origin gh-pages`.
+
+Các mục dưới ghi lại kiểm chứng ban đầu trên repository nguồn `mhfed/gom`.
+
 Theo yêu cầu mới nhất ngày 02/11/2026, khôi phục nguyên bản giao diện đầu tiên từ commit `c5f59b8`: nền sáng/mint, tiêu đề giữa trang và serif nghiêng. Không giữ các thay đổi bố cục của hai lần thiết kế lại.
 
 ## Phạm vi

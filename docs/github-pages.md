@@ -1,8 +1,22 @@
-# Landing page Gom trên GitHub Pages
+# Gom — GitHub Pages cá nhân
 
-Bản triển khai cá nhân: <https://vidongls.github.io/gom/>, từ fork <https://github.com/vidongls/gom>. Các liên kết tải bộ cài tiếp tục dùng GitHub Releases của dự án gốc.
+Website: <https://vidongls.github.io/gom/>. Repository: <https://github.com/vidongls/gom>, fork từ `mhfed/gom`.
 
-Source trang nằm trong `website/`, độc lập với app Electron. HTML/CSS/JS và logo đều được phục vụ tĩnh, không cần cài dependency hoặc build. Không có analytics, cookie hay tài nguyên từ CDN. Các cuộc trò chuyện hiển thị trên landing page là nội dung minh họa.
+## Cách xuất bản
+
+- Mã nguồn landing page nằm trong `website/` trên nhánh `main`.
+- Nhánh `gh-pages` chỉ chứa nội dung của `website/`, với `index.html` ở thư mục gốc và `.nojekyll`.
+- Settings → Pages dùng **Deploy from a branch → gh-pages → /(root)**.
+- GitHub tự build/deploy khi nhánh `gh-pages` được cập nhật. Workflow Pages tự viết hiện được tắt vì tài khoản đang bị khóa chạy Actions do billing; luồng Pages tích hợp vẫn chạy được.
+
+Sau khi sửa website, commit và đẩy `main`, rồi xuất bản từ checkout của fork:
+
+```sh
+git push origin main
+git subtree push --prefix=website origin gh-pages
+```
+
+Kiểm tra workflow **pages build and deployment** trong [GitHub Actions](https://github.com/vidongls/gom/actions). Không sửa trực tiếp nhánh `gh-pages` nếu vẫn dùng cách xuất bản này.
 
 ## Xem tại máy
 
@@ -12,24 +26,10 @@ Từ thư mục repository:
 python3 -m http.server 4173 --directory website --bind 127.0.0.1
 ```
 
-Mở <http://127.0.0.1:4173>. Kiểm tra cả màn hình máy tính và điện thoại; thử menu, tab nền tảng, chat nổi minh họa và FAQ.
+Mở <http://127.0.0.1:4173>.
 
-## Xuất bản
+## Nội dung
 
-1. Đưa `website/` và `.github/workflows/pages.yml` lên nhánh `main` của `vidongls/gom`.
-2. Trong GitHub repository, mở **Settings → Pages → Build and deployment → Source → GitHub Actions**. Cần người có quyền quản trị repository cho bước này.
-3. Workflow **Deploy Gom landing page** tự chạy khi source website thay đổi trên `main`. Nếu vừa bật Pages sau khi đã push, vào **Actions → Deploy Gom landing page → Run workflow**, chọn `main`.
-4. Chờ job `deploy` thành công. Lấy URL từ environment `github-pages`; URL mặc định dự kiến là <https://vidongls.github.io/gom/>.
+`website/index.html`, `website/styles.css` và `website/app.js` chứa trang tĩnh, không có dependency hoặc CDN. Các cuộc trò chuyện là minh họa. URL canonical và Open Graph trỏ về website cá nhân; nút tải bộ cài tiếp tục trỏ tới release thật của dự án gốc `mhfed/gom`.
 
-Workflow chỉ upload `website/`, không upload source app, file cài đặt, `outputs/` hoặc dữ liệu tài khoản. Không cần deploy key hoặc token lưu trong repository; workflow dùng quyền Pages và OIDC của GitHub Actions.
-
-Hướng dẫn chính thức: [Using custom workflows with GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
-
-## Cập nhật nội dung
-
-- `website/index.html`: nội dung, FAQ, thông tin phiên bản và URL bộ cài. Tìm `0.8.3` để cập nhật sau khi xác minh release mới cùng asset Mac/Windows.
-- `website/styles.css`: bố cục responsive và màu thương hiệu.
-- `website/app.js`: menu điện thoại, tab nền tảng và minh họa chat nổi. Các nút tải, nội dung và FAQ hoạt động khi tắt JavaScript.
-- `website/assets/`: logo Gom và logo nền tảng từ source app; xem `providers/SOURCES.md` để biết nguồn.
-
-Tất cả URL asset dùng đường dẫn tương đối nên chạy ở cả `/gom/` và tên miền riêng. Liên kết tải là URL GitHub Releases tuyệt đối. Bộ cài đang được liên kết là **0.8.3**, đã đối chiếu với GitHub Releases ngày 02/11/2026.
+Hướng dẫn chính thức: [Configuring a publishing source for GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
