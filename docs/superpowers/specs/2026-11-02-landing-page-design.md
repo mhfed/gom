@@ -12,13 +12,11 @@ Use a buildless static site in `website/`, hosted with GitHub Pages. A framework
 
 ## Visual design
 
-Latest direction after two user reviews on 2026-11-02: the first centered mint/italic-serif/bento page felt templated, while the all-white text-row version felt too plain for a landing page. Keep Helvetica Neue/Helvetica/Arial and natural copy, but give the product a more developed visual presentation.
-
-Use a split hero with a working app preview on a deep teal #174E45 surface. Follow with a supported-platform roster, an account-switcher story with a native UI illustration, a contrasting dark chat-float story showing a document and floating conversation, then three compact utility illustrations. Keep most of the page white; use teal to establish hierarchy, no gradients, display serif, stars, invented testimonials or statistics. Download requirements and supporting links must meet normal-text contrast; use #536C50 and #526A50 on #E7EEE8.
+Use the existing Gom mark and palette: teal #0B7A75, mint #9DE4CF, ivory #F7F7F2, ink #172E2C, muted #617775, white #FFFFFF. Large rounded sans-serif headings, restrained serif emphasis, generous whitespace and a mint stage with a functional, explicitly illustrative product preview form the identity. Use system fonts, local icons and no tracking or third-party runtime resources.
 
 ## Structure and behavior
 
-Navigation → split hero with direct Mac/Windows downloads and interactive provider window → supported platforms → two illustrated product-use stories → private space/reminders/shelf → onboarding → download band → installation FAQ → footer. Retain mobile navigation, keyboard-operable provider tabs, native FAQ disclosures and reduced-motion support. Chat-float demo can open from either hero or the feature story and returns focus to its invoking control. All sample content is explicitly illustrative. Download URLs reference verified release v0.8.3. Both installers remain reachable without JavaScript.
+Navigation → hero and download actions → interactive provider preview → supported platforms → feature layouts (accounts, floating chat, private space, reminders and shelf) → three-step onboarding → download panel → installation FAQ → footer. Mobile navigation, keyboard-operable provider tabs, native FAQ disclosures and reduced-motion support. Download URLs reference verified release v0.8.3, not the older local README. Both installers remain reachable without JavaScript.
 
 ## Constraints and acceptance
 

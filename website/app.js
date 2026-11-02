@@ -22,13 +22,13 @@ const providers = {
   telegram: {
     name: "Telegram",
     icon: "telegram.svg",
-    color: "#dce9f4",
+    color: "#dceee2",
     title: "Minh Anh",
     subtitle: "Cuộc trò chuyện mẫu",
     messages: [
-      "Mình đã gửi bản thiết kế mới.",
-      "Mình xem rồi. Chốt phương án này nhé.",
-      "OK, chiều mình gửi file hoàn chỉnh.",
+      "Chiều nay mình cà phê nhé? ☕",
+      "Được chứ! Mình vừa xong việc rồi.",
+      "Hẹn bạn ở quán quen nhé!",
     ],
     composer: "Viết tin nhắn…",
   },
@@ -52,7 +52,7 @@ const providers = {
     title: "Minh Anh",
     subtitle: "Cuộc trò chuyện mẫu · Messenger",
     messages: [
-      "Cuối tuần đi dạo một chút không?",
+      "Cuối tuần đi dạo một chút không? 🌿",
       "Có chứ! Để mình rủ thêm Linh nữa.",
       "Tuyệt. Hẹn nhau chiều thứ Bảy nhé!",
     ],
@@ -67,7 +67,7 @@ const providers = {
     messages: [
       "Chào bạn, mình gửi lịch hẹn cuối tuần này.",
       "Mình đã xem lịch. Hẹn bạn lúc 15:00 nhé!",
-      "Cảm ơn bạn. Mình đã ghi vào lịch.",
+      "Cảm ơn bạn. Chúc bạn một ngày thật vui ☀️",
     ],
     composer: "Trả lời email…",
   },
@@ -129,8 +129,6 @@ for (const tab of tabs) {
 const floatOpen = document.querySelector("[data-float-open]");
 const floatClose = document.querySelector("[data-float-close]");
 const floatingDemo = document.querySelector("#floating-demo");
-const secondaryFloat = document.querySelector("[data-secondary-float]");
-let floatReturnFocus = floatOpen;
 
 function closeFloat() {
   floatingDemo.hidden = true;
@@ -138,7 +136,6 @@ function closeFloat() {
 }
 
 floatOpen.addEventListener("click", () => {
-  floatReturnFocus = floatOpen;
   if (!floatingDemo.hidden) {
     closeFloat();
     return;
@@ -161,21 +158,14 @@ floatOpen.addEventListener("click", () => {
 
 floatClose.addEventListener("click", () => {
   closeFloat();
-  floatReturnFocus.focus({ preventScroll: true });
-});
-
-secondaryFloat.addEventListener("click", () => {
-  if (floatingDemo.hidden) floatOpen.click();
-  floatReturnFocus = secondaryFloat;
-  floatingDemo.scrollIntoView({ block: "center" });
-  floatClose.focus({ preventScroll: true });
+  floatOpen.focus({ preventScroll: true });
 });
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   if (!floatingDemo.hidden) {
     closeFloat();
-    floatReturnFocus.focus({ preventScroll: true });
+    floatOpen.focus({ preventScroll: true });
   }
   if (menuButton.getAttribute("aria-expanded") === "true") {
     closeMenu();
@@ -197,5 +187,4 @@ for (const link of document.querySelectorAll('a[href^="#"]')) {
   });
 }
 revealLinkedAnswer();
-selectProvider(tabs[0]);
 document.documentElement.classList.add("enhanced");

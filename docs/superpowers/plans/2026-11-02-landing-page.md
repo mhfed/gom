@@ -4,8 +4,6 @@
 
 **Goal:** Deliver a polished Vietnamese Gom landing page ready for GitHub Pages.
 
-**Design revision:** User rejected the centered mint/italic-serif/card layout, then found the text-row utility version too plain. Final composition keeps Helvetica Neue/Arial and adds a split hero, two illustrated product stories, three utility details and a download band. Preserve all download and Pages behavior.
-
 **Architecture:** A self-contained `website/` folder with semantic HTML, CSS and a small progressive-enhancement script. A Pages Actions workflow publishes only that folder from main.
 
 **Tech Stack:** HTML, CSS, browser JavaScript, existing local provider SVGs, GitHub Actions.
