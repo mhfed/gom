@@ -2,20 +2,20 @@
 <html lang="vi">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#0b7a75" />
     <meta
       name="description"
-      content="Gom mang Zalo, Telegram, Messenger, Gmail và nhiều nền tảng về một cửa sổ. Nhiều tài khoản, chat nổi và không gian riêng trên macOS và Windows."
+      content="Zalo, Messenger, Telegram và các nền tảng bạn dùng hằng ngày, trong một cửa sổ Gom. Ứng dụng cho macOS và Windows."
     />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="vi_VN" />
-    <meta property="og:title" content="Gom — Trò chuyện, gọn một nơi." />
+    <meta property="og:title" content="Gom — Nhiều tài khoản. Một cửa sổ." />
     <meta
       property="og:description"
-      content="Bớt chuyển cửa sổ. Thêm kết nối. Các nền tảng quen thuộc, trong một không gian của bạn."
+      content="Mở các nền tảng bạn vẫn dùng trong Gom, rồi chuyển qua lại bằng tab. Dành cho macOS và Windows."
     />
-    <title>Gom — Trò chuyện, gọn một nơi.</title>
+    <title>Gom — Nhiều tài khoản. Một cửa sổ.</title>
     <link rel="icon" href="./assets/gom-mark.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/app-icon.png" />
     <link rel="stylesheet" href="./styles.css" />
@@ -86,17 +86,17 @@
         </symbol>
       </defs>
     </svg>
-
     <header class="site-header">
       <nav class="nav wrap" aria-label="Điều hướng chính">
         <a class="brand" href="#main" aria-label="Gom — về đầu trang"
           ><img
             src="./assets/gom-mark.svg"
-            width="38"
-            height="38"
+            width="32"
+            height="32"
             alt=""
-          /><span>Gom<span class="brand-period">.</span></span></a
+          /><span>Gom</span></a
         >
+        <span class="nav-description">Ứng dụng cho máy tính</span>
         <button
           class="menu-toggle"
           type="button"
@@ -107,64 +107,57 @@
           <span></span><span></span>
         </button>
         <div class="nav-links" id="nav-links">
-          <a href="#tinh-nang">Tính năng</a><a href="#nen-tang">Nền tảng</a
-          ><a href="#hoi-dap">Hỏi đáp</a>
-          <a
-            class="nav-github"
-            href="https://github.com/mhfed/gom"
-            aria-label="Gom trên GitHub"
-            ><svg class="icon"><use href="#github" /></svg
-            ><span>GitHub</span></a
-          >
+          <a href="#tinh-nang">Cách dùng</a><a href="#nen-tang">Nền tảng</a
+          ><a href="#hoi-dap">Hỏi đáp</a
+          ><a href="https://github.com/mhfed/gom">GitHub ↗</a>
         </div>
-        <a class="button button-small nav-download" href="#tai-gom"
-          >Tải Gom <svg class="icon"><use href="#download" /></svg
+        <a class="nav-download" href="#tai-gom"
+          >Tải Gom
+          <svg class="icon" aria-hidden="true"><use href="#download" /></svg
         ></a>
       </nav>
     </header>
-
     <main id="main">
       <section class="hero wrap" aria-labelledby="hero-title">
-        <a
-          class="release-pill"
-          href="https://github.com/mhfed/gom/releases/tag/v0.8.3"
-          ><span class="status-dot"></span> Gom 0.8.3 đã có mặt
-          <span class="pill-divider"></span> Khám phá bản mới
-          <svg class="icon"><use href="#arrow" /></svg
-        ></a>
-        <h1 id="hero-title">
-          Trò chuyện,<br />&#32;<em>gọn một nơi.</em
-          ><span class="headline-spark" aria-hidden="true">✳</span>
-        </h1>
-        <p class="hero-description">
-          Bạn có nhiều kết nối. Chỉ cần một cửa sổ.<br />&#32;Gom các nền tảng
-          và tài khoản quen thuộc vào một không gian của bạn.
-        </p>
-        <div class="hero-actions">
-          <a
-            class="button"
-            href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg"
-            ><svg class="icon"><use href="#apple" /></svg> Tải cho macOS
-            <svg class="icon action-arrow"><use href="#download" /></svg
-          ></a>
-          <a
-            class="button button-secondary"
-            href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe"
-            ><svg class="icon"><use href="#windows" /></svg> Tải cho Windows</a
-          >
+        <div class="hero-intro">
+          <div class="hero-copy">
+            <h1 id="hero-title">Nhiều tài khoản.<br />&#32;Một cửa sổ.</h1>
+            <p>
+              Zalo cho công việc. Messenger cho bạn bè.<br
+                class="desktop-break"
+              />&#32;Telegram cho nhóm dự án. Mở tất cả trong Gom,<br
+                class="desktop-break"
+              />&#32;rồi chuyển qua lại bằng tab.
+            </p>
+          </div>
+          <aside class="hero-download" aria-label="Tải ứng dụng Gom">
+            <a
+              class="version-link"
+              href="https://github.com/mhfed/gom/releases/tag/v0.8.3"
+              >Gom 0.8.3 <span>Ghi chú phiên bản ↗</span></a
+            ><a
+              class="button"
+              href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg"
+              ><svg class="icon" aria-hidden="true"><use href="#apple" /></svg
+              ><span>Tải cho macOS</span
+              ><svg class="icon" aria-hidden="true">
+                <use href="#download" /></svg></a
+            ><a
+              class="button button-secondary"
+              href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe"
+              ><svg class="icon" aria-hidden="true"><use href="#windows" /></svg
+              ><span>Tải cho Windows</span
+              ><svg class="icon" aria-hidden="true">
+                <use href="#download" /></svg
+            ></a>
+            <p>
+              Apple Silicon · Windows 10/11 x64<br />&#32;<a href="#cai-dat"
+                >Lưu ý trước khi cài</a
+              >
+            </p>
+          </aside>
         </div>
-        <p class="hero-note">
-          Mac Apple Silicon · Windows 10/11 x64 <span>·</span>
-          <a href="#cai-dat">Hướng dẫn cài đặt</a>
-        </p>
-
         <div class="product-stage">
-          <div class="stage-orbit orbit-one" aria-hidden="true"></div>
-          <div class="stage-orbit orbit-two" aria-hidden="true"></div>
-          <span class="stage-note" aria-hidden="true"
-            >Bớt chuyển cửa sổ.<br />&#32;Thêm kết nối.<svg viewBox="0 0 70 55">
-              <path d="M4 5c30 0 10 42 53 35m-9-9 10 10-12 5" /></svg
-          ></span>
           <div
             class="app-preview"
             aria-label="Minh họa cửa sổ Gom với nội dung mẫu"
@@ -184,7 +177,7 @@
                 class="preview-tabs"
                 role="tablist"
                 aria-label="Thử chuyển nền tảng"
-                data-provider-tabs
+                data-provider-tabs=""
               >
                 <button
                   class="provider-tab"
@@ -275,7 +268,7 @@
               ><button
                 type="button"
                 class="float-trigger"
-                data-float-open
+                data-float-open=""
                 aria-expanded="false"
                 aria-controls="floating-demo"
               >
@@ -288,7 +281,7 @@
               role="tabpanel"
               aria-labelledby="tab-telegram"
               tabindex="0"
-              data-provider-panel
+              data-provider-panel=""
             >
               <aside
                 class="chat-sidebar"
@@ -302,7 +295,7 @@
                   <span class="avatar avatar-mint">M</span
                   ><span
                     ><strong>Minh Anh</strong
-                    ><small data-chat-snippet
+                    ><small data-chat-snippet=""
                       >Hẹn bạn ở quán quen nhé!</small
                     ></span
                   ><span class="chat-meta">09:41<b>2</b></span>
@@ -334,8 +327,8 @@
                     alt=""
                     width="17"
                     height="17"
-                    data-current-provider-icon
-                  /><span data-current-provider>Telegram</span
+                    data-current-provider-icon=""
+                  /><span data-current-provider="">Telegram</span
                   ><span>Giao diện minh họa</span>
                 </div>
               </aside>
@@ -343,8 +336,8 @@
                 <div class="conversation-header">
                   <span class="avatar avatar-mint">M</span>
                   <div>
-                    <strong data-conversation-title>Minh Anh</strong
-                    ><small data-conversation-subtitle
+                    <strong data-conversation-title="">Minh Anh</strong
+                    ><small data-conversation-subtitle=""
                       >Cuộc trò chuyện mẫu</small
                     >
                   </div>
@@ -357,15 +350,15 @@
                 >
                   <span class="date-chip">Hôm nay</span>
                   <div class="message received">
-                    <p data-message-one>Chiều nay mình cà phê nhé? ☕</p>
+                    <p data-message-one="">Chiều nay mình cà phê nhé? ☕</p>
                     <time>09:38</time>
                   </div>
                   <div class="message sent">
-                    <p data-message-two>Được chứ! Mình vừa xong việc rồi.</p>
+                    <p data-message-two="">Được chứ! Mình vừa xong việc rồi.</p>
                     <time>09:40 <span aria-label="Đã đọc">✓✓</span></time>
                   </div>
                   <div class="message received">
-                    <p data-message-three>Hẹn bạn ở quán quen nhé!</p>
+                    <p data-message-three="">Hẹn bạn ở quán quen nhé!</p>
                     <time>09:41</time>
                   </div>
                   <div class="chat-reaction" aria-hidden="true">
@@ -373,19 +366,10 @@
                   </div>
                 </div>
                 <div class="demo-composer" aria-hidden="true">
-                  <span>＋</span><span data-composer>Viết tin nhắn…</span
+                  <span>＋</span><span data-composer="">Viết tin nhắn…</span
                   ><span>☺</span><span class="send-icon">↑</span>
                 </div>
               </div>
-            </div>
-          </div>
-          <div class="floating-note" aria-hidden="true">
-            <span class="floating-note-icon"
-              ><svg class="icon"><use href="#check" /></svg
-            ></span>
-            <div>
-              <strong>Mọi kết nối, vẫn ở đây.</strong
-              ><span>Trong một cửa sổ gọn gàng.</span>
             </div>
           </div>
           <div class="floating-demo" id="floating-demo" hidden>
@@ -399,7 +383,7 @@
               ><button
                 type="button"
                 aria-label="Đóng minh họa chat nổi"
-                data-float-close
+                data-float-close=""
               >
                 ×
               </button>
@@ -408,21 +392,23 @@
             <span>Chat nổi · Nội dung minh họa</span>
           </div>
         </div>
-        <p class="preview-caption">
-          <span class="caption-dot"></span> Bấm vào tab để khám phá
-          <span class="caption-separator">/</span> Giao diện và nội dung minh
-          họa
-        </p>
+        <div class="preview-caption">
+          <p>Thử chuyển nền tảng bằng các tab phía trên.</p>
+          <span>Giao diện minh họa · Nội dung mẫu</span>
+        </div>
       </section>
-
       <section
-        class="platforms wrap"
+        class="platforms wrap section-block"
         id="nen-tang"
         aria-labelledby="platform-title"
       >
-        <p class="eyebrow" id="platform-title">
-          NHỮNG NỀN TẢNG BẠN ĐÃ QUEN. MỘT NƠI ĐỂ MỞ TẤT CẢ.
-        </p>
+        <div class="section-heading">
+          <h2 id="platform-title">Vẫn là những nền tảng bạn đang dùng.</h2>
+          <p>
+            Đăng nhập bằng tài khoản của bạn.<br />&#32;Gom mở giao diện web của
+            từng dịch vụ.
+          </p>
+        </div>
         <div class="platform-list">
           <div>
             <img
@@ -497,309 +483,209 @@
             /><span>Tinder</span>
           </div>
         </div>
-        <p>
-          Và cả website riêng của bạn.
+        <p class="platform-extra">
+          Bạn dùng dịch vụ khác?
           <a href="https://github.com/mhfed/gom#sắp-xếp-không-gian-của-bạn"
-            >Thêm vào Gom <span aria-hidden="true">↗</span></a
+            >Thêm website riêng bằng nút + ↗</a
           >
         </p>
       </section>
-
       <section
-        class="features wrap section-space"
+        class="features wrap section-block"
         id="tinh-nang"
         aria-labelledby="features-title"
       >
-        <div class="section-intro">
-          <div>
-            <span class="eyebrow teal">ÍT LỘN XỘN HƠN, NHIỀU KẾT NỐI HƠN</span>
-            <h2 id="features-title">
-              Một chỗ cho mọi chuyện.<br />&#32;<span
-                >Thêm chỗ cho chính bạn.</span
-              >
-            </h2>
-          </div>
+        <div class="section-heading">
+          <h2 id="features-title">
+            Sắp xếp một lần.<br />&#32;Dùng theo cách của bạn.
+          </h2>
           <p>
-            Từ công việc đến những cuộc hẹn,<br />&#32;Gom giúp bạn sắp xếp theo
-            cách của mình.
+            Những việc nhỏ khi dùng nhiều tài khoản,<br />&#32;Gom có sẵn chỗ để
+            xử lý.
           </p>
         </div>
-        <div class="feature-grid">
-          <article class="feature-card account-card">
-            <div class="feature-icon">
-              <svg class="icon"><use href="#users" /></svg>
+        <div class="feature-rows">
+          <article class="feature-row">
+            <div class="feature-label">
+              <svg class="icon" aria-hidden="true"><use href="#users" /></svg>
+              <h3>Cá nhân và công việc,<br />&#32;mỗi bên một tài khoản.</h3>
             </div>
-            <h3>Nhiều tài khoản.<br />&#32;Không cần đăng xuất.</h3>
-            <p>
-              Cá nhân, công việc, dự án riêng. Mỗi tài khoản có phiên đăng nhập
-              độc lập, chuyển qua lại ngay trong cùng nền tảng.
-            </p>
-            <div
-              class="account-visual"
-              aria-label="Ví dụ ba tài khoản riêng trên Gom"
-            >
-              <div>
-                <span class="avatar avatar-mint">M</span
-                ><span
-                  ><strong>Minh · Cá nhân</strong><small>Telegram</small></span
-                ><span class="account-active"
-                  >Đang dùng <svg class="icon"><use href="#check" /></svg
-                ></span>
-              </div>
-              <div>
-                <span class="avatar avatar-lilac">M</span
-                ><span
-                  ><strong>Minh · Công việc</strong
-                  ><small>Telegram</small></span
-                ><span class="account-badge">3</span>
-              </div>
-              <div>
-                <span class="avatar avatar-peach">S</span
-                ><span
-                  ><strong>Studio của mình</strong><small>Telegram</small></span
-                ><span class="account-add" aria-hidden="true">↗</span>
-              </div>
-            </div>
-          </article>
-          <article class="feature-card float-card">
-            <div class="feature-icon">
-              <svg class="icon"><use href="#float" /></svg>
-            </div>
-            <h3>Cuộc trò chuyện nhỏ.<br />&#32;Không gian làm việc lớn.</h3>
-            <p>
-              Tách tab thành chat nổi, ghim trên màn hình hoặc thu về bong bóng.
-              Mở lại cuộc trò chuyện khi bạn cần.
-            </p>
-            <div class="float-visual" aria-hidden="true">
-              <div class="work-window">
-                <div><i></i><i></i><i></i></div>
-                <span></span><span></span><span></span><span></span>
-                <div class="work-blocks"><i></i><i></i></div>
-              </div>
-              <div class="mini-chat">
-                <header>
-                  <span class="avatar avatar-mint">M</span
-                  ><strong>Minh Anh</strong><span>↗</span>
-                </header>
-                <p>Gửi bạn một chút năng lượng ☀️</p>
-                <span class="mini-reply">Cảm ơn bạn nha!</span>
-              </div>
-              <div class="gom-bubble">
-                <img
-                  src="./assets/gom-mark.svg"
-                  alt=""
-                  width="32"
-                  height="32"
-                />
-              </div>
-            </div>
-          </article>
-          <article class="feature-card private-card">
-            <div class="feature-icon">
-              <svg class="icon"><use href="#lock" /></svg>
-            </div>
-            <h3>Không gian riêng,<br />&#32;theo nghĩa của bạn.</h3>
-            <p>
-              Tách tài khoản thường và kín. Khóa giao diện không gian kín bằng
-              mật khẩu khi muốn giữ riêng tư.
-            </p>
-            <div class="space-visual">
-              <span
-                ><svg class="icon"><use href="#users" /></svg> Thường</span
-              ><span
-                ><svg class="icon"><use href="#lock" /></svg> Không gian kín
-                <i></i
-              ></span>
-            </div>
-            <a class="text-link" href="#faq-private"
-              >Hiểu thêm về Không gian kín <span>↗</span></a
-            >
-          </article>
-          <article class="feature-card reminder-card">
-            <div class="feature-icon">
-              <svg class="icon"><use href="#bell" /></svg>
-            </div>
-            <h3>Để sau.<br />&#32;Đừng để quên.</h3>
-            <p>
-              Ghi chú việc cần trả lời, chọn giờ nhắc. Quay lại đúng tài khoản
-              khi bạn sẵn sàng.
-            </p>
-            <div class="reminder-visual">
-              <span class="reminder-check"></span>
-              <div>
-                <strong>Gửi lại bản thiết kế cho Linh</strong
-                ><span
-                  ><svg class="icon"><use href="#bell" /></svg> Hôm nay,
-                  14:30</span
-                >
-              </div>
-              <img
-                src="./assets/providers/messenger.svg"
-                width="22"
-                height="22"
-                alt="Messenger"
-                loading="lazy"
-              />
-            </div>
-          </article>
-          <article class="feature-card shelf-card">
-            <div class="feature-icon">
-              <svg class="icon"><use href="#shelf" /></svg>
-            </div>
-            <h3>Một chiếc khay.<br />&#32;Chuyển gì cũng tiện.</h3>
-            <p>
-              Giữ chữ, link, ảnh và bản sao tệp trong Khay. Mang nội dung từ nền
-              tảng này sang nền tảng khác.
-            </p>
-            <div class="shelf-visual" aria-hidden="true">
-              <span class="shelf-item"
-                ><span>↗</span><small>Link hay</small></span
-              ><span class="shelf-item"
-                ><span>Aa</span><small>Ghi chú</small></span
-              ><span class="shelf-item"
-                ><span>▧</span><small>Tệp của bạn</small></span
-              >
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section
-        class="getting-started section-space"
-        aria-labelledby="start-title"
-      >
-        <div class="wrap">
-          <div class="section-heading">
-            <span class="eyebrow teal">BẮT ĐẦU THẬT NHẸ NHÀNG</span>
-            <h2 id="start-title">
-              Vài phút để gom.<br />&#32;<span>Cả ngày gọn hơn.</span>
-            </h2>
-          </div>
-          <ol class="steps">
-            <li>
-              <span class="step-number">01</span>
-              <h3>Cài Gom lên máy</h3>
-              <p>Chọn bản dành cho macOS hoặc Windows. Cài đặt và mở Gom.</p>
-              <a class="text-link" href="#tai-gom"
-                >Chọn bản tải xuống <span>↗</span></a
-              >
-            </li>
-            <li>
-              <span class="step-number">02</span>
-              <h3>Thêm nền tảng của bạn</h3>
+            <div class="feature-content">
               <p>
-                Bấm dấu +, chọn nền tảng, đặt tên tài khoản rồi đăng nhập trực
-                tiếp.
+                Thêm nhiều tài khoản cho cùng một nền tảng. Đặt tên để phân
+                biệt, chuyển tài khoản ngay trên thanh công cụ. Mỗi tài khoản có
+                phiên đăng nhập riêng.
               </p>
-              <div class="step-platforms" aria-hidden="true">
+              <div
+                class="account-example"
+                aria-label="Ví dụ hai tài khoản trên Telegram"
+              >
                 <img
-                  src="./assets/providers/zalo.png"
-                  width="24"
-                  height="24"
-                  alt=""
-                  loading="lazy"
-                /><img
                   src="./assets/providers/telegram.svg"
                   width="24"
                   height="24"
-                  alt=""
-                  loading="lazy"
-                /><img
-                  src="./assets/providers/messenger.svg"
-                  width="24"
-                  height="24"
-                  alt=""
-                  loading="lazy"
-                /><span>+</span>
+                  alt="Telegram"
+                /><span>Cá nhân <span class="account-selected">✓</span></span
+                ><span>Công việc <b>3</b></span
+                ><span class="example-note"
+                  >Hai tài khoản, không cần đăng xuất.</span
+                >
               </div>
-            </li>
-            <li>
-              <span class="step-number">03</span>
-              <h3>Sắp xếp theo ý mình</h3>
+            </div>
+          </article>
+          <article class="feature-row">
+            <div class="feature-label">
+              <svg class="icon" aria-hidden="true"><use href="#float" /></svg>
+              <h3>Đưa cuộc trò chuyện<br />&#32;ra cạnh công việc.</h3>
+            </div>
+            <div class="feature-content">
               <p>
-                Ghim tab hay dùng, thêm tài khoản và chọn giao diện sáng hoặc
-                tối.
+                Tách một tab thành cửa sổ chat nổi. Ghim trên màn hình khi cần
+                trao đổi, thu về bong bóng khi cần thêm chỗ làm việc.
               </p>
-              <span class="step-done"
-                ><svg class="icon"><use href="#check" /></svg> Không gian của
-                bạn đã sẵn sàng.</span
-              >
-            </li>
-          </ol>
+              <button class="inline-demo" type="button" data-secondary-float>
+                Thử cửa sổ chat nổi
+                <svg class="icon" aria-hidden="true"><use href="#arrow" /></svg>
+              </button>
+              <p class="feature-note">
+                Mỗi lúc mở một tab nổi. Lưu bản nháp quan trọng trước khi tách
+                tab.
+              </p>
+            </div>
+          </article>
+          <article class="feature-row">
+            <div class="feature-label">
+              <svg class="icon" aria-hidden="true"><use href="#lock" /></svg>
+              <h3>Tài khoản riêng,<br />&#32;có không gian riêng.</h3>
+            </div>
+            <div class="feature-content">
+              <p>
+                Không gian thường và Không gian kín có danh sách tài khoản, tab
+                và trạng thái riêng. Đặt mật khẩu để khóa giao diện Không gian
+                kín.
+              </p>
+              <p class="feature-note">
+                Mật khẩu khóa truy cập qua giao diện, không mã hóa lại dữ liệu
+                phiên trên đĩa. <a href="#faq-private">Xem chi tiết ↗</a>
+              </p>
+            </div>
+          </article>
+          <article class="feature-row">
+            <div class="feature-label">
+              <svg class="icon" aria-hidden="true"><use href="#bell" /></svg>
+              <h3>Cần trả lời sau?<br />&#32;Ghi lại, rồi hẹn giờ.</h3>
+            </div>
+            <div class="feature-content">
+              <p>
+                Ghi chú việc cần quay lại và chọn giờ nhắc. Gom mở lại đúng tài
+                khoản khi bạn sẵn sàng; bạn tự tìm cuộc hội thoại và trả lời.
+              </p>
+              <p class="feature-note">
+                Thông báo nhắc thường cần Gom đang chạy. Nhắc trong Không gian
+                kín chỉ hiện trong danh sách kín.
+              </p>
+            </div>
+          </article>
+          <article class="feature-row">
+            <div class="feature-label">
+              <svg class="icon" aria-hidden="true"><use href="#shelf" /></svg>
+              <h3>Chuyển chữ, link, tệp<br />&#32;qua một chiếc khay.</h3>
+            </div>
+            <div class="feature-content">
+              <p>
+                Lưu nội dung vào Khay, chuyển nền tảng rồi dùng lại. Chữ, link,
+                ảnh và bản sao tệp được giữ trên máy, tách theo từng không gian.
+              </p>
+              <p class="feature-note">
+                Gom chỉ đọc clipboard khi bạn bấm “Lấy từ clipboard”.
+              </p>
+            </div>
+          </article>
         </div>
       </section>
-
+      <section class="start wrap section-block" aria-labelledby="start-title">
+        <div class="section-heading">
+          <h2 id="start-title">Cài xong là bắt đầu.</h2>
+          <a
+            href="https://github.com/mhfed/gom#bắt-đầu-sử-dụng"
+            class="text-link"
+            >Hướng dẫn đầy đủ ↗</a
+          >
+        </div>
+        <ol class="steps">
+          <li>
+            <h3>Cài Gom</h3>
+            <p>Tải bộ cài phù hợp với máy. Mở Gom sau khi cài đặt.</p>
+          </li>
+          <li>
+            <h3>Thêm nền tảng</h3>
+            <p>Bấm +, chọn dịch vụ, đặt tên tài khoản và đăng nhập.</p>
+          </li>
+          <li>
+            <h3>Giữ lại thứ hay dùng</h3>
+            <p>Ghim tab, thêm tài khoản hoặc website riêng khi cần.</p>
+          </li>
+        </ol>
+      </section>
       <section
-        class="download-section wrap section-space"
+        class="download-section wrap section-block"
         id="tai-gom"
         aria-labelledby="download-title"
       >
-        <div class="download-panel">
-          <div class="download-copy">
-            <img
-              class="download-logo"
-              src="./assets/gom-mark.svg"
-              width="68"
-              height="68"
-              alt=""
-              loading="lazy"
-            /><span class="eyebrow">MỌI KẾT NỐI. MỘT GOM.</span>
-            <h2 id="download-title">
-              Gom lại một chút.<br />&#32;<em>Nhẹ đầu hơn nhiều.</em>
-            </h2>
-            <p>
-              Một cửa sổ cho các nền tảng bạn vẫn dùng mỗi ngày.<br />&#32;Tải
-              Gom và tạo không gian của riêng mình.
-            </p>
-            <a
-              href="https://github.com/mhfed/gom/releases/tag/v0.8.3"
-              class="release-link"
-              >Phiên bản 0.8.3 <span>·</span> Xem có gì mới ↗</a
+        <div class="download-intro">
+          <img
+            src="./assets/gom-mark.svg"
+            width="42"
+            height="42"
+            alt=""
+            loading="lazy"
+          />
+          <h2 id="download-title">Thử Gom trên<br />&#32;máy của bạn.</h2>
+          <a
+            href="https://github.com/mhfed/gom/releases/tag/v0.8.3"
+            class="version-link"
+            >Phiên bản 0.8.3 · Ghi chú phát hành ↗</a
+          >
+        </div>
+        <div class="download-options">
+          <a
+            class="os-download"
+            href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg"
+            ><svg class="icon" aria-hidden="true"><use href="#apple" /></svg
+            ><span
+              ><strong>macOS</strong
+              ><small>Apple Silicon · macOS 13 trở lên</small></span
+            ><span class="file-extension">.dmg</span
+            ><svg class="icon" aria-hidden="true">
+              <use href="#download" /></svg></a
+          ><a
+            class="os-download"
+            href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe"
+            ><svg class="icon" aria-hidden="true"><use href="#windows" /></svg
+            ><span
+              ><strong>Windows</strong
+              ><small>Windows 10 / 11 · 64-bit</small></span
+            ><span class="file-extension">.exe</span
+            ><svg class="icon" aria-hidden="true"><use href="#download" /></svg
+          ></a>
+          <p>
+            Chưa có bản Mac Intel và Linux.<br />&#32;<a href="#cai-dat"
+              >Đọc hướng dẫn cài đặt và lưu ý về chữ ký ứng dụng ↗</a
             >
-          </div>
-          <div class="download-options">
-            <a
-              class="os-download"
-              href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg"
-              ><svg class="os-icon icon"><use href="#apple" /></svg
-              ><span
-                ><strong>Tải cho macOS</strong
-                ><small>Apple Silicon · macOS 13+ · .dmg</small></span
-              ><svg class="icon"><use href="#download" /></svg></a
-            ><a
-              class="os-download"
-              href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe"
-              ><svg class="os-icon icon"><use href="#windows" /></svg
-              ><span
-                ><strong>Tải cho Windows</strong
-                ><small>Windows 10 / 11 · 64-bit · .exe</small></span
-              ><svg class="icon"><use href="#download" /></svg
-            ></a>
-            <p>
-              Chưa có bản dành cho Mac Intel và Linux.<br />&#32;<a
-                href="#cai-dat"
-                >Xem lưu ý khi cài đặt <span>↗</span></a
-              >
-            </p>
-          </div>
+          </p>
         </div>
       </section>
-
       <section
-        class="faq wrap section-space"
+        class="faq wrap section-block"
         id="hoi-dap"
         aria-labelledby="faq-title"
       >
         <div class="faq-intro">
-          <span class="eyebrow teal">BẠN CÓ THỂ ĐANG THẮC MẮC</span>
-          <h2 id="faq-title">Hỏi nhỏ.<br />&#32;<span>Đáp gọn.</span></h2>
-          <p>
-            Còn điều gì muốn hỏi?<br />&#32;<a
-              href="https://github.com/mhfed/gom/issues"
-              class="text-link"
-              >Gặp nhau trên GitHub <span>↗</span></a
-            >
-          </p>
+          <h2 id="faq-title">Trước khi dùng Gom.</h2>
+          <p>Một vài điều cần biết.</p>
+          <a href="https://github.com/mhfed/gom/issues" class="text-link"
+            >Góp ý hoặc báo lỗi trên GitHub ↗</a
+          >
         </div>
         <div class="faq-list">
           <details>
@@ -907,29 +793,15 @@
         </div>
       </section>
     </main>
-
     <footer class="footer wrap">
-      <div class="footer-top">
-        <a class="brand" href="#main" aria-label="Gom — về đầu trang"
-          ><img
-            src="./assets/gom-mark.svg"
-            width="35"
-            height="35"
-            alt=""
-          /><span>Gom<span class="brand-period">.</span></span></a
-        >
-        <p>Trò chuyện, gọn một nơi.</p>
-        <div>
-          <a href="https://github.com/mhfed/gom">GitHub <span>↗</span></a
-          ><a href="https://github.com/mhfed/gom/releases">Phiên bản</a
-          ><a href="https://github.com/mhfed/gom/issues">Góp ý</a>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>Gom · Một không gian cho những kết nối của bạn.</span>
-        <p>Gom là ứng dụng độc lập, không thuộc các nền tảng được tích hợp.</p>
-        <a href="#main">Lên đầu trang ↑</a>
-      </div>
+      <a class="brand" href="#main" aria-label="Gom — về đầu trang"
+        ><img src="./assets/gom-mark.svg" width="27" height="27" alt="" /><span
+          >Gom</span
+        ></a
+      >
+      <p>Ứng dụng độc lập, không thuộc các nền tảng được tích hợp.</p>
+      <a href="https://github.com/mhfed/gom">GitHub ↗</a
+      ><a href="#main">Lên đầu trang ↑</a>
     </footer>
   </body>
 </html>

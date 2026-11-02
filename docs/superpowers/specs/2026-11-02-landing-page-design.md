@@ -12,11 +12,11 @@ Use a buildless static site in `website/`, hosted with GitHub Pages. A framework
 
 ## Visual design
 
-Use the existing Gom mark and palette: teal #0B7A75, mint #9DE4CF, ivory #F7F7F2, ink #172E2C, muted #617775, white #FFFFFF. Large rounded sans-serif headings, restrained serif emphasis, generous whitespace and a mint stage with a functional, explicitly illustrative product preview form the identity. Use system fonts, local icons and no tracking or third-party runtime resources.
+Revised after user feedback on 2026-11-02: the initial centered hero, italic serif, mint stage and rounded feature cards felt like a common AI template. Replace that composition with a restrained desktop-utility site. Use white #FFFFFF, ink #202725, gray #626965, neutral surface #F4F5F4, rules #DCE0DD and Gom teal #0B7A75 as a small accent. Typography is Helvetica Neue/Helvetica/Arial with normal proportions and medium weights; no serif or italic display. The asymmetrical introduction places a left-aligned factual headline beside direct downloads. A large plain app window follows. Features are divided content rows, downloads are simple OS rows and all prose describes actual usage. No decorative pills, floating endorsements, gradients, bento cards, stars or marketing claims. Use system fonts, local icons and no tracking or third-party runtime resources.
 
 ## Structure and behavior
 
-Navigation → hero and download actions → interactive provider preview → supported platforms → feature layouts (accounts, floating chat, private space, reminders and shelf) → three-step onboarding → download panel → installation FAQ → footer. Mobile navigation, keyboard-operable provider tabs, native FAQ disclosures and reduced-motion support. Download URLs reference verified release v0.8.3, not the older local README. Both installers remain reachable without JavaScript.
+Navigation → asymmetrical introduction and direct downloads → interactive provider window → supported platforms → feature rows (accounts, floating chat, private space, reminders and shelf) → simple three-step onboarding → OS download rows → installation FAQ → footer. Mobile navigation, keyboard-operable provider tabs, native FAQ disclosures and reduced-motion support. Download URLs reference verified release v0.8.3, not the older local README. Both installers remain reachable without JavaScript.
 
 ## Constraints and acceptance
 
