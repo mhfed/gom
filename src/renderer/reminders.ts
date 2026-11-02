@@ -326,7 +326,14 @@ export function createReminderUI(options: { getState(): AppState }) {
           (entry) => entry.id === item.accountId && !entry.archived,
         );
         const readonly = state.reminders?.unavailable === true;
-        actions.append(button("Mở tài khoản", "open", item, !available));
+        actions.append(
+          button(
+            item.hasConversationLink ? "Mở cuộc trò chuyện" : "Mở tài khoản",
+            "open",
+            item,
+            !available,
+          ),
+        );
         if (item.completedAt === null)
           actions.append(
             button("Để sau 15 phút", "snooze", item, readonly),
@@ -622,7 +629,7 @@ export function createReminderUI(options: { getState(): AppState }) {
       noteCount();
       due.value = localInput(futureDefault());
       filter = "pending";
-      feedback("Đã lưu nhắc việc.");
+      feedback(result.message || "Đã lưu nhắc việc.");
     } catch {
       if (current(token, lockVersion))
         text($("reminder-error"), "Chưa lưu được nhắc việc. Bạn thử lại nhé.");

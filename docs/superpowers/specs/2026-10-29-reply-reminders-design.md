@@ -14,3 +14,7 @@ Thiết kế được tiếp tục theo yêu cầu “hoàn thiện Nhắc trả
 - Claim thông báo được lưu trước khi phát để tránh lặp sau khởi động. Nếu đổi không gian giữa lúc claim và phát, bỏ claim có điều kiện để nhắc thường có thể phát khi quay lại.
 
 Lựa chọn triển khai: scheduler trong Gom dùng tick hiện có và chạy khi khởi động/thức máy. Không đăng ký service hay lịch hệ điều hành trong bản đầu. Scope hiện tại là chức năng trong mã nguồn và bản build kiểm thử; build bộ cài/phát hành theo yêu cầu tiếp theo.
+
+## Bổ sung: mở lại cuộc trò chuyện
+
+Theo yêu cầu tiếp theo “Nhắc trả lời đúng cuộc trò chuyện”, nếu URL nội bộ của tài khoản đã chọn khác URL vào mặc định, Gom lưu URL đó trong kho nhắc mã hóa và nạp lại khi mở nhắc. Không đọc DOM/nội dung tin nhắn. Nếu nền tảng giữ lựa chọn cuộc trò chuyện trong trạng thái SPA mà URL không đổi, nhắc mở tài khoản và người dùng chọn lại; xem thiết kế bổ sung 2026-11-02.

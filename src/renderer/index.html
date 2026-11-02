@@ -25,6 +25,9 @@
         <symbol id="i-plus" viewBox="0 0 24 24">
           <path d="M12 5v14M5 12h14" />
         </symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24">
+          <path d="M4 7h16m-10 4v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" />
+        </symbol>
         <symbol id="i-arrow" viewBox="0 0 24 24">
           <path d="M5 12h14m-5-5 5 5-5 5" />
         </symbol>
@@ -240,6 +243,30 @@
               hidden
             ></span>
           </button>
+          <div class="workspace-profiles" aria-label="Không gian làm việc">
+            <select id="workspace-profile" aria-label="Chọn không gian làm việc">
+              <option value="">Mặc định</option>
+            </select>
+            <button
+              id="workspace-profile-save"
+              class="icon-button"
+              type="button"
+              title="Lưu bố cục hiện tại thành không gian mới"
+              aria-label="Lưu bố cục hiện tại thành không gian mới"
+            >
+              <svg aria-hidden="true"><use href="#i-plus" /></svg>
+            </button>
+            <button
+              id="workspace-profile-delete"
+              class="icon-button workspace-delete"
+              type="button"
+              title="Xóa không gian đang chọn"
+              aria-label="Xóa không gian đang chọn"
+              hidden
+            >
+              <svg aria-hidden="true"><use href="#i-trash" /></svg>
+            </button>
+          </div>
           <button
             id="private-space-toggle"
             class="workspace-toggle"
@@ -760,7 +787,8 @@
                     Tinder cần bạn chạy lệnh một lần trong Console của tab
                     Chrome đã đăng nhập; Gom chỉ nhận dữ liệu Tinder qua kết nối
                     nội bộ. Gmail, Discord và Telegram chưa nhập phiên Chrome.
-                    Phiên tài khoản đích được giữ nếu nhập thất bại.
+                    Với WhatsApp, hãy mở tab trong Gom và liên kết thiết bị bằng
+                    điện thoại. Phiên tài khoản đích được giữ nếu nhập thất bại.
                   </p>
                 </div>
               </details>
@@ -827,6 +855,21 @@
                 <p>
                   Lựa chọn này áp dụng cho Gom. Giao diện bên trong trang chat
                   do từng nền tảng quản lý.
+                </p>
+              </div>
+              <div class="section-heading">
+                <h3>Tiết kiệm bộ nhớ</h3>
+                <p>
+                  Tài khoản chat chạy nền sẽ tự ngủ sau 15 phút và tải lại khi
+                  bạn mở lại.
+                </p>
+              </div>
+              <div class="inline-note">
+                <svg aria-hidden="true"><use href="#i-info" /></svg>
+                <p>
+                  Khi tab ngủ, nền tảng không gửi thông báo tới Gom. Số chưa
+                  đọc là số gần nhất và có thể cũ cho đến khi bạn mở lại tab.
+                  Bản nháp chưa được nền tảng tự lưu có thể bị mất.
                 </p>
               </div>
             </div>
@@ -1073,6 +1116,12 @@
         </div>
       </div>
     </main>
+    <p
+      id="global-action-feedback"
+      class="global-action-feedback"
+      role="status"
+      hidden
+    ></p>
     <dialog id="command-dialog" aria-labelledby="command-label">
       <div class="command-input">
         <svg aria-hidden="true"><use href="#i-search" /></svg
@@ -1245,6 +1294,11 @@
           aria-describedby="reminder-error"
         >
           <h3>Tạo nhắc việc</h3>
+          <p class="hint">
+            Chọn tài khoản đang mở cuộc trò chuyện. Gom lưu liên kết nội bộ nếu
+            nền tảng có URL riêng; nếu không, nút mở sẽ đưa bạn vào tài khoản
+            để chọn lại.
+          </p>
           <label class="field-label" for="reminder-account"
             >Tài khoản cần quay lại</label
           >
@@ -1342,6 +1396,41 @@
           </button>
         </div>
       </form>
+    </dialog>
+    <p id="workspace-feedback" class="sr-only" role="status"></p>
+    <dialog id="workspace-save-dialog" aria-labelledby="workspace-save-title">
+      <form id="workspace-save-form">
+        <h2 id="workspace-save-title">Lưu không gian làm việc</h2>
+        <p class="hint">
+          Lưu các tab nền tảng, tài khoản đang chọn và giao diện. Thông tin đăng nhập vẫn thuộc tài khoản hiện có.
+        </p>
+        <label class="field-label" for="workspace-profile-name">Tên không gian</label>
+        <input
+          id="workspace-profile-name"
+          type="text"
+          maxlength="32"
+          autocomplete="off"
+          required
+        />
+        <p id="workspace-profile-name-error" class="form-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button id="workspace-save-cancel" type="button" class="secondary">Hủy</button>
+          <button type="submit" class="primary">Lưu không gian</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="workspace-delete-dialog" aria-labelledby="workspace-delete-title">
+      <div class="workspace-delete-content">
+        <h2 id="workspace-delete-title">Xóa không gian làm việc?</h2>
+        <p class="hint">
+          Bố cục <strong id="workspace-delete-name"></strong> sẽ bị xóa. Tài khoản và phiên đăng nhập vẫn được giữ.
+        </p>
+        <p id="workspace-delete-error" class="form-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button id="workspace-delete-cancel" type="button" class="secondary">Hủy</button>
+          <button id="workspace-delete-confirm" type="button" class="primary">Xóa</button>
+        </div>
+      </div>
     </dialog>
     <script src="shell.js"></script>
   </body>

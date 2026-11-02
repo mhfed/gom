@@ -187,6 +187,13 @@ const popupProviders = new Map<WebContents, AccountId>();
 const recovery = new RecoveryPolicy<AccountId>();
 const probes = new ProbeQueue();
 const backgroundWarmups = new WeakMap<WebContents, () => void>();
+const BACKGROUND_HIBERNATION_MS = 15 * 60 * 1000;
+const backgroundSince = new Map<AccountId, number>();
+const hibernatingAccounts = new Set<AccountId>();
+const hibernatedAccounts = new Set<AccountId>();
+const reminderOpenUrls = new Map<AccountId, string>();
+let accountOperationGeneration = 0;
+let hibernationLoop: Promise<void> | undefined;
 const navigationFailed = new Set<AccountId>();
 const epochs = new Map<AccountId, number>();
 let tray: Tray | undefined;
@@ -194,6 +201,7 @@ let traySignature = "";
 let sleeping = false;
 let accountEditorOpen = false;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
+let actionFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
 let wakeTimer: ReturnType<typeof setTimeout> | undefined;
 let firstRunUpdateTimer: ReturnType<typeof setTimeout> | undefined;
 const lastNotificationClicks = new Map<AccountId, number>();
@@ -286,6 +294,7 @@ const state: AppState = {
   providerTabs: normalizeProviderTabs(undefined, [...PROVIDER_ORDER]),
   presentation: normalizePresentation(undefined, []),
   commandOpen: false,
+  actionFeedback: "",
   accounts: defaultAccounts(),
   accountBusy: false,
   catalogWarning: "",
@@ -372,6 +381,21 @@ let workspaces: { normal: WorkspaceNavigation; private: WorkspaceNavigation } =
     normal: normalizeWorkspaceNavigation(undefined, state.accounts, false),
     private: normalizeWorkspaceNavigation(undefined, state.accounts, true),
   };
+interface NamedWorkspaceProfile {
+  id: string;
+  name: string;
+  navigation: WorkspaceNavigation;
+}
+type WorkspaceKey = "normal" | "private";
+const workspaceProfiles: Record<WorkspaceKey, NamedWorkspaceProfile[]> = {
+  normal: [],
+  private: [],
+};
+const activeWorkspaceProfileIds: Record<WorkspaceKey, string | null> = {
+  normal: null,
+  private: null,
+};
+let workspaceProfileBusy = false;
 let privacyGeneration = 0;
 let privacyDialogs = new AbortController();
 const privacyMenus = new Set<Menu>();
@@ -506,6 +530,7 @@ function publicAccount(id: unknown): boolean {
 function visibleState(): AppState {
   state.floating = floating?.snapshot();
   state.reminders = reminderService?.snapshot();
+  const workspaceKey: WorkspaceKey = privateUnlocked ? "private" : "normal";
   state.privateSpace = {
     ...privateStore.status(),
     unlocked: privateUnlocked,
@@ -514,35 +539,65 @@ function visibleState(): AppState {
   return {
     ...privateState(state, privateUnlocked),
     shelf: shelfService.summary(),
+    workspaceProfiles: {
+      activeId: activeWorkspaceProfileIds[workspaceKey],
+      items: workspaceProfiles[workspaceKey].map(({ id, name }) => ({
+        id,
+        name,
+      })),
+    },
   };
 }
 function accessibleProvider(id: unknown): id is ProviderId {
   return knownProvider(id) && visibleState().providers.some((p) => p.id === id);
 }
+function workspaceNavigationFor(key: WorkspaceKey): WorkspaceNavigation {
+  const id = activeWorkspaceProfileIds[key];
+  return (
+    workspaceProfiles[key].find((profile) => profile.id === id)?.navigation ||
+    workspaces[key]
+  );
+}
+function workspaceNavigation(): WorkspaceNavigation {
+  return workspaceNavigationFor(privateUnlocked ? "private" : "normal");
+}
 function rememberWorkspace() {
   if (!workspaces) return;
-  workspaces[privateUnlocked ? "private" : "normal"] =
-    normalizeWorkspaceNavigation(
-      {
-        active: state.active,
-        providerTabs: state.providerTabs,
-        presentation: state.presentation,
-        lastAccounts: Object.fromEntries(lastAccounts),
-        collapsed: state.collapsed,
-        panel: state.panel,
-      },
-      state.accounts,
-      privateUnlocked,
-    );
-}
-function restoreWorkspace() {
-  const key = privateUnlocked ? "private" : "normal";
+  const key: WorkspaceKey = privateUnlocked ? "private" : "normal";
   const next = normalizeWorkspaceNavigation(
-    workspaces[key],
+    {
+      active: state.active,
+      providerTabs: state.providerTabs,
+      presentation: state.presentation,
+      lastAccounts: Object.fromEntries(lastAccounts),
+      collapsed: state.collapsed,
+      panel: state.panel,
+    },
     state.accounts,
     privateUnlocked,
   );
-  workspaces[key] = next;
+  const profile = workspaceProfiles[key].find(
+    (item) => item.id === activeWorkspaceProfileIds[key],
+  );
+  if (profile) profile.navigation = next;
+  else workspaces[key] = next;
+}
+function restoreWorkspace() {
+  const key: WorkspaceKey = privateUnlocked ? "private" : "normal";
+  if (
+    activeWorkspaceProfileIds[key] &&
+    !workspaceProfiles[key].some(
+      (profile) => profile.id === activeWorkspaceProfileIds[key],
+    )
+  )
+    activeWorkspaceProfileIds[key] = null;
+  const source = workspaceNavigation();
+  const next = normalizeWorkspaceNavigation(source, state.accounts, privateUnlocked);
+  const profile = workspaceProfiles[key].find(
+    (item) => item.id === activeWorkspaceProfileIds[key],
+  );
+  if (profile) profile.navigation = next;
+  else workspaces[key] = next;
   state.active = next.active;
   state.providerTabs = next.providerTabs;
   state.presentation = next.presentation;
@@ -576,6 +631,7 @@ function hideInactiveWorkspace() {
       }
     }
     if (inactive) {
+      backgroundSince.delete(account.id);
       epochs.set(account.id, (epochs.get(account.id) ?? 0) + 1);
       testAlerts.get(account.id)?.close();
       testAlerts.delete(account.id);
@@ -592,6 +648,56 @@ function hideInactiveWorkspace() {
     }
   }
 }
+function resetBackgroundTimersForWorkspace() {
+  const now = Date.now();
+  backgroundSince.clear();
+  for (const [id] of views.entries())
+    if (accessible(id) && id !== state.active) backgroundSince.set(id, now);
+}
+function normalizeWorkspaceProfiles(
+  raw: unknown,
+  accounts: Account[],
+  isPrivate: boolean,
+): NamedWorkspaceProfile[] {
+  if (!Array.isArray(raw)) return [];
+  const profiles: NamedWorkspaceProfile[] = [];
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  for (const candidate of raw.slice(0, 12)) {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))
+      continue;
+    const value = candidate as Record<string, unknown>;
+    if (
+      typeof value.id !== "string" ||
+      !/^[\w-]{1,64}$/.test(value.id) ||
+      ids.has(value.id) ||
+      typeof value.name !== "string"
+    )
+      continue;
+    const name = value.name.trim();
+    const foldedName = name.toLocaleLowerCase();
+    if (
+      !name ||
+      name.length > 32 ||
+      /[\u0000-\u001f\u007f]/.test(name) ||
+      foldedName === "mặc định" ||
+      names.has(foldedName)
+    )
+      continue;
+    ids.add(value.id);
+    names.add(foldedName);
+    profiles.push({
+      id: value.id,
+      name,
+      navigation: normalizeWorkspaceNavigation(
+        value.navigation,
+        accounts,
+        isPrivate,
+      ),
+    });
+  }
+  return profiles;
+}
 function switchWorkspace(toPrivate: boolean) {
   const changed = privateUnlocked !== toPrivate;
   if (changed || privateUnlocked) {
@@ -605,6 +711,7 @@ function switchWorkspace(toPrivate: boolean) {
   hideInactiveWorkspace();
   if (changed && state.panel === "service" && accessible(state.active))
     activate(state.active, false);
+  resetBackgroundTimersForWorkspace();
   layout();
   publish(true);
   scheduleSave();
@@ -691,6 +798,173 @@ async function privateSpaceCommand(arg: unknown): Promise<AccountResult> {
     return { ok: false, message: "Tài khoản không thuộc không gian hiện tại." };
   return transferAccount(data.accountId, data.private, generation);
 }
+async function workspaceProfileCommand(arg: unknown): Promise<AccountResult> {
+  const request = arg as {
+    action?: unknown;
+    data?: Record<string, unknown>;
+  } | null;
+  if (!request || typeof request !== "object") return { ok: false };
+  if (
+    closing ||
+    accountEditorOpen ||
+    state.accountBusy ||
+    state.importing ||
+    closingProviders.size > 0 ||
+    workspaceProfileBusy
+  )
+    return {
+      ok: false,
+      message: "Đợi thao tác hiện tại hoàn tất rồi thử đổi không gian.",
+    };
+  const data =
+    request.data && typeof request.data === "object" ? request.data : {};
+  if (
+    !Number.isSafeInteger(data.lockVersion) ||
+    data.lockVersion !== privacyGeneration
+  )
+    return {
+      ok: false,
+      message: "Không gian đã thay đổi. Mở lại bảng để thử lại.",
+    };
+  const key: WorkspaceKey = privateUnlocked ? "private" : "normal";
+  workspaceProfileBusy = true;
+  try {
+    return await updateWorkspaceProfile(request.action, data, key);
+  } finally {
+    workspaceProfileBusy = false;
+  }
+}
+async function updateWorkspaceProfile(
+  action: unknown,
+  data: Record<string, unknown>,
+  key: WorkspaceKey,
+): Promise<AccountResult> {
+  const profiles = workspaceProfiles[key];
+  const lockVersion = data.lockVersion as number;
+  const refreshCurrentZone = () => {
+    if (key === (privateUnlocked ? "private" : "normal")) {
+      restoreWorkspace();
+      resetBackgroundTimersForWorkspace();
+      layout();
+    }
+    publish(true);
+  };
+  if (action === "save") {
+    if (typeof data.name !== "string")
+      return { ok: false, message: "Nhập tên không gian làm việc." };
+    const name = data.name.trim();
+    if (!name || name.length > 32 || /[\u0000-\u001f\u007f]/.test(name))
+      return {
+        ok: false,
+        message: "Tên cần có từ 1 đến 32 ký tự.",
+      };
+    const foldedName = name.toLocaleLowerCase();
+    if (
+      foldedName === "mặc định" ||
+      profiles.some(
+        (profile) =>
+          profile.name.toLocaleLowerCase() === foldedName,
+      )
+    )
+      return { ok: false, message: "Tên này đã được dùng trong không gian." };
+    if (profiles.length >= 12)
+      return {
+        ok: false,
+        message: "Mỗi vùng riêng tư lưu tối đa 12 không gian có tên.",
+      };
+    const previousId = activeWorkspaceProfileIds[key];
+    rememberWorkspace();
+    const id = crypto.randomUUID();
+    profiles.push({
+      id,
+      name,
+      navigation: normalizeWorkspaceNavigation(
+        workspaceNavigation(),
+        state.accounts,
+        privateUnlocked,
+      ),
+    });
+    activeWorkspaceProfileIds[key] = id;
+    restoreWorkspace();
+    resetBackgroundTimersForWorkspace();
+    layout();
+    if (!(await persist(true))) {
+      profiles.splice(
+        profiles.findIndex((profile) => profile.id === id),
+        1,
+      );
+      activeWorkspaceProfileIds[key] = previousId;
+      refreshCurrentZone();
+      return {
+        ok: false,
+        message: "Chưa lưu được không gian làm việc. Thử lại sau nhé.",
+      };
+    }
+    return lockVersion === privacyGeneration
+      ? { ok: true, message: "Đã lưu không gian làm việc." }
+      : { ok: false, message: "Không gian đã thay đổi. Mở lại bảng để thử lại." };
+  }
+  if (action === "switch") {
+    const targetId = data.id === null || data.id === "" ? null : data.id;
+    if (
+      targetId !== null &&
+      (typeof targetId !== "string" ||
+        !profiles.some((profile) => profile.id === targetId))
+    )
+      return { ok: false, message: "Không gian này không còn tồn tại." };
+    if (targetId === activeWorkspaceProfileIds[key]) return { ok: true };
+    const previousId = activeWorkspaceProfileIds[key];
+    rememberWorkspace();
+    activeWorkspaceProfileIds[key] = targetId;
+    restoreWorkspace();
+    if (state.panel === "service" && accessible(state.active))
+      activate(state.active, false);
+    resetBackgroundTimersForWorkspace();
+    layout();
+    if (!(await persist(true))) {
+      activeWorkspaceProfileIds[key] = previousId;
+      refreshCurrentZone();
+      return {
+        ok: false,
+        message: "Chưa lưu được lựa chọn không gian. Thử lại sau nhé.",
+      };
+    }
+    return lockVersion === privacyGeneration
+      ? { ok: true }
+      : { ok: false, message: "Không gian đã thay đổi. Mở lại bảng để thử lại." };
+  }
+  if (action === "delete") {
+    const targetId =
+      typeof data.id === "string" ? data.id : activeWorkspaceProfileIds[key];
+    const index = profiles.findIndex((profile) => profile.id === targetId);
+    if (index < 0)
+      return { ok: false, message: "Chọn một không gian có tên để xóa." };
+    const previousId = activeWorkspaceProfileIds[key];
+    rememberWorkspace();
+    const [removed] = profiles.splice(index, 1);
+    if (activeWorkspaceProfileIds[key] === removed.id) {
+      activeWorkspaceProfileIds[key] = null;
+      restoreWorkspace();
+      if (state.panel === "service" && accessible(state.active))
+        activate(state.active, false);
+      resetBackgroundTimersForWorkspace();
+      layout();
+    }
+    if (!(await persist(true))) {
+      profiles.splice(index, 0, removed);
+      activeWorkspaceProfileIds[key] = previousId;
+      refreshCurrentZone();
+      return {
+        ok: false,
+        message: "Chưa lưu được thay đổi. Thử lại sau nhé.",
+      };
+    }
+    return lockVersion === privacyGeneration
+      ? { ok: true, message: "Đã xóa không gian làm việc." }
+      : { ok: false, message: "Không gian đã thay đổi. Mở lại bảng để thử lại." };
+  }
+  return { ok: false, message: "Thao tác không gian chưa hợp lệ." };
+}
 async function transferAccount(
   accountId: string,
   toPrivate: boolean,
@@ -703,6 +977,7 @@ async function transferAccount(
     };
   return (
     (await accountOps.run(async () => {
+      accountOperationGeneration++;
       state.accountBusy = true;
       publish();
       const before = state.accounts;
@@ -735,7 +1010,9 @@ async function transferAccount(
         if (floating?.accountId === accountId) floating.conceal();
         reminderService?.invalidate();
         state.accounts = next;
-        const destination = workspaces[toPrivate ? "private" : "normal"];
+        const destination = workspaceNavigationFor(
+          toPrivate ? "private" : "normal",
+        );
         const moved = findAccount(accountId, true)!;
         if (!moved.archived) {
           destination.providerTabs = openProviderTab(
@@ -748,6 +1025,7 @@ async function transferAccount(
         }
         restoreWorkspace();
         hideInactiveWorkspace();
+        resetBackgroundTimersForWorkspace();
         layout();
         publish(true);
         await rm(membershipJournalPath, { force: true });
@@ -770,6 +1048,7 @@ async function transferAccount(
           "Chưa lưu được thay đổi riêng tư. Giữ tài khoản ở trạng thái được bảo vệ; hãy thử lại sau khi mở lại Gom.";
         return { ok: false, message: state.catalogWarning };
       } finally {
+        accountOperationGeneration++;
         state.accountBusy = false;
         publish(true);
       }
@@ -802,6 +1081,44 @@ function providerDefinition(id: ProviderId) {
   if (!provider) throw new Error("unknown-provider");
   return provider;
 }
+function validatedReminderUrl(id: AccountId, raw: unknown): string | undefined {
+  if (typeof raw !== "string" || raw.length > 4096 || !accessible(id))
+    return undefined;
+  const account = findAccount(id);
+  if (
+    !account ||
+    navigationPolicy(account.provider, raw, state.providers) !== "internal"
+  )
+    return undefined;
+  try {
+    const url = new URL(raw);
+    if (url.username || url.password) return undefined;
+    return url.href;
+  } catch {
+    return undefined;
+  }
+}
+function captureReminderUrl(id: AccountId): string | null {
+  const account = findAccount(id);
+  const view = views.peek(id);
+  if (
+    !account ||
+    state.active !== id ||
+    !accessible(id) ||
+    !view ||
+    view.webContents.isDestroyed() ||
+    (!providerDefinition(account.provider).custom &&
+      state.statuses[id] !== "authenticated")
+  )
+    return null;
+  const target = validatedReminderUrl(id, view.webContents.getURL());
+  if (
+    !target ||
+    target === new URL(providerDefinition(account.provider).entry).href
+  )
+    return null;
+  return target;
+}
 function knownProvider(id: unknown): id is ProviderId {
   return validProviderId(id) && state.providers.some((p) => p.id === id);
 }
@@ -810,7 +1127,11 @@ function accountLabel(id: AccountId) {
   return `${providerDefinition(a.provider).label} · ${a.name}`;
 }
 function isCurrent(id: AccountId, contents: WebContents) {
-  return !!findAccount(id) && views.peek(id)?.webContents === contents;
+  return (
+    !hibernatingAccounts.has(id) &&
+    !!findAccount(id) &&
+    views.peek(id)?.webContents === contents
+  );
 }
 const partition = (id: AccountId) =>
   session.fromPartition(accountPartition(findAccount(id, true)!));
@@ -858,6 +1179,16 @@ const statePublisher = new StatePublisher(
 const publish = (force = false) => {
   if (win && !win.isDestroyed()) statePublisher.publish(force);
 };
+function showActionFeedback(message: string) {
+  state.actionFeedback = message;
+  publish();
+  clearTimeout(actionFeedbackTimer);
+  actionFeedbackTimer = setTimeout(() => {
+    actionFeedbackTimer = undefined;
+    state.actionFeedback = "";
+    publish();
+  }, 6500);
+}
 function shouldMuteAccount(id: unknown) {
   const focus = state.preferences.focus;
   return (
@@ -898,8 +1229,14 @@ async function focusCommand(arg: unknown): Promise<AccountResult> {
 }
 function status(id: AccountId, value: ProviderStatus) {
   if (!findAccount(id)) return;
+  if (value === "authenticated" || value === "needs-login")
+    hibernatedAccounts.delete(id);
   state.statuses[id] = value;
-  if (value !== "authenticated")
+  if (
+    value !== "authenticated" &&
+    value !== "sleeping" &&
+    !hibernatedAccounts.has(id)
+  )
     state.unread[id] = normalizeUnread({
       global: null,
       loaded: null,
@@ -1270,6 +1607,7 @@ function guard(contents: WebContents, id: AccountId) {
     return { action: "deny" };
   });
   contents.on("did-create-window", (popup) => {
+    if (state.active !== id) backgroundSince.set(id, Date.now());
     popups.add(popup);
     const popupContents = popup.webContents;
     popupProviders.set(popupContents, id);
@@ -1290,6 +1628,8 @@ function guard(contents: WebContents, id: AccountId) {
 }
 function createView(id: AccountId) {
   if (!accessible(id)) throw Error("unknown-account");
+  if (state.active === id) backgroundSince.delete(id);
+  else backgroundSince.set(id, Date.now());
   state.statuses[id] = "loading";
   const ses = partition(id);
   setupSession(ses, id);
@@ -1356,9 +1696,9 @@ function createView(id: AccountId) {
     epochs.set(id, (epochs.get(id) ?? 0) + 1);
     fail(id, "crashed");
   });
-  void view.webContents
-    .loadURL(providerDefinition(providerFor(id)).entry)
-    .catch(() => {});
+  const entry =
+    reminderOpenUrls.get(id) || providerDefinition(providerFor(id)).entry;
+  void view.webContents.loadURL(entry).catch(() => {});
   return view;
 }
 function shelfCoversPage() {
@@ -1398,6 +1738,10 @@ function activate(id: AccountId, focusPage = true) {
   )
     return;
   if (floating?.accountId === id) floating.returnToMain(false);
+  const previousActive = state.active;
+  if (previousActive !== id && views.peek(previousActive))
+    backgroundSince.set(previousActive, Date.now());
+  backgroundSince.delete(id);
   const opened = !state.providerTabs.open.includes(account.provider);
   state.providerTabs = openProviderTab(state.providerTabs, account.provider);
   const selectionChanged =
@@ -1514,15 +1858,19 @@ async function detectOnce(id: AccountId, contents: WebContents) {
     );
     const result = snapshot.status;
     const theme = normalizeTheme(snapshot.theme);
-    const unread = normalizeUnread(
-      result === "authenticated"
-        ? snapshot.unread
-        : {
-            global: null,
-            loaded: null,
-            kind: unreadKind(providerFor(id)),
-          },
-    );
+    const waking = hibernatedAccounts.has(id);
+    const unread =
+      waking && result === "ready"
+        ? state.unread[id]
+        : normalizeUnread(
+            result === "authenticated"
+              ? snapshot.unread
+              : {
+                  global: null,
+                  loaded: null,
+                  kind: unreadKind(providerFor(id)),
+                },
+          );
     if (!valid()) return;
     let changed = false;
     if (theme && JSON.stringify(theme) !== JSON.stringify(state.themes[id])) {
@@ -1546,6 +1894,8 @@ async function detectOnce(id: AccountId, contents: WebContents) {
       state.statuses[id] = result;
       changed = true;
     }
+    if (result === "authenticated" || result === "needs-login")
+      hibernatedAccounts.delete(id);
     if (result === "authenticated") {
       backgroundWarmups.get(contents)?.();
       backgroundWarmups.delete(contents);
@@ -1626,8 +1976,217 @@ function goBack() {
   )
     contents.navigationHistory.goBack();
 }
+function hasAccountPopup(id: AccountId) {
+  return [...popups].some(
+    (popup) =>
+      !popup.isDestroyed() && popupProviders.get(popup.webContents) === id,
+  );
+}
+function hibernationProtected(id: AccountId, account: Account) {
+  return (
+    (state.active === id &&
+      state.providerTabs.open.includes(account.provider)) ||
+    !accessible(id) ||
+    state.accountBusy ||
+    state.importing ||
+    closingProviders.has(account.provider) ||
+    floating?.accountId === id ||
+    hasAccountPopup(id)
+  );
+}
+function hibernationContextValid(
+  id: AccountId,
+  view: WebContentsView,
+  account: Account,
+  generation: number,
+  backgroundAt: number,
+  epoch: number,
+  operationGeneration: number,
+) {
+  return (
+    !closing &&
+    privacyGeneration === generation &&
+    findAccount(id) === account &&
+    accessible(id) &&
+    views.peek(id) === view &&
+    !view.webContents.isDestroyed() &&
+    !hibernationProtected(id, account) &&
+    backgroundSince.get(id) === backgroundAt &&
+    (epochs.get(id) ?? 0) === epoch &&
+    accountOperationGeneration === operationGeneration &&
+    Date.now() - backgroundAt >= BACKGROUND_HIBERNATION_MS
+  );
+}
+function retryHibernationLater(
+  id: AccountId,
+  view: WebContentsView,
+  account: Account,
+  generation: number,
+  backgroundAt: number,
+) {
+  if (
+    !closing &&
+    privacyGeneration === generation &&
+    findAccount(id) === account &&
+    accessible(id) &&
+    views.peek(id) === view &&
+    state.active !== id &&
+    backgroundSince.get(id) === backgroundAt
+  )
+    backgroundSince.set(id, Date.now());
+}
+async function hibernateAccount(
+  id: AccountId,
+  view: WebContentsView,
+  account: Account,
+  generation: number,
+  backgroundAt: number,
+  epoch: number,
+  operationGeneration: number,
+) {
+  try {
+    if (
+      !hibernationContextValid(
+        id,
+        view,
+        account,
+        generation,
+        backgroundAt,
+        epoch,
+        operationGeneration,
+      )
+    )
+      return;
+    const flushed = await flushBeforeClose([view.webContents.session]);
+    if (!flushed) {
+      retryHibernationLater(id, view, account, generation, backgroundAt);
+      return;
+    }
+    if (
+      !hibernationContextValid(
+        id,
+        view,
+        account,
+        generation,
+        backgroundAt,
+        epoch,
+        operationGeneration,
+      )
+    ) {
+      retryHibernationLater(id, view, account, generation, backgroundAt);
+      return;
+    }
+
+    const contents = view.webContents;
+    const attached =
+      !!win && !win.isDestroyed() && win.contentView.children.includes(view);
+    hibernatingAccounts.add(id);
+    try {
+      if (attached) win.contentView.removeChildView(view);
+      view.setVisible(false);
+      backgroundWarmups.get(contents)?.();
+      backgroundWarmups.delete(contents);
+      epochs.set(id, epoch + 1);
+      if (!contents.isDestroyed()) contents.destroy();
+    } catch {
+      // Leave the view available for the next sleep attempt.
+    } finally {
+      hibernatingAccounts.delete(id);
+    }
+    if (!contents.isDestroyed()) {
+      if (attached && win && !win.isDestroyed()) {
+        try {
+          if (!win.contentView.children.includes(view))
+            win.contentView.addChildView(view);
+          layout();
+        } catch {}
+      }
+      retryHibernationLater(id, view, account, generation, backgroundAt);
+      return;
+    }
+
+    if (views.peek(id) === view) views.remove(id);
+    backgroundSince.delete(id);
+    hibernatedAccounts.add(id);
+    recovery.reset(id);
+    navigationFailed.delete(id);
+    state.statuses[id] = "sleeping";
+    state.connections[id] = {
+      phase: isOnline() ? "connecting" : "offline",
+      reason: null,
+      retryAt: null,
+    };
+    publish();
+  } catch {
+    retryHibernationLater(id, view, account, generation, backgroundAt);
+  }
+}
+async function hibernateDueViews(now: number) {
+  for (const [id, view] of views.entries()) {
+    if (closing) return;
+    const account = findAccount(id);
+    if (!account || !accessible(id)) {
+      backgroundSince.delete(id);
+      continue;
+    }
+    if (
+      state.active === id &&
+      state.providerTabs.open.includes(account.provider)
+    ) {
+      backgroundSince.delete(id);
+      continue;
+    }
+    if (hibernatingAccounts.has(id)) continue;
+    if (hibernationProtected(id, account)) {
+      backgroundSince.set(id, now);
+      continue;
+    }
+    const backgroundAt = backgroundSince.get(id);
+    if (backgroundAt === undefined) {
+      backgroundSince.set(id, now);
+      continue;
+    }
+    if (
+      now - backgroundAt < BACKGROUND_HIBERNATION_MS ||
+      view.webContents.isDestroyed()
+    )
+      continue;
+    await hibernateAccount(
+      id,
+      view,
+      account,
+      privacyGeneration,
+      backgroundAt,
+      epochs.get(id) ?? 0,
+      accountOperationGeneration,
+    );
+  }
+}
+function startHibernationSweep(now: number) {
+  if (hibernationLoop) return;
+  const loop = hibernateDueViews(now).catch(() => {});
+  hibernationLoop = loop;
+  void loop.then(() => {
+    if (hibernationLoop === loop) hibernationLoop = undefined;
+  });
+}
+function hibernationDue(id: AccountId, now: number) {
+  const account = findAccount(id);
+  const backgroundAt = backgroundSince.get(id);
+  return (
+    !!account &&
+    !(
+      state.active === id &&
+      state.providerTabs.open.includes(account.provider)
+    ) &&
+    backgroundAt !== undefined &&
+    now - backgroundAt >= BACKGROUND_HIBERNATION_MS
+  );
+}
 function tick() {
   if (closing || sleeping) return;
+  const now = Date.now();
+  startHibernationSweep(now);
   focusSchedule.refresh();
   void reminderService?.tick();
   const online = isOnline();
@@ -1641,8 +2200,14 @@ function tick() {
           ? "connecting"
           : "connected";
   }
-  if (!state.importing)
-    for (const id of recovery.due(Date.now(), online)) reloadProvider(id);
+  if (!state.importing && !state.accountBusy)
+    for (const id of recovery.due(
+      now,
+      online,
+      (id) =>
+        !hibernationDue(id, now) && !hibernatingAccounts.has(id),
+    ))
+      reloadProvider(id);
   for (const [id, view] of views.entries()) void detect(id, view.webContents);
   publish();
 }
@@ -1811,14 +2376,16 @@ function configureShortcut(enabled: boolean) {
     state.notice = `Phím tắt ${SHORTCUT_DISPLAY} đang được app khác dùng. Bạn có thể bật lại sau.`;
   } else state.preferences.shortcut = true;
 }
-async function persist(forcePublish = false) {
+async function persist(forcePublish = false): Promise<boolean> {
   publish(forcePublish);
   try {
     await save();
+    return true;
   } catch {
     state.notice =
       "Chưa lưu được cài đặt. Bạn kiểm tra dung lượng/quyền ghi rồi thử lại.";
     publish();
+    return false;
   }
 }
 function scheduleSave() {
@@ -1976,6 +2543,7 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
   if (!findAccount(targetId) || providerFor(targetId) !== "messenger")
     return { status: "invalid-account" };
   if (state.importing) return { status: "busy" };
+  accountOperationGeneration++;
   state.importing = true;
   state.notice = "Đang kiểm tra phiên Messenger từ hồ sơ đã chọn…";
   publish();
@@ -2088,6 +2656,7 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
     verified.forEach((cookie) => (cookie.value = ""));
     if (stage && !stage.isDestroyed()) stage.destroy();
     await stageSession?.clearStorageData().catch(() => {});
+    accountOperationGeneration++;
     state.importing = false;
     publish();
   }
@@ -2124,6 +2693,7 @@ async function importTinderChromeSession(
   if (!findAccount(targetId) || providerFor(targetId) !== "tinder")
     return { status: "invalid-account" };
   if (state.importing) return { status: "busy" };
+  accountOperationGeneration++;
   state.importing = true;
   state.notice = "Đang kiểm tra tài khoản Tinder đích…";
   publish();
@@ -2213,6 +2783,7 @@ async function importTinderChromeSession(
       if (typeof imported.mfaRecord === "string") imported.mfaRecord = "";
       else if (imported.mfaRecord) imported.mfaRecord = null;
     }
+    accountOperationGeneration++;
     state.importing = false;
     publish();
   }
@@ -2228,6 +2799,13 @@ async function importProviderSession(
   if (!findAccount(targetId) || providerFor(targetId) !== provider)
     return { status: "invalid-account" };
   if (state.importing) return { status: "busy" };
+  if (provider === "whatsapp") {
+    state.notice =
+      "Mở WhatsApp trong Gom và liên kết thiết bị trên điện thoại.";
+    publish();
+    return { status: "unsupported-session" };
+  }
+  accountOperationGeneration++;
   state.importing = true;
   const label = providerDefinition(provider).label;
   state.notice = `Đang kiểm tra phiên ${label} từ hồ sơ Chrome đã chọn…`;
@@ -2350,6 +2928,7 @@ async function importProviderSession(
     verified.forEach((cookie) => (cookie.value = ""));
     if (stage && !stage.isDestroyed()) stage.destroy();
     await stageSession?.clearStorageData().catch(() => {});
+    accountOperationGeneration++;
     state.importing = false;
     publish();
   }
@@ -2390,6 +2969,7 @@ async function addProvider(arg: unknown): Promise<ProviderResult> {
   const { name, url } = arg;
   return (
     accountOps.run(async () => {
+      accountOperationGeneration++;
       state.accountBusy = true;
       const generation = privacyGeneration;
       const inPrivateSpace = privateUnlocked;
@@ -2420,6 +3000,7 @@ async function addProvider(arg: unknown): Promise<ProviderResult> {
           : "Chưa lưu được website. Bạn kiểm tra quyền ghi hoặc dung lượng rồi thử lại.";
         return { ok: false, message };
       } finally {
+        accountOperationGeneration++;
         state.accountBusy = false;
         publish();
       }
@@ -2439,12 +3020,19 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
       message: "Đợi thao tác hiện tại hoàn tất để đóng tab.",
     };
   if (!state.providerTabs.open.includes(provider)) return { ok: true };
+  accountOperationGeneration++;
   state.accountBusy = true;
   const generation = privacyGeneration;
   closingProviders.add(provider);
   publish();
   try {
     const custom = providerDefinition(provider).custom;
+    const providerAccounts = state.accounts.filter(
+      (account) =>
+        account.provider === provider &&
+        !account.archived &&
+        accessible(account.id),
+    );
     const owned = [...views.entries()].filter(
       ([id]) => providerFor(id) === provider && accessible(id),
     );
@@ -2464,6 +3052,12 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
     const result = closeProviderTab(state.providerTabs, provider, active);
     state.providerTabs = result.tabs;
     if (custom) {
+      const liveIds = new Set(owned.map(([id]) => id));
+      for (const account of providerAccounts) {
+        backgroundSince.delete(account.id);
+        hibernatedAccounts.delete(account.id);
+        if (!liveIds.has(account.id)) state.statuses[account.id] = "idle";
+      }
       for (const popup of [...popups])
         if (!popup.isDestroyed()) {
           const id = popupProviders.get(popup.webContents);
@@ -2471,6 +3065,8 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
             popup.destroy();
         }
       for (const [id, view] of owned) {
+        backgroundSince.delete(id);
+        hibernatedAccounts.delete(id);
         epochs.set(id, (epochs.get(id) ?? 0) + 1);
         views.remove(id);
         win.contentView.removeChildView(view);
@@ -2503,6 +3099,7 @@ async function closeProvider(provider: ProviderId): Promise<AccountResult> {
     return { ok: true };
   } finally {
     closingProviders.delete(provider);
+    accountOperationGeneration++;
     state.accountBusy = false;
     publish();
   }
@@ -2760,6 +3357,7 @@ async function changeAccount(
     return { ok: false, message: "Thông tin tài khoản chưa hợp lệ." };
   return (
     accountOps.run(async () => {
+      accountOperationGeneration++;
       state.accountBusy = true;
       publish();
       try {
@@ -2816,6 +3414,8 @@ async function changeAccount(
         if (command === "account-archive") {
           reminderService?.invalidate();
           if (floating?.accountId === id) floating.conceal();
+          backgroundSince.delete(id);
+          hibernatedAccounts.delete(id);
           epochs.set(id, (epochs.get(id) ?? 0) + 1);
           for (const popup of [...popups])
             if (
@@ -2892,6 +3492,7 @@ async function changeAccount(
         publish();
         return { ok: false, message };
       } finally {
+        accountOperationGeneration++;
         state.accountBusy = false;
         publish();
       }
@@ -2912,6 +3513,8 @@ async function save() {
     presentation: normal.presentation,
     providerTabs: normal.providerTabs,
     workspaces,
+    workspaceProfiles,
+    activeWorkspaceProfileIds,
     providerTabDefaultsVersion: savedProviderTabDefaultsVersion,
   });
 }
@@ -2961,6 +3564,8 @@ function beginAutomaticUpdate() {
 async function quit(installUpdate = false) {
   if (closing) return;
   closing = true;
+  clearTimeout(actionFeedbackTimer);
+  await hibernationLoop?.catch(() => {});
   focusSchedule.dispose();
   await reminderService?.close();
   floating?.close();
@@ -3174,6 +3779,39 @@ else {
         true,
       ),
     };
+    const storedWorkspaceProfiles =
+      stored.workspaceProfiles && typeof stored.workspaceProfiles === "object"
+        ? (stored.workspaceProfiles as Record<string, unknown>)
+        : {};
+    workspaceProfiles.normal = normalizeWorkspaceProfiles(
+      storedWorkspaceProfiles.normal,
+      state.accounts,
+      false,
+    );
+    workspaceProfiles.private = normalizeWorkspaceProfiles(
+      storedWorkspaceProfiles.private,
+      state.accounts,
+      true,
+    );
+    const storedActiveProfiles =
+      stored.activeWorkspaceProfileIds &&
+      typeof stored.activeWorkspaceProfileIds === "object"
+        ? (stored.activeWorkspaceProfileIds as Record<string, unknown>)
+        : {};
+    activeWorkspaceProfileIds.normal =
+      typeof storedActiveProfiles.normal === "string" &&
+      workspaceProfiles.normal.some(
+        (profile) => profile.id === storedActiveProfiles.normal,
+      )
+        ? storedActiveProfiles.normal
+        : null;
+    activeWorkspaceProfileIds.private =
+      typeof storedActiveProfiles.private === "string" &&
+      workspaceProfiles.private.some(
+        (profile) => profile.id === storedActiveProfiles.private,
+      )
+        ? storedActiveProfiles.private
+        : null;
     restoreWorkspace();
     if (!stored.activeAccount)
       await copyFile(
@@ -3240,6 +3878,7 @@ else {
       currentEpoch: () => privacyGeneration,
       accounts: () => state.accounts,
       accessible: (id) => accessible(id, true),
+      captureConversation: captureReminderUrl,
       canNotify: (id) =>
         !closing &&
         !sleeping &&
@@ -3247,20 +3886,56 @@ else {
         publicAccount(id) &&
         accessible(id) &&
         Notification.isSupported(),
-      openAccount: async (id) => {
+      openAccount: async (id, rawTarget) => {
+        const account = findAccount(id);
         if (
           closing ||
           !accessible(id) ||
           accountEditorOpen ||
-          state.commandOpen
+          state.commandOpen ||
+          state.accountBusy ||
+          state.importing ||
+          !account ||
+          closingProviders.has(account.provider)
         )
           return {
             ok: false,
             message: "Đóng hộp thoại hiện tại trước khi mở tài khoản.",
           };
-        activate(id);
+        const target = validatedReminderUrl(id, rawTarget);
+        const existing = views.peek(id);
+        const existingIsLive =
+          !!existing && !existing.webContents.isDestroyed();
+        if (target && !existingIsLive) reminderOpenUrls.set(id, target);
+        try {
+          activate(id);
+        } finally {
+          reminderOpenUrls.delete(id);
+        }
+        const view = views.peek(id);
+        if (!view || view.webContents.isDestroyed())
+          return {
+            ok: false,
+            message: "Chưa mở được tài khoản của nhắc việc.",
+          };
+        if (
+          target &&
+          existingIsLive &&
+          view.webContents.getURL() !== target
+        )
+          void view.webContents.loadURL(target).catch(() => {});
         showWindow();
-        return { ok: true, accountId: id };
+        const message = target
+          ? "Đang mở lại cuộc trò chuyện đã lưu."
+          : rawTarget
+            ? "Liên kết không còn hợp lệ; đã mở tài khoản thay thế."
+            : "Đã mở tài khoản. Chọn lại cuộc trò chuyện nếu cần.";
+        showActionFeedback(message);
+        return {
+          ok: true,
+          accountId: id,
+          message,
+        };
       },
       notify: notifyReminder,
       changed: () => publish(),
@@ -3418,6 +4093,8 @@ else {
           return floatChat();
         case "private-space":
           return privateSpaceCommand(arg);
+        case "workspace-profile":
+          return workspaceProfileCommand(arg);
         case "focus":
           return focusCommand(arg);
         case "state":

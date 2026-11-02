@@ -40,12 +40,21 @@ export class RecoveryPolicy<K extends string = ProviderId> {
   retryAt(id: K) {
     return this.states.get(id)?.next ?? null;
   }
-  due(now: number, online: boolean): K[] {
+  due(
+    now: number,
+    online: boolean,
+    canRetry: (id: K) => boolean = () => true,
+  ): K[] {
     const due: K[] = [];
     for (const [id, s] of this.states) {
       if (s.healthySince !== null && now - s.healthySince >= 30000)
         s.attempts = 0;
-      if (online && s.next !== null && now >= s.next) {
+      if (
+        online &&
+        s.next !== null &&
+        now >= s.next &&
+        canRetry(id)
+      ) {
         s.next = null;
         s.attempts++;
         due.push(id);

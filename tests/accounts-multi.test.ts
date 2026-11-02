@@ -28,7 +28,7 @@ test("legacy migration keeps exact partition names; new same-platform accounts h
   ]);
   assert.deepEqual(
     legacy.slice(3).map((account) => account.id),
-    ["gmail", "instagram", "discord", "slack", "tinder"],
+    ["gmail", "instagram", "discord", "slack", "tinder", "whatsapp"],
   );
   const added = createAccount("zalo", "Công việc", "💼", uuid);
   assert.equal(added.id, "acc_" + uuid);

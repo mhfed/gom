@@ -71,6 +71,29 @@ function reference(value: unknown): string {
     throw new Error("invalid-reminder-id");
   return value;
 }
+function conversationUrl(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (
+    typeof value !== "string" ||
+    !value ||
+    value.length > 4096 ||
+    value.replace(controls, "") !== value
+  )
+    throw new Error("invalid-reminder-url");
+  try {
+    const url = new URL(value);
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      url.href !== value
+    )
+      throw new Error("invalid-reminder-url");
+    return url.href;
+  } catch {
+    throw new Error("invalid-reminder-url");
+  }
+}
 function parse(plaintext: string): ReplyReminder[] {
   if (typeof plaintext !== "string" || Buffer.byteLength(plaintext) > MAX_BYTES)
     throw new Error("invalid-reminders");
@@ -98,10 +121,12 @@ function parse(plaintext: string): ReplyReminder[] {
     const name = note(raw.note);
     if (name !== raw.note) throw new Error("invalid-reminders");
     ids.add(raw.id);
+    const target = conversationUrl(raw.conversationUrl);
     return {
       id: raw.id,
       accountId: accountId(raw.accountId),
       note: name,
+      ...(target ? { conversationUrl: target } : {}),
       dueAt: raw.dueAt,
       createdAt: raw.createdAt,
       completedAt: raw.completedAt,
@@ -252,7 +277,12 @@ export class ReminderStore {
     }
   }
   async add(
-    input: { accountId: string; note: string; dueAt: number },
+    input: {
+      accountId: string;
+      note: string;
+      dueAt: number;
+      conversationUrl?: string;
+    },
     now = Date.now(),
     valid?: MutationGuard,
   ): Promise<ReplyReminder> {
@@ -260,6 +290,7 @@ export class ReminderStore {
       accountId: accountId(input?.accountId),
       note: note(input?.note),
       dueAt: future(input?.dueAt, now),
+      conversationUrl: conversationUrl(input?.conversationUrl),
     };
     return this.enqueue(async () => {
       this.ready();

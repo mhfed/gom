@@ -446,6 +446,37 @@ header .focus-toolbar {
   gap: 3px;
   flex: none;
 }
+.workspace-profiles {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+}
+.workspace-profiles select {
+  width: 112px;
+  height: 28px;
+  padding: 0 5px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+.workspace-profiles .icon-button {
+  width: 26px;
+  height: 28px;
+  border-radius: 6px;
+}
+.workspace-profiles .workspace-delete {
+  color: var(--danger);
+}
+.workspace-profiles .icon-button svg {
+  width: 15px;
+  height: 15px;
+}
 .tools svg,
 .account-picker svg {
   width: 17px;
@@ -1016,6 +1047,26 @@ header .focus-toolbar {
   margin-top: 18px;
   font-size: 12px;
   line-height: 1.6;
+}
+.global-action-feedback {
+  position: fixed;
+  z-index: 20;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(420px, calc(100vw - 36px));
+  max-height: 44px;
+  overflow: hidden;
+  margin: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 12px 35px #0002;
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
 }
 .catalog-warning {
   padding: 14px;
@@ -1766,6 +1817,35 @@ input[aria-invalid="true"] {
   margin-top: 16px;
   margin-bottom: 7px;
 }
+#workspace-save-dialog,
+#workspace-delete-dialog {
+  width: min(430px, calc(100vw - 40px));
+  padding: 25px;
+}
+#workspace-save-dialog h2,
+#workspace-delete-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+#workspace-save-dialog .hint,
+#workspace-delete-dialog .hint {
+  line-height: 1.55;
+}
+#workspace-save-dialog input {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: var(--paper);
+}
+#workspace-save-dialog .field-label {
+  display: block;
+  margin: 16px 0 7px;
+}
+#workspace-profile-name-error:empty,
+#workspace-delete-error:empty {
+  display: none;
+}
 .reminder-toolbar {
   position: relative;
 }
@@ -2304,6 +2384,9 @@ dialog::backdrop {
   }
   .tools {
     gap: 2px;
+  }
+  .workspace-profiles select {
+    width: 82px;
   }
 }
 @media (max-width: 800px) {

@@ -1,6 +1,13 @@
+import { whatsappStatusScript } from "./whatsapp-dom.ts";
+
 /** Only count indicators are returned; message text and account identifiers never leave the view. */
 export const unreadScript = `(()=>{
  const host=location.hostname;
+ if(host==='web.whatsapp.com'){
+  const status=${whatsappStatusScript};
+  const count=status==='authenticated'?document.title.match(/^\\(([\\d,]+\\+?)\\)\\s*WhatsApp\\s*$/)?.[1]:null;
+  return {global:count??null,loaded:null,kind:'conversations'};
+ }
  if(host==='mail.google.com'){
   const title=document.title.match(/^\\(([\\d,]+\\+?)\\)/);
   const label=[...document.querySelectorAll('[aria-label],[data-tooltip]')].map(e=>e.getAttribute('aria-label')||e.getAttribute('data-tooltip')||'').find(v=>/(?:Inbox|Hộp thư đến).*?\\d/i.test(v));

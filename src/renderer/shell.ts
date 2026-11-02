@@ -3,7 +3,9 @@ import { createProviderNavigation } from "./provider-navigation.ts";
 import { createPrivateSpaceUI } from "./private-space.ts";
 import { createShelfUI } from "./shelf.ts";
 import { createReminderUI } from "./reminders.ts";
+import { createWorkspacePresetUI } from "./workspace-presets.ts";
 import { createFocusUI } from "./focus.ts";
+import { sessionImportState } from "./session-import.ts";
 import {
   type Account,
   type AccountId,
@@ -34,6 +36,7 @@ const labels = {
   ready: "Sẵn sàng",
   "needs-login": "Đăng nhập để bắt đầu",
   authenticated: "Đã kết nối · Phiên riêng trên máy",
+  sleeping: "Đang ngủ · chọn để tải lại",
   error: "Chưa kết nối được · Thử tải lại",
 };
 const icons: Record<string, string> = {
@@ -45,6 +48,7 @@ const icons: Record<string, string> = {
   discord: "discord.svg",
   slack: "slack.svg",
   tinder: "tinder.svg",
+  whatsapp: "whatsapp.svg",
 };
 let current: AppState;
 let activeTab = "accounts";
@@ -58,6 +62,7 @@ let logoDialogSelection: ProviderLogoChange | undefined;
 let logoDialogBusy = false;
 let privacyGeneration = 0;
 let floatingBusy = false;
+let actionFeedbackTimer: number | undefined;
 const settingsSections: Record<string, { title: string; description: string }> =
   {
     accounts: {
@@ -1040,6 +1045,24 @@ $("floating-show").onclick = () => $("float-chat").click();
 $("floating-bring-back").onclick = () => {
   if (current?.active) void window.desktop.activate(current.active);
 };
+function renderSessionImport(state: AppState) {
+  const targetId = $<HTMLSelectElement>("import-target").value;
+  const account = state.accounts.find((account) => account.id === targetId);
+  const availability = sessionImportState({
+    target: account
+      ? { provider: account.provider, label: nameOf(account) }
+      : undefined,
+    hasProfiles: !!state.profiles.length,
+    importing: state.importing,
+    accountBusy: state.accountBusy,
+  });
+  setProperty($("import-hint"), "textContent", availability.hint);
+  setProperty(
+    $<HTMLButtonElement>("import"),
+    "disabled",
+    availability.disabled,
+  );
+}
 function render(state: AppState) {
   const previous = current;
   const active = state.accounts.find((a) => a.id === state.active);
@@ -1050,7 +1073,25 @@ function render(state: AppState) {
         state.privateSpace.lockVersion !== previous.privateSpace?.lockVersion));
   if (spaceChanged) scrubPrivateUI();
   current = state;
+  const actionFeedback = $("global-action-feedback");
+  if (state.actionFeedback) {
+    if (previous?.actionFeedback !== state.actionFeedback) {
+      actionFeedback.textContent = state.actionFeedback;
+      actionFeedback.hidden = false;
+      window.clearTimeout(actionFeedbackTimer);
+      actionFeedbackTimer = window.setTimeout(() => {
+        actionFeedback.hidden = true;
+        actionFeedback.textContent = "";
+      }, 6500);
+    }
+  } else {
+    window.clearTimeout(actionFeedbackTimer);
+    actionFeedbackTimer = undefined;
+    actionFeedback.hidden = true;
+    actionFeedback.textContent = "";
+  }
   privateSpaceUI.sync(state);
+  workspacePresetUI.sync(state);
   shelfUI.render(state);
   reminderUI.sync(state);
   focusUI.sync(state);
@@ -1113,13 +1154,15 @@ function render(state: AppState) {
       setProperty(
         accountStatus,
         "textContent",
-        state.statuses[a.id] === "authenticated"
-          ? "● Đã kết nối"
-          : state.statuses[a.id] === "needs-login"
-            ? "Cần đăng nhập"
-            : state.connections[a.id].phase === "offline"
-              ? "Ngoại tuyến"
-              : labels[state.statuses[a.id]].split(" · ")[0],
+        state.statuses[a.id] === "sleeping"
+          ? "Đang ngủ · mở để tải lại"
+          : state.statuses[a.id] === "authenticated"
+            ? "● Đã kết nối"
+            : state.statuses[a.id] === "needs-login"
+              ? "Cần đăng nhập"
+              : state.connections[a.id].phase === "offline"
+                ? "Ngoại tuyến"
+                : labels[state.statuses[a.id]].split(" · ")[0],
       );
       setClass(
         accountStatus,
@@ -1259,25 +1302,8 @@ function render(state: AppState) {
     const importBusy = state.importing || state.accountBusy;
     setProperty(select, "disabled", importBusy || !state.profiles.length);
     setProperty(target, "disabled", importBusy || !target.value);
-    setProperty(
-      $("import-hint"),
-      "textContent",
-      state.importing
-        ? "Đang kiểm tra phiên đã chọn. Bạn đợi một chút nhé."
-        : state.accountBusy
-          ? "Đợi thao tác tài khoản hoàn tất để dùng phiên Chrome."
-          : !target.value
-            ? "Thêm một tài khoản trước khi chọn phiên Chrome."
-            : !state.profiles.length
-              ? "Chưa tìm thấy profile Chrome trên máy. Bạn có thể đăng nhập trực tiếp trong tài khoản đích."
-              : `Chọn tài khoản ${nameOf(state.accounts.find((account) => account.id === target.value)!)} và profile Chrome đã đăng nhập dịch vụ đó.`,
-    );
+    renderSessionImport(state);
     const button = $<HTMLButtonElement>("import");
-    setProperty(
-      button,
-      "disabled",
-      importBusy || !state.profiles.length || !target.value,
-    );
     setProperty(
       button,
       "textContent",
@@ -1317,7 +1343,9 @@ function render(state: AppState) {
       );
   lastPanel = state.panel;
   command.sync(
-    privateSpaceUI.isOpen() || reminderUI.isOpen()
+    privateSpaceUI.isOpen() ||
+      reminderUI.isOpen() ||
+      workspacePresetUI.isOpen()
       ? { ...state, commandOpen: false }
       : state,
   );
@@ -1363,6 +1391,7 @@ $("import").onclick = () =>
     $<HTMLSelectElement>("profiles").value,
     $<HTMLSelectElement>("import-target").value,
   );
+$("import-target").onchange = () => renderSessionImport(current);
 $("retry-connection").onclick = () => void window.desktop.reload();
 $("open-at-login").onchange = (e) =>
   void window.desktop.setPreference(
@@ -1535,6 +1564,7 @@ const privateSpaceUI = createPrivateSpaceUI({
   getState: () => current,
 });
 const reminderUI = createReminderUI({ getState: () => current });
+const workspacePresetUI = createWorkspacePresetUI({ getState: () => current });
 const focusUI = createFocusUI(async () => {
   await window.desktop.settings();
   showTab("notifications");
@@ -1543,6 +1573,7 @@ function scrubPrivateUI() {
   privacyGeneration++;
   privateSpaceUI.reset();
   reminderUI.reset();
+  workspacePresetUI.reset();
   command.reset();
   providerNavigation.reset();
   for (const id of ["account-editor", "provider-logo-editor"]) {
@@ -1579,7 +1610,8 @@ function requestCommand() {
     $<HTMLDialogElement>("account-editor").open ||
     $<HTMLDialogElement>("provider-logo-editor").open ||
     $<HTMLDialogElement>("private-space-dialog").open ||
-    reminderUI.isOpen()
+    reminderUI.isOpen() ||
+    workspacePresetUI.isOpen()
   )
     return;
   void window.desktop.command(!current.commandOpen);

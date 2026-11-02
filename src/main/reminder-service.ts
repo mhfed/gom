@@ -12,7 +12,8 @@ interface ReminderOptions {
   accessible(id: string): boolean;
   canNotify(id: string): boolean;
   currentEpoch(): number;
-  openAccount(id: string): Promise<AccountResult>;
+  captureConversation(id: string): string | null;
+  openAccount(id: string, conversationUrl?: string): Promise<AccountResult>;
   notify(item: ReplyReminder, click: () => void): { close(): void } | null;
   changed(): void;
 }
@@ -39,7 +40,14 @@ export class ReminderService {
         .filter((a) => this.options.accessible(a.id))
         .map((a) => a.id),
     );
-    const items = snapshot.items.filter((item) => ids.has(item.accountId));
+    const items = snapshot.items
+      .filter((item) => ids.has(item.accountId))
+      .map((item) => {
+        const { conversationUrl, ...visible } = item;
+        return conversationUrl
+          ? { ...visible, hasConversationLink: true }
+          : visible;
+      });
     return {
       ...snapshot,
       items,
@@ -78,6 +86,7 @@ export class ReminderService {
       message: "Không gian đã đổi. Mở lại nhắc việc để thử lại.",
     };
     if (!current()) return cancelled;
+    let successMessage: string | undefined;
     try {
       if (action === "add") {
         if (
@@ -90,11 +99,14 @@ export class ReminderService {
             message: "Chọn tài khoản đang dùng trong không gian hiện tại.",
           };
         const accountId = data.accountId;
+        const targetUrl =
+          this.options.captureConversation(accountId) || undefined;
         await this.options.store.add(
           {
             accountId: data.accountId,
             note: data.note as string,
             dueAt: data.dueAt as number,
+            ...(targetUrl ? { conversationUrl: targetUrl } : {}),
           },
           undefined,
           () =>
@@ -102,6 +114,9 @@ export class ReminderService {
             this.options.accessible(accountId) &&
             !this.account(accountId)?.archived,
         );
+        successMessage = targetUrl
+          ? "Đã lưu nhắc kèm liên kết cuộc trò chuyện."
+          : "Đã lưu nhắc. Khi mở, Gom sẽ vào tài khoản để bạn chọn lại cuộc trò chuyện.";
       } else {
         const item =
           typeof data.id === "string"
@@ -118,7 +133,10 @@ export class ReminderService {
               ok: false,
               message: "Khôi phục tài khoản trong Cài đặt trước khi mở.",
             };
-          const result = await this.options.openAccount(item.accountId);
+          const result = await this.options.openAccount(
+            item.accountId,
+            item.conversationUrl,
+          );
           if (result.ok) this.closeAlert(item.id);
           return result;
         }
@@ -142,7 +160,10 @@ export class ReminderService {
       }
       if (!current()) return cancelled;
       this.options.changed();
-      return { ok: true };
+      return {
+        ok: true,
+        ...(successMessage ? { message: successMessage } : {}),
+      };
     } catch (error) {
       this.options.changed();
       const state = this.options.store.snapshot();

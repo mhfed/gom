@@ -9,6 +9,8 @@ const bridge: DesktopBridge = {
   floatChat: () => ipcRenderer.invoke("desktop", "float-chat"),
   privateSpace: (action, data) =>
     ipcRenderer.invoke("desktop", "private-space", { action, data }),
+  workspaceProfile: (action, data) =>
+    ipcRenderer.invoke("desktop", "workspace-profile", { action, data }),
   state: () => ipcRenderer.invoke("desktop", "state"),
   activate: (id) => ipcRenderer.invoke("desktop", "activate", id),
   activateProvider: (provider, focusPage = true) =>

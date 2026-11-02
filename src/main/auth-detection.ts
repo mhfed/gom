@@ -1,4 +1,7 @@
+import { whatsappStatusScript } from "./whatsapp-dom.ts";
+
 export const authScript = `(()=>{
+  if(location.hostname==='web.whatsapp.com')return ${whatsappStatusScript};
   const visible=e=>!!(e&&e.getClientRects().length);
   // Reading innerText can force layout; only ambiguous Telegram/Zalo pages need it.
   const loginText=()=>(document.body?.innerText||'').slice(0,30000);
