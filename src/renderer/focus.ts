@@ -92,12 +92,14 @@ export function createFocusUI(openSettings: () => Promise<void>) {
   stop.onclick = () => {
     void submit("stop");
   };
-  toolbar.onclick = async () => {
+  const open = async () => {
     await openSettings();
     duration.focus();
   };
+  toolbar.onclick = open;
   updateCustom();
   return {
+    open,
     sync(state: AppState) {
       const focus = state.preferences.focus;
       const active = !!focus && focus.endsAt > Date.now();

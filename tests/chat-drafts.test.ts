@@ -7,6 +7,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  rename,
   rm,
   stat,
   writeFile,
@@ -75,7 +76,10 @@ test("encrypted disk round-trip preserves Vietnamese text and separates accounts
   const bytes = await readFile(path);
   assert.equal(bytes.includes(Buffer.from("Bản nháp")), false);
   assert.equal(bytes.includes(Buffer.from("account-one")), false);
-  assert.equal((await stat(path)).mode & 0o777, 0o600);
+  const metadata = await stat(path);
+  assert.equal(metadata.isFile(), true);
+  // Windows exposes file attributes here; Unix permission bits do not map to ACLs.
+  if (process.platform !== "win32") assert.equal(metadata.mode & 0o777, 0o600);
   const loaded = new DraftStore(path, encryption);
   await loaded.load();
   assert.deepEqual(loaded.get(ref), {
@@ -175,13 +179,21 @@ test("a real filesystem write failure preserves prior ciphertext and revision", 
   await store.load();
   await store.save(ref, "Safe prior draft", 0);
   const before = await readFile(path);
-  await chmod(root, 0o500);
-  await assert.rejects(store.save(ref, "Cannot write", 1), {
-    code: "write-failed",
-  });
-  assert.deepEqual(store.get(ref), { text: "Safe prior draft", revision: 1 });
+  const displaced = root + ".saved";
+  await rename(root, displaced);
+  try {
+    // A file at the parent path blocks writes on Windows as well as Unix.
+    await writeFile(root, "not a directory");
+    await assert.rejects(store.save(ref, "Cannot write", 1), {
+      code: "write-failed",
+    });
+    assert.deepEqual(store.get(ref), { text: "Safe prior draft", revision: 1 });
+    assert.deepEqual(await readFile(join(displaced, "drafts.enc")), before);
+  } finally {
+    await rm(root, { force: true });
+    await rename(displaced, root);
+  }
   assert.deepEqual(await readFile(path), before);
-  await chmod(root, 0o700);
   assert.deepEqual((await readdir(root)).sort(), ["drafts.enc"]);
   await store.save(ref, "Retry succeeds", 1);
   assert.deepEqual(store.get(ref), { text: "Retry succeeds", revision: 2 });
@@ -293,14 +305,35 @@ test("readers see only complete encrypted snapshots during replacement writes", 
   await store.load();
   await store.save(ref, "0".repeat(16000), 0);
   let finished = false;
+  let resumeFrom = 9;
   const writes = (async () => {
     try {
-      for (let revision = 1; revision <= 8; revision++)
-        await store.save(ref, String(revision).repeat(16000), revision);
+      for (let revision = 1; revision <= 8; revision++) {
+        try {
+          await store.save(ref, String(revision).repeat(16000), revision);
+        } catch (error) {
+          // Windows can refuse replacing a file held by a concurrent reader.
+          // The failure must roll back; finish the remaining saves once that
+          // reader closes, without treating a rejected write as a commit.
+          if (
+            process.platform !== "win32" ||
+            (error as { code?: string }).code !== "write-failed"
+          )
+            throw error;
+          assert.deepEqual(store.get(ref), {
+            text: String(revision - 1).repeat(16000),
+            revision,
+          });
+          resumeFrom = revision;
+          break;
+        }
+      }
     } finally {
       finished = true;
     }
   })();
+  // Preserve the later rejection while avoiding a temporarily unhandled promise.
+  void writes.catch(() => {});
   let reads = 0;
   do {
     const plain = await encryption.decrypt(await readFile(path));
@@ -311,6 +344,8 @@ test("readers see only complete encrypted snapshots during replacement writes", 
     reads++;
   } while (!finished);
   await writes;
+  for (let revision = resumeFrom; revision <= 8; revision++)
+    await store.save(ref, String(revision).repeat(16000), revision);
   assert.ok(reads > 0);
   assert.deepEqual((await readdir(root)).sort(), ["drafts.enc"]);
   assert.equal(store.get(ref).revision, 9);

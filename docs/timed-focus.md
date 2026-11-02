@@ -1,6 +1,6 @@
 # Tập trung có hẹn giờ
 
-Tính năng trong mã nguồn đang phát triển, chưa nằm trong bộ cài 0.8.2.
+Có từ Gom 0.8.3.
 
 ## Bắt đầu và thay đổi phiên
 

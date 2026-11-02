@@ -3,14 +3,12 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { DatabaseSync } from "node:sqlite";
 import { ChromeSources } from "../src/main/local-accounts.ts";
 import {
   replaceLoginCookies,
   type LoginCookie,
 } from "../src/main/cookie-transaction.ts";
-const execute = promisify(execFile);
 
 test("selected Chrome profile is resolved from metadata; traversal and unlisted profiles are refused", async () => {
   const root = await mkdtemp(join(tmpdir(), "tin-nhan-source-"));
@@ -28,10 +26,14 @@ test("selected Chrome profile is resolved from metadata; traversal and unlisted 
       }),
     );
     await mkdir(join(root, "Default"));
-    await execute("/usr/bin/sqlite3", [
-      join(root, "Default", "Cookies"),
-      "CREATE TABLE meta(key TEXT,value TEXT); INSERT INTO meta VALUES('version','24'); CREATE TABLE cookies(host_key TEXT,name TEXT,path TEXT,is_secure INT,is_httponly INT,expires_utc INT,encrypted_value BLOB,value TEXT); INSERT INTO cookies VALUES('.facebook.com','c_user','/',1,1,0,X'76313000',''); INSERT INTO cookies VALUES('.facebook.com','xs','/',1,1,0,X'76313001',''); INSERT INTO cookies VALUES('.other.test','private','/',1,1,0,X'010203','unrelated-secret');",
-    ]);
+    const database = new DatabaseSync(join(root, "Default", "Cookies"));
+    try {
+      database.exec(
+        "CREATE TABLE meta(key TEXT,value TEXT); INSERT INTO meta VALUES('version','24'); CREATE TABLE cookies(host_key TEXT,name TEXT,path TEXT,is_secure INT,is_httponly INT,expires_utc INT,encrypted_value BLOB,value TEXT); INSERT INTO cookies VALUES('.facebook.com','c_user','/',1,1,0,X'76313000',''); INSERT INTO cookies VALUES('.facebook.com','xs','/',1,1,0,X'76313001',''); INSERT INTO cookies VALUES('.other.test','private','/',1,1,0,X'010203','unrelated-secret');",
+      );
+    } finally {
+      database.close();
+    }
     const sources = new ChromeSources(root, "fixture@example.test");
     assert.deepEqual(
       (await sources.list()).map((x) => [x.id, x.preferred]),

@@ -1,3 +1,4 @@
+export const PROVIDER_TAB_DEFAULTS_VERSION = 2;
 import {
   PROVIDER_ORDER,
   type ProviderId,

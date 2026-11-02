@@ -1,3 +1,4 @@
+import { nativeHeaderChoice } from "./native-menu-fixture.mjs";
 import { _electron } from "playwright-core";
 import assert from "node:assert/strict";
 import { mkdtemp, writeFile, readFile, mkdir, rm } from "node:fs/promises";
@@ -103,7 +104,7 @@ async function launch(path = bootstrap) {
     await wait(
       (s) =>
         s.accounts
-          .filter((a) => !a.archived)
+          .filter((a) => !a.archived && Object.hasOwn(providers, a.provider))
           .every((a) =>
             ["authenticated", "needs-login"].includes(s.statuses[a.id]),
           ),
@@ -209,11 +210,13 @@ async function selectAccount(accountId) {
   }
   assert.deepEqual(
     await client.evaluate(() =>
-      globalThis.fixture.accountMenu.menu.items.map((item) => ({
-        id: item.id,
-        type: item.type,
-        checked: item.checked,
-      })),
+      globalThis.fixture.accountMenu.menu.items
+        .filter((item) => item.id?.startsWith("account-"))
+        .map((item) => ({
+          id: item.id,
+          type: item.type,
+          checked: item.checked,
+        })),
     ),
     before.accounts
       .filter((account) => !account.archived && account.provider === provider)
@@ -256,7 +259,9 @@ try {
     "legacy authenticated",
   );
   assert.deepEqual(
-    (await snapshot()).accounts.map((a) => a.id),
+    (await snapshot()).accounts
+      .filter((a) => Object.hasOwn(providers, a.provider))
+      .map((a) => a.id),
     ["zalo", "messenger", "telegram"],
   );
   assert.equal((await snapshot()).preferences.notifications.telegram, "allow");
@@ -274,7 +279,12 @@ try {
   );
   const added = {};
   for (const provider of Object.keys(providers)) {
-    await page.locator("#add-account-toolbar").click();
+    await nativeHeaderChoice(
+      client,
+      page,
+      "header-add-account",
+      "#provider-add",
+    );
     await page.locator("#account-editor").waitFor({ state: "visible" });
     await page.locator("#account-provider").selectOption(provider);
     await page.locator("#account-name").fill("Công việc " + provider);
@@ -316,7 +326,7 @@ try {
       { id: account.id, url: providers[provider], provider },
     );
   }
-  assert.equal((await snapshot()).accounts.length, 6);
+  assert.equal((await snapshot()).accounts.length, 11);
   const before = await viewIds();
   await remote(
     "telegram",
@@ -406,7 +416,7 @@ try {
   assert.equal(
     (
       await page.evaluate(
-        (id) => window.desktop.importMessenger("Default", id),
+        (id) => window.desktop.importSession("Default", id),
         added.messenger,
       )
     ).status,
@@ -416,7 +426,7 @@ try {
   await destinationPair(false);
   // A new login established while the source is being staged must also survive.
   const raced = page.evaluate(
-    (id) => window.desktop.importMessenger("Default", id),
+    (id) => window.desktop.importSession("Default", id),
     added.messenger,
   );
   await wait((s) => s.importing, "race import started");
@@ -434,7 +444,7 @@ try {
   assert.equal(await cookie(added.messenger, "xs"), "own-xs");
   await destinationPair(false);
   const importPromise = page.evaluate(
-    (id) => window.desktop.importMessenger("Default", id),
+    (id) => window.desktop.importSession("Default", id),
     added.messenger,
   );
   await wait((s) => s.importing, "import started");
@@ -452,7 +462,7 @@ try {
   await wait(
     (s) =>
       s.accounts
-        .filter((a) => !a.archived)
+        .filter((a) => !a.archived && Object.hasOwn(providers, a.provider))
         .every((a) => s.statuses[a.id] === "authenticated"),
     "six authenticated after import",
   );
@@ -461,7 +471,7 @@ try {
   assert.equal(
     (
       await page.evaluate(() =>
-        window.desktop.importMessenger("Default", "messenger"),
+        window.desktop.importSession("Default", "messenger"),
       )
     ).status,
     "already-connected",
@@ -529,11 +539,11 @@ try {
   await wait(
     (s) =>
       s.accounts
-        .filter((a) => !a.archived)
+        .filter((a) => !a.archived && Object.hasOwn(providers, a.provider))
         .every((a) => s.statuses[a.id] === "authenticated"),
     "six authenticated after relaunch",
   );
-  assert.equal((await snapshot()).accounts.length, 6);
+  assert.equal((await snapshot()).accounts.length, 11);
   assert.equal((await snapshot()).preferences.notifications.telegram, "mute");
   assert.equal(
     (await snapshot()).preferences.notifications[added.telegram],

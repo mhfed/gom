@@ -1,3 +1,4 @@
+import type { HeaderAction } from "../shared.ts";
 import type {
   AppState,
   ProviderDefinition,
@@ -5,7 +6,10 @@ import type {
   UnreadInfo,
 } from "../shared.ts";
 import { badgeText } from "../main/unread.ts";
-import { fitProviderTabs } from "./provider-tab-layout.ts";
+import {
+  fitProviderTabs,
+  compactProviderWidth,
+} from "./provider-tab-layout.ts";
 
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -34,6 +38,7 @@ const attr = (node: Element, key: string, value: string) => {
 export function createProviderNavigation(options: {
   getState(): AppState;
   select(provider: ProviderId, focusPage?: boolean): Promise<void>;
+  onAction(action: HeaderAction): void | Promise<void>;
   logo(provider: ProviderDefinition): HTMLElement;
   icon(name: string): SVGSVGElement;
 }) {
@@ -80,36 +85,44 @@ export function createProviderNavigation(options: {
       );
     };
   };
-  const close = async (id: ProviderId) => {
-    const isCurrent = workspaceGuard();
-    try {
-      const result = await window.desktop.closeProvider(id);
-      if (!isCurrent()) return;
-      if (!result.ok) {
-        await window.desktop.providerLibrary(true);
-        if (!isCurrent()) return;
-        report(result.message || "Chưa đóng được tab. Bạn thử lại nhé.");
-      }
-    } catch {
-      if (!isCurrent()) return;
-      await window.desktop.providerLibrary(true);
-      if (!isCurrent()) return;
-      report("Chưa đóng được tab. Bạn thử lại nhé.");
-    }
-  };
   const menu = async (
     button: HTMLElement,
     provider?: ProviderId,
     position?: { x: number; y: number },
+    addMenu = false,
   ) => {
     if (button.getAttribute("aria-expanded") === "true") return;
-    const rect = button.getBoundingClientRect();
+    const rect = button.getBoundingClientRect(),
+      valid = workspaceGuard(),
+      context = options.getState();
     attr(button, "aria-expanded", "true");
     try {
-      await window.desktop.providerMenu({
+      const before = await window.desktop.state();
+      if (
+        !valid() ||
+        before.active !== context.active ||
+        before.panel !== context.panel ||
+        before.privateSpace?.lockVersion !== context.privateSpace?.lockVersion
+      )
+        return;
+      const action = await window.desktop.providerMenu({
         ...(position || { x: rect.left, y: rect.bottom + 5 }),
-        ...(provider ? { provider } : { overflow: hidden }),
+        ...(addMenu
+          ? { add: true }
+          : provider
+            ? { provider }
+            : { overflow: hidden }),
       });
+      if (!action) return;
+      const latest = await window.desktop.state();
+      const current = options.getState();
+      if (
+        latest.headerRevision === before.headerRevision &&
+        valid() &&
+        current.active === context.active &&
+        current.panel === context.panel
+      )
+        await options.onAction(action);
     } finally {
       attr(button, "aria-expanded", "false");
     }
@@ -166,23 +179,6 @@ export function createProviderNavigation(options: {
         );
         wrapper.dataset.provider = id;
         wrapper.setAttribute("role", "presentation");
-        const unreadSpace = provider.custom ? 0 : 30;
-        const width = pin
-          ? 34
-          : Math.ceil(
-              Math.min(
-                156 + unreadSpace,
-                Math.max(
-                  96 + unreadSpace,
-                  (canvas?.measureText(provider.label).width ||
-                    provider.label.length * 7) +
-                    62 +
-                    unreadSpace,
-                ),
-              ),
-            );
-        widths.set(id, width);
-        wrapper.style.width = width + "px";
         const button = create("button", "provider-tab-button");
         button.type = "button";
         button.id = "platform-" + id;
@@ -232,16 +228,6 @@ export function createProviderNavigation(options: {
           void menu(button, id, { x: event.clientX, y: event.clientY });
         };
         wrapper.append(button);
-        if (!pin) {
-          const closeButton = create("button", "provider-tab-close");
-          closeButton.type = "button";
-          closeButton.id = "close-provider-" + id;
-          closeButton.title = "Đóng tab " + provider.label;
-          closeButton.setAttribute("aria-label", closeButton.title);
-          closeButton.append(options.icon("close"));
-          closeButton.onclick = () => void close(id);
-          wrapper.append(closeButton);
-        }
         nodes.push(wrapper);
       }
       tabs.replaceChildren(...nodes);
@@ -276,6 +262,19 @@ export function createProviderNavigation(options: {
             })
           : "";
       const selected = active === id;
+      const width = compactProviderWidth(
+        canvas?.measureText(provider.label).width ?? provider.label.length * 7,
+        selected,
+      );
+      widths.set(id, width);
+      const wrapper = button.parentElement!;
+      if (wrapper.style.width !== width + "px")
+        wrapper.style.width = width + "px";
+      attr(
+        button,
+        "aria-description",
+        "Shift F10 hoặc nhấp chuột phải để quản lý tab.",
+      );
       attr(button, "aria-selected", String(selected));
       prop(button, "tabIndex", selected ? 0 : -1);
       const unreadBadge =
@@ -289,12 +288,8 @@ export function createProviderNavigation(options: {
       attr(button, "aria-label", label);
       prop(button, "title", label + " · Nhấp chuột phải để quản lý tab");
       button.parentElement?.classList.toggle("is-active", selected);
-      const closeButton = $<HTMLButtonElement>("close-provider-" + id);
-      if (closeButton)
-        prop(closeButton, "disabled", state.accountBusy || state.importing);
     }
     add.classList.toggle("active", state.panel === "providers");
-    attr(add, "aria-expanded", String(state.panel === "providers"));
     fit();
   }
   function filterLibrary() {
@@ -465,7 +460,7 @@ export function createProviderNavigation(options: {
   };
   $<HTMLInputElement>("provider-url").oninput = () => report("");
   search.oninput = filterLibrary;
-  add.onclick = () => void window.desktop.providerLibrary(true);
+  add.onclick = () => void menu(add, undefined, undefined, true);
   overflow.onclick = () => void menu(overflow);
   overflow.onkeydown = (event) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {

@@ -1,3 +1,14 @@
+/** Compact icons reserve space only for the active provider's name and badge. */
+export function compactProviderWidth(
+  measuredLabelWidth: number,
+  active: boolean,
+): number {
+  if (!active) return 34;
+  const label = Number.isFinite(measuredLabelWidth)
+    ? Math.max(0, measuredLabelWidth)
+    : 0;
+  return Math.ceil(Math.min(150, Math.max(96, label + 66)));
+}
 /** Fit tabs without scrolling the header; the selected tab always gets a slot. */
 export function fitProviderTabs<T extends string>(
   tabs: readonly { id: T; width: number }[],
