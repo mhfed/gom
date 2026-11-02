@@ -3,11 +3,11 @@
 ## Cloudflare Pages production — 02/11/2026
 
 - Cloudflare Pages project `gom` dùng Direct Upload; URL production: <https://gom-df6.pages.dev/>.
-- Production deployment: <https://918aeb42.gom-df6.pages.dev/>; nhánh `main`, 16 asset.
-- Kiểm tra HTTP: URL production trả `200`; HTML công khai có canonical Cloudflare, nút tải DMG 0.8.4 cho macOS Apple Silicon và thông báo Windows đang chuẩn bị. Không còn liên kết tải `Setup.exe`.
-- Trang release `v0.8.4` trả `200`; URL DMG và ZIP macOS đều chuyển tới asset công khai và trả `200`.
+- Production deployment: <https://4dc84d4b.gom-df6.pages.dev/>; nhánh `main`, 16 asset.
+- Kiểm tra HTTP: URL production trả `200`; HTML công khai có canonical Cloudflare, nút tải DMG 0.8.4 cho macOS Apple Silicon và bộ cài Windows x64 0.8.3.
+- Trang release fork `v0.8.4` trả `200`; URL DMG và ZIP macOS đều chuyển tới asset công khai và trả `200`. Bộ cài Windows 0.8.3 trên release gốc `mhfed/gom` chuyển tới asset công khai và trả `200`.
 - Canonical và Open Graph trỏ về URL Cloudflare. Lệnh deploy được lưu trong `npm run deploy:website`.
-- Release 0.8.4 được phát hành cho macOS trước; Windows không có trong release này do runner GitHub không khởi chạy vì billing. Landing hiển thị rõ trạng thái đó.
+- Release 0.8.4 của fork được phát hành cho macOS; Windows tải bản 0.8.3 từ release trước của repository gốc vì runner GitHub không khởi chạy do billing.
 
 ## Fork cá nhân đã xuất bản — 02/11/2026
 

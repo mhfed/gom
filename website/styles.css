@@ -197,15 +197,6 @@ p {
   color: var(--teal-dark);
   background: #ecf7f0;
 }
-.button-unavailable {
-  cursor: default;
-  opacity: 0.72;
-}
-.button-unavailable:hover {
-  background: #fdfefa;
-  box-shadow: none;
-  transform: none;
-}
 .action-arrow {
   width: 17px;
   height: 17px;
@@ -1476,14 +1467,6 @@ h2 > span {
   transform: translateY(-3px);
   border-color: var(--teal);
   box-shadow: 0 5px 15px #0b7a7510;
-}
-.os-download-unavailable {
-  cursor: default;
-}
-.os-download-unavailable:hover {
-  transform: none;
-  border-color: #c9decc;
-  box-shadow: none;
 }
 .os-icon {
   width: 29px;

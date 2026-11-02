@@ -11,7 +11,7 @@
 
 ## Windows x64
 
-Windows chưa có trong release 0.8.4. Thư mục app đã đóng gói nhưng chưa tạo bộ cài Squirrel; workflow GitHub hiện không khởi chạy do khóa billing tài khoản. Landing page ghi rõ Windows đang được chuẩn bị.
+Windows chưa có trong release 0.8.4. Thư mục app đã đóng gói nhưng chưa tạo bộ cài Squirrel; workflow GitHub hiện không khởi chạy do khóa billing tài khoản. Landing page tiếp tục cung cấp bộ cài Windows 0.8.3 từ release trước trên repository gốc.
 
 ## GitHub Release
 
