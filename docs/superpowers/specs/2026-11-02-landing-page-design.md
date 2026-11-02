@@ -12,11 +12,13 @@ Use a buildless static site in `website/`, hosted with GitHub Pages. A framework
 
 ## Visual design
 
-Revised after user feedback on 2026-11-02: the initial centered hero, italic serif, mint stage and rounded feature cards felt like a common AI template. Replace that composition with a restrained desktop-utility site. Use white #FFFFFF, ink #202725, gray #626965, neutral surface #F4F5F4, rules #DCE0DD and Gom teal #0B7A75 as a small accent. Typography is Helvetica Neue/Helvetica/Arial with normal proportions and medium weights; no serif or italic display. The asymmetrical introduction places a left-aligned factual headline beside direct downloads. A large plain app window follows. Features are divided content rows, downloads are simple OS rows and all prose describes actual usage. No decorative pills, floating endorsements, gradients, bento cards, stars or marketing claims. Use system fonts, local icons and no tracking or third-party runtime resources.
+Latest direction after two user reviews on 2026-11-02: the first centered mint/italic-serif/bento page felt templated, while the all-white text-row version felt too plain for a landing page. Keep Helvetica Neue/Helvetica/Arial and natural copy, but give the product a more developed visual presentation.
+
+Use a split hero with a working app preview on a deep teal #174E45 surface. Follow with a supported-platform roster, an account-switcher story with a native UI illustration, a contrasting dark chat-float story showing a document and floating conversation, then three compact utility illustrations. Keep most of the page white; use teal to establish hierarchy, no gradients, display serif, stars, invented testimonials or statistics. Download requirements and supporting links must meet normal-text contrast; use #536C50 and #526A50 on #E7EEE8.
 
 ## Structure and behavior
 
-Navigation → asymmetrical introduction and direct downloads → interactive provider window → supported platforms → feature rows (accounts, floating chat, private space, reminders and shelf) → simple three-step onboarding → OS download rows → installation FAQ → footer. Mobile navigation, keyboard-operable provider tabs, native FAQ disclosures and reduced-motion support. Download URLs reference verified release v0.8.3, not the older local README. Both installers remain reachable without JavaScript.
+Navigation → split hero with direct Mac/Windows downloads and interactive provider window → supported platforms → two illustrated product-use stories → private space/reminders/shelf → onboarding → download band → installation FAQ → footer. Retain mobile navigation, keyboard-operable provider tabs, native FAQ disclosures and reduced-motion support. Chat-float demo can open from either hero or the feature story and returns focus to its invoking control. All sample content is explicitly illustrative. Download URLs reference verified release v0.8.3. Both installers remain reachable without JavaScript.
 
 ## Constraints and acceptance
 

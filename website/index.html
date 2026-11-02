@@ -119,282 +119,290 @@
     </header>
     <main id="main">
       <section class="hero wrap" aria-labelledby="hero-title">
-        <div class="hero-intro">
+        <div class="hero-layout">
           <div class="hero-copy">
-            <h1 id="hero-title">Nhiều tài khoản.<br />&#32;Một cửa sổ.</h1>
+            <p class="hero-kicker">Gom · Trò chuyện, gọn một nơi.</p>
+            <h1 id="hero-title">
+              Nhiều tài khoản.<br /><span>Một cửa sổ.</span>
+            </h1>
             <p>
-              Zalo cho công việc. Messenger cho bạn bè.<br
-                class="desktop-break"
-              />&#32;Telegram cho nhóm dự án. Mở tất cả trong Gom,<br
-                class="desktop-break"
-              />&#32;rồi chuyển qua lại bằng tab.
+              Zalo cho công việc, Messenger cho bạn bè, Telegram cho nhóm dự án.
+              Gom giữ các nền tảng và tài khoản ấy trong cùng một cửa sổ trên
+              máy tính.
             </p>
+            <aside class="hero-download" aria-label="Tải ứng dụng Gom">
+              <a
+                class="version-link"
+                href="https://github.com/mhfed/gom/releases/tag/v0.8.3"
+                >Gom 0.8.3 <span>Ghi chú phiên bản ↗</span></a
+              ><a
+                class="button"
+                href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg"
+                ><svg class="icon" aria-hidden="true"><use href="#apple" /></svg
+                ><span>Tải cho macOS</span
+                ><svg class="icon" aria-hidden="true">
+                  <use href="#download" /></svg></a
+              ><a
+                class="button button-secondary"
+                href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe"
+                ><svg class="icon" aria-hidden="true">
+                  <use href="#windows" /></svg
+                ><span>Tải cho Windows</span
+                ><svg class="icon" aria-hidden="true">
+                  <use href="#download" /></svg
+              ></a>
+              <p>
+                Apple Silicon · Windows 10/11 x64<br />
+                <a href="#cai-dat">Lưu ý trước khi cài</a>
+              </p>
+            </aside>
           </div>
-          <aside class="hero-download" aria-label="Tải ứng dụng Gom">
-            <a
-              class="version-link"
-              href="https://github.com/mhfed/gom/releases/tag/v0.8.3"
-              >Gom 0.8.3 <span>Ghi chú phiên bản ↗</span></a
-            ><a
-              class="button"
-              href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg"
-              ><svg class="icon" aria-hidden="true"><use href="#apple" /></svg
-              ><span>Tải cho macOS</span
-              ><svg class="icon" aria-hidden="true">
-                <use href="#download" /></svg></a
-            ><a
-              class="button button-secondary"
-              href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe"
-              ><svg class="icon" aria-hidden="true"><use href="#windows" /></svg
-              ><span>Tải cho Windows</span
-              ><svg class="icon" aria-hidden="true">
-                <use href="#download" /></svg
-            ></a>
-            <p>
-              Apple Silicon · Windows 10/11 x64<br />&#32;<a href="#cai-dat"
-                >Lưu ý trước khi cài</a
-              >
-            </p>
-          </aside>
-        </div>
-        <div class="product-stage">
-          <div
-            class="app-preview"
-            aria-label="Minh họa cửa sổ Gom với nội dung mẫu"
-          >
-            <div class="app-titlebar">
-              <div class="window-dots" aria-hidden="true">
-                <i></i><i></i><i></i>
-              </div>
-              <img
-                class="preview-brand"
-                src="./assets/gom-mark.svg"
-                width="24"
-                height="24"
-                alt="Gom"
-              />
+          <div class="hero-visual">
+            <div class="product-stage">
               <div
-                class="preview-tabs"
-                role="tablist"
-                aria-label="Thử chuyển nền tảng"
-                data-provider-tabs=""
+                class="app-preview"
+                aria-label="Minh họa cửa sổ Gom với nội dung mẫu"
               >
-                <button
-                  class="provider-tab"
-                  id="tab-telegram"
-                  aria-label="Telegram"
-                  disabled
-                  type="button"
-                  role="tab"
-                  aria-selected="true"
-                  aria-controls="provider-panel"
-                  data-provider="telegram"
-                >
-                  <img
-                    src="./assets/providers/telegram.svg"
-                    alt=""
-                    width="19"
-                    height="19"
-                  /><span>Telegram</span><b>2</b>
-                </button>
-                <button
-                  class="provider-tab"
-                  id="tab-zalo"
-                  aria-label="Zalo"
-                  disabled
-                  type="button"
-                  role="tab"
-                  aria-selected="false"
-                  tabindex="-1"
-                  aria-controls="provider-panel"
-                  data-provider="zalo"
-                >
-                  <img
-                    src="./assets/providers/zalo.png"
-                    alt=""
-                    width="19"
-                    height="19"
-                  /><span>Zalo</span>
-                </button>
-                <button
-                  class="provider-tab"
-                  id="tab-messenger"
-                  aria-label="Messenger"
-                  disabled
-                  type="button"
-                  role="tab"
-                  aria-selected="false"
-                  tabindex="-1"
-                  aria-controls="provider-panel"
-                  data-provider="messenger"
-                >
-                  <img
-                    src="./assets/providers/messenger.svg"
-                    alt=""
-                    width="19"
-                    height="19"
-                  /><span>Messenger</span><b>3</b>
-                </button>
-                <button
-                  class="provider-tab"
-                  id="tab-gmail"
-                  aria-label="Gmail"
-                  disabled
-                  type="button"
-                  role="tab"
-                  aria-selected="false"
-                  tabindex="-1"
-                  aria-controls="provider-panel"
-                  data-provider="gmail"
-                >
-                  <img
-                    src="./assets/providers/gmail.svg"
-                    alt=""
-                    width="19"
-                    height="19"
-                  /><span>Gmail</span>
-                </button>
-              </div>
-              <span class="preview-plus" aria-hidden="true">+</span
-              ><span class="preview-space"
-                ><svg class="icon"><use href="#lock" /></svg> Thường</span
-              ><span class="preview-tools" aria-hidden="true">···</span>
-            </div>
-            <div class="app-toolbar">
-              <span
-                ><svg class="icon"><use href="#users" /></svg> Cá nhân
-                <span class="tiny-chevron">⌄</span></span
-              ><span class="toolbar-hint">Một tài khoản. Một phiên riêng.</span
-              ><button
-                type="button"
-                class="float-trigger"
-                data-float-open=""
-                aria-expanded="false"
-                aria-controls="floating-demo"
-              >
-                <svg class="icon"><use href="#float" /></svg> Thử chat nổi
-              </button>
-            </div>
-            <div
-              class="provider-panel"
-              id="provider-panel"
-              role="tabpanel"
-              aria-labelledby="tab-telegram"
-              tabindex="0"
-              data-provider-panel=""
-            >
-              <aside
-                class="chat-sidebar"
-                aria-label="Danh sách cuộc trò chuyện mẫu"
-              >
-                <div class="demo-search">
-                  <svg class="icon"><use href="#search" /></svg> Tìm cuộc trò
-                  chuyện
-                </div>
-                <div class="chat-entry selected">
-                  <span class="avatar avatar-mint">M</span
-                  ><span
-                    ><strong>Minh Anh</strong
-                    ><small data-chat-snippet=""
-                      >Hẹn bạn ở quán quen nhé!</small
-                    ></span
-                  ><span class="chat-meta">09:41<b>2</b></span>
-                </div>
-                <div class="chat-entry">
-                  <span class="avatar avatar-lilac">D</span
-                  ><span
-                    ><strong>Design corner</strong
-                    ><small>Mình gửi bản thiết kế mới rồi 👋</small></span
-                  ><span class="chat-meta">09:32</span>
-                </div>
-                <div class="chat-entry">
-                  <span class="avatar avatar-peach">H</span
-                  ><span
-                    ><strong>Hội bạn thân</strong
-                    ><small>Cuối tuần đi đâu mọi người?</small></span
-                  ><span class="chat-meta">08:56</span>
-                </div>
-                <div class="chat-entry">
-                  <span class="avatar avatar-blue">L</span
-                  ><span
-                    ><strong>Linh</strong
-                    ><small>Cảm ơn bạn nhiều nha!</small></span
-                  ><span class="chat-meta">Hôm qua</span>
-                </div>
-                <div class="sidebar-bottom">
-                  <img
-                    src="./assets/providers/telegram.svg"
-                    alt=""
-                    width="17"
-                    height="17"
-                    data-current-provider-icon=""
-                  /><span data-current-provider="">Telegram</span
-                  ><span>Giao diện minh họa</span>
-                </div>
-              </aside>
-              <div class="chat-conversation">
-                <div class="conversation-header">
-                  <span class="avatar avatar-mint">M</span>
-                  <div>
-                    <strong data-conversation-title="">Minh Anh</strong
-                    ><small data-conversation-subtitle=""
-                      >Cuộc trò chuyện mẫu</small
-                    >
+                <div class="app-titlebar">
+                  <div class="window-dots" aria-hidden="true">
+                    <i></i><i></i><i></i>
                   </div>
-                  <span class="conversation-more" aria-hidden="true">···</span>
+                  <img
+                    class="preview-brand"
+                    src="./assets/gom-mark.svg"
+                    width="24"
+                    height="24"
+                    alt="Gom"
+                  />
+                  <div
+                    class="preview-tabs"
+                    role="tablist"
+                    aria-label="Thử chuyển nền tảng"
+                    data-provider-tabs=""
+                  >
+                    <button
+                      class="provider-tab"
+                      id="tab-telegram"
+                      aria-label="Telegram"
+                      disabled
+                      type="button"
+                      role="tab"
+                      aria-selected="true"
+                      aria-controls="provider-panel"
+                      data-provider="telegram"
+                    >
+                      <img
+                        src="./assets/providers/telegram.svg"
+                        alt=""
+                        width="19"
+                        height="19"
+                      /><span>Telegram</span><b>2</b>
+                    </button>
+                    <button
+                      class="provider-tab"
+                      id="tab-zalo"
+                      aria-label="Zalo"
+                      disabled
+                      type="button"
+                      role="tab"
+                      aria-selected="false"
+                      tabindex="-1"
+                      aria-controls="provider-panel"
+                      data-provider="zalo"
+                    >
+                      <img
+                        src="./assets/providers/zalo.png"
+                        alt=""
+                        width="19"
+                        height="19"
+                      /><span>Zalo</span>
+                    </button>
+                    <button
+                      class="provider-tab"
+                      id="tab-messenger"
+                      aria-label="Messenger"
+                      disabled
+                      type="button"
+                      role="tab"
+                      aria-selected="false"
+                      tabindex="-1"
+                      aria-controls="provider-panel"
+                      data-provider="messenger"
+                    >
+                      <img
+                        src="./assets/providers/messenger.svg"
+                        alt=""
+                        width="19"
+                        height="19"
+                      /><span>Messenger</span><b>3</b>
+                    </button>
+                    <button
+                      class="provider-tab"
+                      id="tab-gmail"
+                      aria-label="Gmail"
+                      disabled
+                      type="button"
+                      role="tab"
+                      aria-selected="false"
+                      tabindex="-1"
+                      aria-controls="provider-panel"
+                      data-provider="gmail"
+                    >
+                      <img
+                        src="./assets/providers/gmail.svg"
+                        alt=""
+                        width="19"
+                        height="19"
+                      /><span>Gmail</span>
+                    </button>
+                  </div>
+                  <span class="preview-plus" aria-hidden="true">+</span
+                  ><span class="preview-space"
+                    ><svg class="icon"><use href="#lock" /></svg> Thường</span
+                  ><span class="preview-tools" aria-hidden="true">···</span>
+                </div>
+                <div class="app-toolbar">
+                  <span
+                    ><svg class="icon"><use href="#users" /></svg> Cá nhân
+                    <span class="tiny-chevron">⌄</span></span
+                  ><span class="toolbar-hint"
+                    >Một tài khoản. Một phiên riêng.</span
+                  ><button
+                    type="button"
+                    class="float-trigger"
+                    data-float-open=""
+                    aria-expanded="false"
+                    aria-controls="floating-demo"
+                  >
+                    <svg class="icon"><use href="#float" /></svg> Thử chat nổi
+                  </button>
                 </div>
                 <div
-                  class="chat-messages"
-                  aria-live="polite"
-                  aria-atomic="true"
+                  class="provider-panel"
+                  id="provider-panel"
+                  role="tabpanel"
+                  aria-labelledby="tab-telegram"
+                  tabindex="0"
+                  data-provider-panel=""
                 >
-                  <span class="date-chip">Hôm nay</span>
-                  <div class="message received">
-                    <p data-message-one="">Chiều nay mình cà phê nhé? ☕</p>
-                    <time>09:38</time>
+                  <aside
+                    class="chat-sidebar"
+                    aria-label="Danh sách cuộc trò chuyện mẫu"
+                  >
+                    <div class="demo-search">
+                      <svg class="icon"><use href="#search" /></svg> Tìm cuộc
+                      trò chuyện
+                    </div>
+                    <div class="chat-entry selected">
+                      <span class="avatar avatar-mint">M</span
+                      ><span
+                        ><strong>Minh Anh</strong
+                        ><small data-chat-snippet=""
+                          >Hẹn bạn ở quán quen nhé!</small
+                        ></span
+                      ><span class="chat-meta">09:41<b>2</b></span>
+                    </div>
+                    <div class="chat-entry">
+                      <span class="avatar avatar-lilac">D</span
+                      ><span
+                        ><strong>Design corner</strong
+                        ><small>Mình gửi bản thiết kế mới rồi 👋</small></span
+                      ><span class="chat-meta">09:32</span>
+                    </div>
+                    <div class="chat-entry">
+                      <span class="avatar avatar-peach">H</span
+                      ><span
+                        ><strong>Hội bạn thân</strong
+                        ><small>Cuối tuần đi đâu mọi người?</small></span
+                      ><span class="chat-meta">08:56</span>
+                    </div>
+                    <div class="chat-entry">
+                      <span class="avatar avatar-blue">L</span
+                      ><span
+                        ><strong>Linh</strong
+                        ><small>Cảm ơn bạn nhiều nha!</small></span
+                      ><span class="chat-meta">Hôm qua</span>
+                    </div>
+                    <div class="sidebar-bottom">
+                      <img
+                        src="./assets/providers/telegram.svg"
+                        alt=""
+                        width="17"
+                        height="17"
+                        data-current-provider-icon=""
+                      /><span data-current-provider="">Telegram</span
+                      ><span>Giao diện minh họa</span>
+                    </div>
+                  </aside>
+                  <div class="chat-conversation">
+                    <div class="conversation-header">
+                      <span class="avatar avatar-mint">M</span>
+                      <div>
+                        <strong data-conversation-title="">Minh Anh</strong
+                        ><small data-conversation-subtitle=""
+                          >Cuộc trò chuyện mẫu</small
+                        >
+                      </div>
+                      <span class="conversation-more" aria-hidden="true"
+                        >···</span
+                      >
+                    </div>
+                    <div
+                      class="chat-messages"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >
+                      <span class="date-chip">Hôm nay</span>
+                      <div class="message received">
+                        <p data-message-one="">Chiều nay mình cà phê nhé? ☕</p>
+                        <time>09:38</time>
+                      </div>
+                      <div class="message sent">
+                        <p data-message-two="">
+                          Được chứ! Mình vừa xong việc rồi.
+                        </p>
+                        <time>09:40 <span aria-label="Đã đọc">✓✓</span></time>
+                      </div>
+                      <div class="message received">
+                        <p data-message-three="">Hẹn bạn ở quán quen nhé!</p>
+                        <time>09:41</time>
+                      </div>
+                      <div class="chat-reaction" aria-hidden="true">
+                        ☕ <span>1</span>
+                      </div>
+                    </div>
+                    <div class="demo-composer" aria-hidden="true">
+                      <span>＋</span><span data-composer="">Viết tin nhắn…</span
+                      ><span>☺</span><span class="send-icon">↑</span>
+                    </div>
                   </div>
-                  <div class="message sent">
-                    <p data-message-two="">Được chứ! Mình vừa xong việc rồi.</p>
-                    <time>09:40 <span aria-label="Đã đọc">✓✓</span></time>
-                  </div>
-                  <div class="message received">
-                    <p data-message-three="">Hẹn bạn ở quán quen nhé!</p>
-                    <time>09:41</time>
-                  </div>
-                  <div class="chat-reaction" aria-hidden="true">
-                    ☕ <span>1</span>
-                  </div>
-                </div>
-                <div class="demo-composer" aria-hidden="true">
-                  <span>＋</span><span data-composer="">Viết tin nhắn…</span
-                  ><span>☺</span><span class="send-icon">↑</span>
                 </div>
               </div>
+              <div class="floating-demo" id="floating-demo" hidden>
+                <div>
+                  <img
+                    src="./assets/providers/telegram.svg"
+                    alt=""
+                    width="19"
+                    height="19"
+                  /><strong>Minh Anh</strong
+                  ><button
+                    type="button"
+                    aria-label="Đóng minh họa chat nổi"
+                    data-float-close=""
+                  >
+                    ×
+                  </button>
+                </div>
+                <p>Hẹn bạn ở quán quen nhé! ☕</p>
+                <span>Chat nổi · Nội dung minh họa</span>
+              </div>
+            </div>
+            <div class="preview-caption">
+              <p>Thử chuyển nền tảng bằng các tab phía trên.</p>
+              <span>Giao diện minh họa · Nội dung mẫu</span>
             </div>
           </div>
-          <div class="floating-demo" id="floating-demo" hidden>
-            <div>
-              <img
-                src="./assets/providers/telegram.svg"
-                alt=""
-                width="19"
-                height="19"
-              /><strong>Minh Anh</strong
-              ><button
-                type="button"
-                aria-label="Đóng minh họa chat nổi"
-                data-float-close=""
-              >
-                ×
-              </button>
-            </div>
-            <p>Hẹn bạn ở quán quen nhé! ☕</p>
-            <span>Chat nổi · Nội dung minh họa</span>
-          </div>
-        </div>
-        <div class="preview-caption">
-          <p>Thử chuyển nền tảng bằng các tab phía trên.</p>
-          <span>Giao diện minh họa · Nội dung mẫu</span>
         </div>
       </section>
       <section
@@ -403,11 +411,10 @@
         aria-labelledby="platform-title"
       >
         <div class="section-heading">
-          <h2 id="platform-title">Vẫn là những nền tảng bạn đang dùng.</h2>
-          <p>
-            Đăng nhập bằng tài khoản của bạn.<br />&#32;Gom mở giao diện web của
-            từng dịch vụ.
-          </p>
+          <h2 id="platform-title">
+            Các nền tảng quen thuộc. Cùng có mặt trong Gom.
+          </h2>
+          <p>Dùng tài khoản của bạn, trên giao diện web của từng dịch vụ.</p>
         </div>
         <div class="platform-list">
           <div>
@@ -491,115 +498,209 @@
         </p>
       </section>
       <section
-        class="features wrap section-block"
+        class="features wrap"
         id="tinh-nang"
         aria-labelledby="features-title"
       >
-        <div class="section-heading">
+        <div class="section-heading feature-heading">
           <h2 id="features-title">
-            Sắp xếp một lần.<br />&#32;Dùng theo cách của bạn.
+            Từ lúc bắt đầu làm việc<br />đến khi đóng máy.
           </h2>
           <p>
-            Những việc nhỏ khi dùng nhiều tài khoản,<br />&#32;Gom có sẵn chỗ để
-            xử lý.
+            Gom không đổi cách bạn trò chuyện.<br />Chỉ giúp việc chuyển qua lại
+            gọn hơn.
           </p>
         </div>
-        <div class="feature-rows">
-          <article class="feature-row">
-            <div class="feature-label">
-              <svg class="icon" aria-hidden="true"><use href="#users" /></svg>
-              <h3>Cá nhân và công việc,<br />&#32;mỗi bên một tài khoản.</h3>
+        <article class="account-story story-layout">
+          <div class="story-copy">
+            <span class="section-label">Nhiều tài khoản</span>
+            <h3>Công việc và cá nhân,<br />không cần thay phiên.</h3>
+            <p>
+              Thêm nhiều tài khoản cho cùng một nền tảng, đặt tên để phân biệt
+              rồi chuyển ngay trên thanh công cụ. Mỗi tài khoản giữ phiên đăng
+              nhập riêng.
+            </p>
+            <div class="story-detail">
+              <svg class="icon" aria-hidden="true"><use href="#check" /></svg>
+              Mỗi tài khoản một phiên riêng
             </div>
-            <div class="feature-content">
-              <p>
-                Thêm nhiều tài khoản cho cùng một nền tảng. Đặt tên để phân
-                biệt, chuyển tài khoản ngay trên thanh công cụ. Mỗi tài khoản có
-                phiên đăng nhập riêng.
-              </p>
-              <div
-                class="account-example"
-                aria-label="Ví dụ hai tài khoản trên Telegram"
-              >
+            <div class="story-detail">
+              <svg class="icon" aria-hidden="true"><use href="#check" /></svg>
+              Ghim những tab bạn mở hằng ngày
+            </div>
+          </div>
+          <figure class="account-illustration">
+            <div class="account-sheet">
+              <div class="sheet-heading">
                 <img
                   src="./assets/providers/telegram.svg"
                   width="24"
                   height="24"
                   alt="Telegram"
-                /><span>Cá nhân <span class="account-selected">✓</span></span
-                ><span>Công việc <b>3</b></span
-                ><span class="example-note"
-                  >Hai tài khoản, không cần đăng xuất.</span
-                >
+                  loading="lazy"
+                /><strong>Tài khoản Telegram</strong
+                ><span aria-hidden="true">···</span>
+              </div>
+              <div class="account-line is-current">
+                <span class="profile-avatar">M</span>
+                <div>
+                  <strong>Minh · Cá nhân</strong
+                  ><small>Tài khoản đang mở</small>
+                </div>
+                <span class="account-tick"
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="#check" /></svg
+                ></span>
+              </div>
+              <div class="account-line">
+                <span class="profile-avatar work-avatar">M</span>
+                <div>
+                  <strong>Minh · Công việc</strong
+                  ><small>Nhóm dự án và đồng nghiệp</small>
+                </div>
+                <span class="unread-count">3</span>
+              </div>
+              <div class="account-sheet-footer">
+                <span aria-hidden="true">＋</span> Thêm tài khoản
               </div>
             </div>
-          </article>
-          <article class="feature-row">
-            <div class="feature-label">
-              <svg class="icon" aria-hidden="true"><use href="#float" /></svg>
-              <h3>Đưa cuộc trò chuyện<br />&#32;ra cạnh công việc.</h3>
+            <figcaption>Ví dụ hai tài khoản trên cùng một nền tảng.</figcaption>
+          </figure>
+        </article>
+        <article class="float-story story-layout">
+          <div
+            class="float-illustration"
+            aria-label="Minh họa một cuộc trò chuyện đặt cạnh tài liệu làm việc"
+          >
+            <div class="document-window" aria-hidden="true">
+              <div class="document-toolbar">
+                <i></i><i></i><i></i><span>Ghi chú dự án</span>
+              </div>
+              <div class="document-body">
+                <span class="document-eyebrow">DỰ ÁN / GOM</span
+                ><strong>Việc cần làm hôm nay</strong>
+                <div class="document-task">
+                  <i class="task-done"></i> Xem lại bản thiết kế
+                </div>
+                <div class="document-task"><i></i> Gửi nội dung cho nhóm</div>
+                <div class="document-task"><i></i> Chốt lịch trao đổi</div>
+                <div class="document-rule"></div>
+                <div class="document-rule short"></div>
+              </div>
             </div>
-            <div class="feature-content">
-              <p>
-                Tách một tab thành cửa sổ chat nổi. Ghim trên màn hình khi cần
-                trao đổi, thu về bong bóng khi cần thêm chỗ làm việc.
-              </p>
-              <button class="inline-demo" type="button" data-secondary-float>
-                Thử cửa sổ chat nổi
-                <svg class="icon" aria-hidden="true"><use href="#arrow" /></svg>
-              </button>
-              <p class="feature-note">
-                Mỗi lúc mở một tab nổi. Lưu bản nháp quan trọng trước khi tách
-                tab.
-              </p>
+            <div class="story-chat">
+              <header>
+                <img
+                  src="./assets/providers/messenger.svg"
+                  width="24"
+                  height="24"
+                  alt="Messenger"
+                  loading="lazy"
+                /><strong>Minh Anh</strong><span aria-hidden="true">↗</span>
+              </header>
+              <div class="story-chat-body">
+                <span class="story-incoming"
+                  >Bạn xem giúp mình bản mới nhé.</span
+                ><span class="story-outgoing"
+                  >Mình đang xem. Lát mình gửi lại.</span
+                >
+              </div>
+              <span class="story-chat-compose">Viết tin nhắn…</span>
             </div>
-          </article>
-          <article class="feature-row">
-            <div class="feature-label">
+            <span class="illustration-label"
+              >Giao diện và nội dung minh họa</span
+            >
+          </div>
+          <div class="story-copy">
+            <span class="section-label">Chat nổi</span>
+            <h3>Đặt cuộc trò chuyện<br />bên cạnh công việc.</h3>
+            <p>
+              Tách một tab thành cửa sổ nhỏ, ghim trên màn hình hoặc thu về bong
+              bóng. Bạn có thể tiếp tục trao đổi mà vẫn nhìn thấy việc đang làm.
+            </p>
+            <button class="inline-demo" type="button" data-secondary-float="">
+              Thử cửa sổ chat nổi
+              <svg class="icon" aria-hidden="true"><use href="#arrow" /></svg>
+            </button>
+            <p class="story-footnote">
+              Mỗi lúc mở một tab nổi. Lưu bản nháp quan trọng trước khi tách.
+            </p>
+          </div>
+        </article>
+        <div class="toolbox-heading">
+          <h3>Những việc nhỏ, cũng có chỗ riêng.</h3>
+          <p>Để một cuộc trò chuyện không kéo theo quá nhiều việc phải nhớ.</p>
+        </div>
+        <div class="toolbox">
+          <article class="tool">
+            <div class="tool-title">
               <svg class="icon" aria-hidden="true"><use href="#lock" /></svg>
-              <h3>Tài khoản riêng,<br />&#32;có không gian riêng.</h3>
+              <h3>Không gian kín</h3>
             </div>
-            <div class="feature-content">
-              <p>
-                Không gian thường và Không gian kín có danh sách tài khoản, tab
-                và trạng thái riêng. Đặt mật khẩu để khóa giao diện Không gian
-                kín.
-              </p>
-              <p class="feature-note">
-                Mật khẩu khóa truy cập qua giao diện, không mã hóa lại dữ liệu
-                phiên trên đĩa. <a href="#faq-private">Xem chi tiết ↗</a>
-              </p>
+            <p>
+              Tách các tài khoản riêng khỏi danh sách thường. Đặt mật khẩu để
+              khóa truy cập qua giao diện khi cần.
+            </p>
+            <div class="privacy-illustration" aria-hidden="true">
+              <span>Thường</span
+              ><span
+                ><svg class="icon" aria-hidden="true"><use href="#lock" /></svg>
+                Không gian kín</span
+              >
             </div>
+            <a href="#faq-private" class="text-link"
+              >Cách Không gian kín bảo vệ dữ liệu ↗</a
+            >
           </article>
-          <article class="feature-row">
-            <div class="feature-label">
+          <article class="tool">
+            <div class="tool-title">
               <svg class="icon" aria-hidden="true"><use href="#bell" /></svg>
-              <h3>Cần trả lời sau?<br />&#32;Ghi lại, rồi hẹn giờ.</h3>
+              <h3>Nhắc trả lời</h3>
             </div>
-            <div class="feature-content">
-              <p>
-                Ghi chú việc cần quay lại và chọn giờ nhắc. Gom mở lại đúng tài
-                khoản khi bạn sẵn sàng; bạn tự tìm cuộc hội thoại và trả lời.
-              </p>
-              <p class="feature-note">
-                Thông báo nhắc thường cần Gom đang chạy. Nhắc trong Không gian
-                kín chỉ hiện trong danh sách kín.
-              </p>
+            <p>
+              Tự ghi chú, chọn giờ nhắc và quay lại đúng tài khoản. Bạn vẫn tự
+              mở cuộc hội thoại và gửi câu trả lời.
+            </p>
+            <div class="reminder-illustration">
+              <span class="reminder-square" aria-hidden="true"></span>
+              <div>
+                <strong>Gửi bản thiết kế cho Linh</strong
+                ><small
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="#bell" />
+                  </svg>
+                  Hôm nay, 14:30</small
+                >
+              </div>
+              <img
+                src="./assets/providers/messenger.svg"
+                width="24"
+                height="24"
+                alt="Messenger"
+                loading="lazy"
+              />
             </div>
+            <span class="tool-footnote"
+              >Thông báo nhắc thường cần Gom đang chạy.</span
+            >
           </article>
-          <article class="feature-row">
-            <div class="feature-label">
+          <article class="tool">
+            <div class="tool-title">
               <svg class="icon" aria-hidden="true"><use href="#shelf" /></svg>
-              <h3>Chuyển chữ, link, tệp<br />&#32;qua một chiếc khay.</h3>
+              <h3>Khay trung chuyển</h3>
             </div>
-            <div class="feature-content">
-              <p>
-                Lưu nội dung vào Khay, chuyển nền tảng rồi dùng lại. Chữ, link,
-                ảnh và bản sao tệp được giữ trên máy, tách theo từng không gian.
-              </p>
-              <p class="feature-note">
-                Gom chỉ đọc clipboard khi bạn bấm “Lấy từ clipboard”.
-              </p>
+            <p>
+              Giữ chữ, link, ảnh và bản sao tệp trên máy. Mở nền tảng khác rồi
+              dùng lại nội dung từ Khay.
+            </p>
+            <div class="shelf-illustration" aria-hidden="true">
+              <div><span>↗</span>Liên kết</div>
+              <div><span>Aa</span>Đoạn chữ</div>
+              <div><span>▤</span>Tệp</div>
             </div>
+            <span class="tool-footnote"
+              >Chỉ đọc clipboard khi bạn bấm lấy nội dung.</span
+            >
           </article>
         </div>
       </section>
@@ -628,7 +729,7 @@
         </ol>
       </section>
       <section
-        class="download-section wrap section-block"
+        class="download-section wrap section-block download-band"
         id="tai-gom"
         aria-labelledby="download-title"
       >
@@ -640,7 +741,7 @@
             alt=""
             loading="lazy"
           />
-          <h2 id="download-title">Thử Gom trên<br />&#32;máy của bạn.</h2>
+          <h2 id="download-title">Mở Gom.<br />Tiếp tục cuộc trò chuyện.</h2>
           <a
             href="https://github.com/mhfed/gom/releases/tag/v0.8.3"
             class="version-link"
@@ -669,7 +770,8 @@
             ><svg class="icon" aria-hidden="true"><use href="#download" /></svg
           ></a>
           <p>
-            Chưa có bản Mac Intel và Linux.<br />&#32;<a href="#cai-dat"
+            Chưa có bản Mac Intel và Linux.<br />
+            <a href="#cai-dat"
               >Đọc hướng dẫn cài đặt và lưu ý về chữ ký ứng dụng ↗</a
             >
           </p>
