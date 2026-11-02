@@ -1,5 +1,7 @@
 # Landing page Gom trên GitHub Pages
 
+Bản triển khai cá nhân: <https://vidongls.github.io/gom/>, từ fork <https://github.com/vidongls/gom>. Các liên kết tải bộ cài tiếp tục dùng GitHub Releases của dự án gốc.
+
 Source trang nằm trong `website/`, độc lập với app Electron. HTML/CSS/JS và logo đều được phục vụ tĩnh, không cần cài dependency hoặc build. Không có analytics, cookie hay tài nguyên từ CDN. Các cuộc trò chuyện hiển thị trên landing page là nội dung minh họa.
 
 ## Xem tại máy
@@ -14,10 +16,10 @@ Mở <http://127.0.0.1:4173>. Kiểm tra cả màn hình máy tính và điện 
 
 ## Xuất bản
 
-1. Đưa `website/` và `.github/workflows/pages.yml` lên nhánh `main` của `mhfed/gom`.
+1. Đưa `website/` và `.github/workflows/pages.yml` lên nhánh `main` của `vidongls/gom`.
 2. Trong GitHub repository, mở **Settings → Pages → Build and deployment → Source → GitHub Actions**. Cần người có quyền quản trị repository cho bước này.
 3. Workflow **Deploy Gom landing page** tự chạy khi source website thay đổi trên `main`. Nếu vừa bật Pages sau khi đã push, vào **Actions → Deploy Gom landing page → Run workflow**, chọn `main`.
-4. Chờ job `deploy` thành công. Lấy URL từ environment `github-pages`; URL mặc định dự kiến là <https://mhfed.github.io/gom/>.
+4. Chờ job `deploy` thành công. Lấy URL từ environment `github-pages`; URL mặc định dự kiến là <https://vidongls.github.io/gom/>.
 
 Workflow chỉ upload `website/`, không upload source app, file cài đặt, `outputs/` hoặc dữ liệu tài khoản. Không cần deploy key hoặc token lưu trong repository; workflow dùng quyền Pages và OIDC của GitHub Actions.
 
