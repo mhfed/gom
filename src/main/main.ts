@@ -2325,7 +2325,7 @@ async function hibernateAccount(
       backgroundWarmups.get(contents)?.();
       backgroundWarmups.delete(contents);
       epochs.set(id, epoch + 1);
-      if (!contents.isDestroyed()) contents.destroy();
+      if (!contents.isDestroyed()) contents.close();
     } catch {
       // Leave the view available for the next sleep attempt.
     } finally {
@@ -4080,8 +4080,8 @@ function beginAutomaticUpdate() {
   try {
     const feed =
       process.platform === "win32"
-        ? `https://update.electronjs.org/mhfed/gom/win32-x64/${app.getVersion()}/RELEASES`
-        : `https://update.electronjs.org/mhfed/gom/darwin-${process.arch}/${app.getVersion()}`;
+        ? `https://update.electronjs.org/vidongls/gom/win32-x64/${app.getVersion()}/RELEASES`
+        : `https://update.electronjs.org/vidongls/gom/darwin-${process.arch}/${app.getVersion()}`;
     autoUpdater.setFeedURL({
       url: feed,
       ...(process.platform === "darwin" ? { serverType: "json" as const } : {}),

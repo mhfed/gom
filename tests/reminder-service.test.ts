@@ -53,6 +53,7 @@ async function fixture() {
     accounts: () => accounts,
     accessible: (id) =>
       accounts.some((a) => a.id === id && !!a.private === privateSpace),
+    captureConversation: () => null,
     canNotify: (id) =>
       !paused &&
       accounts.some((a) => a.id === id && !a.archived && !a.private) &&

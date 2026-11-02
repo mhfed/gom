@@ -14,7 +14,7 @@
   <a href="#cài-đặt">Cài đặt</a> ·
   <a href="#bắt-đầu-sử-dụng">Bắt đầu sử dụng</a> ·
   <a href="#câu-hỏi-thường-gặp">Câu hỏi thường gặp</a> ·
-  <a href="https://github.com/mhfed/gom/issues">Báo lỗi</a>
+  <a href="https://github.com/vidongls/gom/issues">Báo lỗi</a>
 </p>
 
 Gom mở giao diện web của **Zalo, Telegram, WhatsApp, Messenger, Gmail, Instagram, Discord, Slack và Tinder**. Bạn có thể thêm nhiều tài khoản cho cùng một nền tảng, đặt tên để phân biệt và chuyển qua lại bằng tab. Gom cũng hỗ trợ thêm website riêng.
@@ -29,12 +29,12 @@ Phiên bản hiện tại: **0.8.4**, phát hành ngày **02/11/2026** cho Mac A
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
 | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.dmg)         |
-| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe) |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.dmg)         |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe) |
 
-Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.8.4](https://github.com/mhfed/gom/releases/tag/v0.8.4), [kết quả kiểm chứng](docs/verification-0.8.4.md) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.8.4](https://github.com/vidongls/gom/releases/tag/v0.8.4), [kết quả kiểm chứng](docs/verification-0.8.4.md) hoặc [tất cả phiên bản](https://github.com/vidongls/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -247,7 +247,7 @@ Gom lưu phiên đăng nhập và tùy chỉnh cục bộ trên từng máy. Khi
 
 ## Báo lỗi và góp ý
 
-[Tạo báo lỗi trên GitHub Issues](https://github.com/mhfed/gom/issues/new) và ghi rõ phiên bản Gom, hệ điều hành, nền tảng gặp lỗi cùng các bước để tái hiện. Nếu gửi ảnh chụp, che nội dung riêng tư trước khi tải lên.
+[Tạo báo lỗi trên GitHub Issues](https://github.com/vidongls/gom/issues/new) và ghi rõ phiên bản Gom, hệ điều hành, nền tảng gặp lỗi cùng các bước để tái hiện. Nếu gửi ảnh chụp, che nội dung riêng tư trước khi tải lên.
 
 Không gửi mật khẩu, mã OTP, cookie, token hoặc toàn bộ hồ sơ trình duyệt.
 

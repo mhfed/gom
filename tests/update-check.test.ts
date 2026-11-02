@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { ManualUpdateChecker, RELEASES_URL } from "../src/main/update-check.ts";
 import type { UpdateState } from "../src/update-types.ts";
 
-const API = "https://api.github.com/repos/mhfed/gom/releases/latest";
+const API = "https://api.github.com/repos/vidongls/gom/releases/latest";
 function release(version = "0.5.10", arch = "arm64", extension = "dmg") {
   const tag = `v${version}`;
   const name = `TinNhan-macOS-${arch}-${version}.${extension}`;
@@ -72,19 +72,19 @@ test("fetches the fixed public source without credentials and orders numeric sem
   );
 });
 
-test("discovers a release from the renamed canonical Gom repository without redirects", async () => {
-  const canonicalApi = "https://api.github.com/repos/mhfed/gom/releases/latest";
+test("discovers a release from the canonical fork without redirects", async () => {
+  const canonicalApi = "https://api.github.com/repos/vidongls/gom/releases/latest";
   const metadata = {
     tag_name: "v0.6.2",
     draft: false,
     prerelease: false,
-    html_url: "https://github.com/mhfed/gom/releases/tag/v0.6.2",
+    html_url: "https://github.com/vidongls/gom/releases/tag/v0.6.2",
     body: "Cập nhật Gom.",
     assets: [
       {
         name: "Gom-macOS-arm64-0.6.2.dmg",
         browser_download_url:
-          "https://github.com/mhfed/gom/releases/download/v0.6.2/Gom-macOS-arm64-0.6.2.dmg",
+          "https://github.com/vidongls/gom/releases/download/v0.6.2/Gom-macOS-arm64-0.6.2.dmg",
       },
     ],
   };
@@ -103,7 +103,7 @@ test("discovers a release from the renamed canonical Gom repository without redi
   assert.equal(result.latestVersion, "0.6.2");
   assert.equal(
     result.releaseUrl,
-    "https://github.com/mhfed/gom/releases/tag/v0.6.2",
+      "https://github.com/vidongls/gom/releases/tag/v0.6.2",
   );
 });
 

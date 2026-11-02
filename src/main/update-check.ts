@@ -1,7 +1,7 @@
 import type { UpdateState } from "../update-types.ts";
 
-export const RELEASES_URL = "https://github.com/mhfed/gom/releases";
-const RELEASES_API = "https://api.github.com/repos/mhfed/gom/releases/latest";
+export const RELEASES_URL = "https://github.com/vidongls/gom/releases";
+const RELEASES_API = "https://api.github.com/repos/vidongls/gom/releases/latest";
 const MAX_RESPONSE_BYTES = 512 * 1024;
 const MAX_NOTES_LENGTH = 12000;
 const NO_PUBLIC_RELEASE = Symbol("no-public-release");

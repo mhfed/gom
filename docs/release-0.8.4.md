@@ -20,7 +20,9 @@ Lưu, đổi tên, chuyển và xóa các bố cục tab có tên. Không gian t
 
 ## Tải xuống
 
-- macOS Apple Silicon: [DMG](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.dmg), [ZIP](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.zip).
-- Windows x64: [Setup.exe](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe), [gói cập nhật](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom_win32_x64-0.8.4-full.nupkg).
+- macOS Apple Silicon: [DMG](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.dmg), [ZIP](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.zip).
+- Windows x64: [Setup.exe](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe), [gói cập nhật](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom_win32_x64-0.8.4-full.nupkg).
 
 Các liên kết tải sẽ hoạt động sau khi phát hành và tải đủ bộ cài lên GitHub Release.
+
+Gom 0.8.3 và cũ hơn kiểm tra cập nhật từ `mhfed/gom`. Cài bản 0.8.4 này thủ công một lần; từ đó Gom kiểm tra các bản mới trên fork `vidongls/gom`.
