@@ -21,6 +21,8 @@ Gom mở giao diện web của **Zalo, Telegram, WhatsApp, Messenger, Gmail, Ins
 
 Landing page của Gom nằm trong [`website/`](website/), dùng HTML/CSS/JS tĩnh và GitHub Pages. Xem [cách xem trước và xuất bản](docs/github-pages.md).
 
+Landing page của Gom nằm trong [`website/`](website/), dùng HTML/CSS/JS tĩnh và GitHub Pages. Xem [cách xem trước và xuất bản](docs/github-pages.md).
+
 ## Tải Gom
 
 Phiên bản hiện tại: **0.8.4**, phát hành ngày **02/11/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
