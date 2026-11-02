@@ -17,22 +17,22 @@
   <a href="https://github.com/mhfed/gom/issues">Báo lỗi</a>
 </p>
 
-Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Discord, Slack và Tinder**. Bạn có thể thêm nhiều tài khoản cho cùng một nền tảng, đặt tên để phân biệt và chuyển qua lại bằng tab. Gom cũng hỗ trợ thêm website riêng.
+Gom mở giao diện web của **Zalo, Telegram, WhatsApp, Messenger, Gmail, Instagram, Discord, Slack và Tinder**. Bạn có thể thêm nhiều tài khoản cho cùng một nền tảng, đặt tên để phân biệt và chuyển qua lại bằng tab. Gom cũng hỗ trợ thêm website riêng.
 
 Landing page của Gom nằm trong [`website/`](website/), dùng HTML/CSS/JS tĩnh và GitHub Pages. Xem [cách xem trước và xuất bản](docs/github-pages.md).
 
 ## Tải Gom
 
-Phiên bản hiện tại: **0.8.3**, phát hành ngày **30/10/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
+Phiên bản hiện tại: **0.8.4**, phát hành ngày **02/11/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
 | -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg)         |
-| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe) |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.dmg)         |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe) |
 
-Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.8.3](https://github.com/mhfed/gom/releases/tag/v0.8.3), [kết quả kiểm chứng](docs/verification-0.8.3.md) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.8.4](https://github.com/mhfed/gom/releases/tag/v0.8.4), [kết quả kiểm chứng](docs/verification-0.8.4.md) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -48,7 +48,7 @@ Xem [nội dung bản 0.8.3](https://github.com/mhfed/gom/releases/tag/v0.8.3), 
 
 ### Trên Mac
 
-1. Tải và mở tệp **Gom-macOS-arm64-0.8.3.dmg**.
+1. Tải và mở tệp **Gom-macOS-arm64-0.8.4.dmg**.
 2. Kéo **Gom.app** vào **Applications**.
 3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 
@@ -58,7 +58,7 @@ DMG cũng kèm **Mo-Gom.command**. Sau khi kéo app vào Applications, bạn có
 
 ### Trên Windows
 
-1. Tải **Gom-win32-x64-0.8.3-Setup.exe**.
+1. Tải **Gom-win32-x64-0.8.4-Setup.exe**.
 2. Chạy tệp Setup và đợi quá trình cài đặt hoàn tất.
 3. Mở **Gom** từ Start menu nếu app chưa tự mở.
 
@@ -108,7 +108,15 @@ Mỗi không gian giữ tối đa 100 món, tổng 250 MiB; mỗi tệp/ảnh t�
 
 ### Nhắc trả lời
 
-Gom có **Nhắc trả lời** để ghi việc cần quay lại, gắn với tài khoản và chọn giờ nhắc. Có giờ nhanh, đổi giờ tùy chỉnh, hoãn 15 phút, hoàn tất và xóa. Nhắc việc thường phát thông báo khi Gom còn chạy; nhắc việc kín chỉ hiện trong danh sách/badge kín. Xem [hướng dẫn](docs/reply-reminders.md). Có từ bản 0.8.2.
+Gom có **Nhắc trả lời** để ghi việc cần quay lại, gắn với tài khoản và chọn giờ nhắc. Có giờ nhanh, đổi giờ tùy chỉnh, hoãn 15 phút, hoàn tất và xóa. Từ 0.8.4, Gom lưu URL nội bộ hiện tại khi nền tảng thể hiện cuộc trò chuyện trong đường dẫn; khi bấm mở, Gom kiểm tra lại URL rồi đưa bạn về đúng trang đó. Gom không đọc nội dung tin nhắn. Nhắc việc thường phát thông báo khi Gom còn chạy; nhắc việc kín chỉ hiện trong danh sách/badge kín. Xem [hướng dẫn](docs/reply-reminders.md). Có từ bản 0.8.2.
+
+### WhatsApp Web
+
+Chọn **WhatsApp** từ nút **+** rồi liên kết thiết bị bằng luồng chính thức trên điện thoại. Mỗi tài khoản WhatsApp có phiên riêng trên máy. Gom không nhập phiên Chrome, lưu mã QR hoặc đọc nội dung tin nhắn; cuộc gọi và thông báo phụ thuộc hỗ trợ của WhatsApp Web.
+
+### Tiết kiệm bộ nhớ và không gian làm việc
+
+Tài khoản nền có thể tự ngủ sau 15 phút; chọn lại để tải lại trang trong cùng phiên. Tab đang ngủ không nhận thông báo nền, số chưa đọc có thể cũ và bản nháp chưa lưu có thể mất. Lưu nhiều **không gian làm việc có tên** để chuyển nhanh giữa các bố cục tab; danh sách tài khoản và phiên đăng nhập vẫn thuộc Không gian thường hoặc Không gian kín như trước.
 
 ### Header gọn
 
@@ -176,7 +184,7 @@ Số trên tab dựa vào chỉ báo mà nền tảng cung cấp. Số có dấu
 Mở **Cài đặt → Cập nhật → Kiểm tra cập nhật** để xem phiên bản mới:
 
 - **Windows**: khi có bản tương thích, tải trong app và chọn khởi động lại để cài
-- **Mac**: bản 0.8.3 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
+- **Mac**: bản 0.8.4 mở trang tải xuống; tải DMG mới, thoát Gom, rồi kéo app vào Applications và chọn thay thế
 
 Lưu hoặc sao chép bản nháp quan trọng trước khi thoát app để cập nhật. Gom dùng lại dữ liệu tài khoản đang có; việc duy trì đăng nhập và khôi phục bản nháp còn phụ thuộc từng nền tảng.
 

@@ -25,9 +25,9 @@ Hướng dẫn chính thức: [Using custom workflows with GitHub Pages](https:/
 
 ## Cập nhật nội dung
 
-- `website/index.html`: nội dung, FAQ, thông tin phiên bản và URL bộ cài. Tìm `0.8.3` để cập nhật sau khi xác minh release mới cùng asset Mac/Windows.
+- `website/index.html`: nội dung, FAQ, thông tin phiên bản và URL bộ cài. Tìm `0.8.4` để cập nhật sau khi xác minh release mới cùng asset Mac/Windows.
 - `website/styles.css`: bố cục responsive và màu thương hiệu.
 - `website/app.js`: menu điện thoại, tab nền tảng và minh họa chat nổi. Các nút tải, nội dung và FAQ hoạt động khi tắt JavaScript.
 - `website/assets/`: logo Gom và logo nền tảng từ source app; xem `providers/SOURCES.md` để biết nguồn.
 
-Tất cả URL asset dùng đường dẫn tương đối nên chạy ở cả `/gom/` và tên miền riêng. Liên kết tải là URL GitHub Releases tuyệt đối. Bộ cài đang được liên kết là **0.8.3**, đã đối chiếu với GitHub Releases ngày 02/11/2026.
+Tất cả URL asset dùng đường dẫn tương đối nên chạy ở cả `/gom/` và tên miền riêng. Liên kết tải là URL GitHub Releases tuyệt đối. Bộ cài được liên kết là **0.8.4**; đối chiếu lại với GitHub Release và asset thật trước khi xuất bản thay đổi trên `main`.

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0b7a75" />
     <meta
       name="description"
-      content="Gom mang Zalo, Telegram, Messenger, Gmail và nhiều nền tảng về một cửa sổ. Nhiều tài khoản, chat nổi và không gian riêng trên macOS và Windows."
+      content="Gom mang Zalo, Telegram, WhatsApp, Messenger, Gmail và nhiều nền tảng về một cửa sổ. Nhiều tài khoản, chat nổi và không gian riêng trên macOS và Windows."
     />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="vi_VN" />
@@ -127,8 +127,8 @@
       <section class="hero wrap" aria-labelledby="hero-title">
         <a
           class="release-pill"
-          href="https://github.com/mhfed/gom/releases/tag/v0.8.3"
-          ><span class="status-dot"></span> Gom 0.8.3 đã có mặt
+          href="https://github.com/mhfed/gom/releases/tag/v0.8.4"
+          ><span class="status-dot"></span> Gom 0.8.4 đã có mặt
           <span class="pill-divider"></span> Khám phá bản mới
           <svg class="icon"><use href="#arrow" /></svg
         ></a>
@@ -143,13 +143,13 @@
         <div class="hero-actions">
           <a
             class="button"
-            href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg"
+            href="https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.dmg"
             ><svg class="icon"><use href="#apple" /></svg> Tải cho macOS
             <svg class="icon action-arrow"><use href="#download" /></svg
           ></a>
           <a
             class="button button-secondary"
-            href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe"
+            href="https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe"
             ><svg class="icon"><use href="#windows" /></svg> Tải cho Windows</a
           >
         </div>
@@ -444,6 +444,15 @@
           </div>
           <div>
             <img
+              src="./assets/providers/whatsapp.svg"
+              width="29"
+              height="29"
+              alt=""
+              loading="lazy"
+            /><span>WhatsApp</span>
+          </div>
+          <div>
+            <img
               src="./assets/providers/messenger.svg"
               width="29"
               height="29"
@@ -532,7 +541,8 @@
             <h3>Nhiều tài khoản.<br />&#32;Không cần đăng xuất.</h3>
             <p>
               Cá nhân, công việc, dự án riêng. Mỗi tài khoản có phiên đăng nhập
-              độc lập, chuyển qua lại ngay trong cùng nền tảng.
+              độc lập, chuyển qua lại ngay trong cùng nền tảng. Tài khoản nền
+              tự ngủ sau 15 phút để giảm bộ nhớ.
             </p>
             <div
               class="account-visual"
@@ -600,8 +610,8 @@
             </div>
             <h3>Không gian riêng,<br />&#32;theo nghĩa của bạn.</h3>
             <p>
-              Tách tài khoản thường và kín. Khóa giao diện không gian kín bằng
-              mật khẩu khi muốn giữ riêng tư.
+              Lưu nhiều bố cục tab có tên để chuyển nhanh giữa việc cá nhân và
+              công việc. Không gian thường và kín giữ danh sách tài khoản riêng.
             </p>
             <div class="space-visual">
               <span
@@ -621,8 +631,8 @@
             </div>
             <h3>Để sau.<br />&#32;Đừng để quên.</h3>
             <p>
-              Ghi chú việc cần trả lời, chọn giờ nhắc. Quay lại đúng tài khoản
-              khi bạn sẵn sàng.
+              Ghi chú việc cần trả lời, chọn giờ nhắc. Mở lại đúng tài khoản và
+              cuộc trò chuyện khi nền tảng có URL riêng.
             </p>
             <div class="reminder-visual">
               <span class="reminder-check"></span>
@@ -752,15 +762,15 @@
               Gom và tạo không gian của riêng mình.
             </p>
             <a
-              href="https://github.com/mhfed/gom/releases/tag/v0.8.3"
+              href="https://github.com/mhfed/gom/releases/tag/v0.8.4"
               class="release-link"
-              >Phiên bản 0.8.3 <span>·</span> Xem có gì mới ↗</a
+              >Phiên bản 0.8.4 <span>·</span> Xem có gì mới ↗</a
             >
           </div>
           <div class="download-options">
             <a
               class="os-download"
-              href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-macOS-arm64-0.8.3.dmg"
+              href="https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.dmg"
               ><svg class="os-icon icon"><use href="#apple" /></svg
               ><span
                 ><strong>Tải cho macOS</strong
@@ -768,7 +778,7 @@
               ><svg class="icon"><use href="#download" /></svg></a
             ><a
               class="os-download"
-              href="https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe"
+              href="https://github.com/mhfed/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe"
               ><svg class="os-icon icon"><use href="#windows" /></svg
               ><span
                 ><strong>Tải cho Windows</strong
@@ -883,10 +893,24 @@
               >
             </summary>
             <p>
-              Không. Bạn tự nhập ghi chú và chọn giờ nhắc. Gom giúp mở lại đúng
-              tài khoản, không bảo đảm mở đúng cuộc hội thoại và không tự gửi
-              câu trả lời. Nhắc thường phát thông báo khi Gom còn chạy; nhắc
-              trong Không gian kín chỉ hiển thị trong danh sách và huy hiệu kín.
+              Không. Bạn tự nhập ghi chú và chọn giờ nhắc. Từ bản 0.8.4, Gom có
+              thể mở lại URL cuộc trò chuyện nếu nền tảng đặt nó trong đường
+              dẫn. Gom không đọc tin nhắn hoặc tự gửi câu trả lời. Nhắc thường
+              phát thông báo khi Gom còn chạy; nhắc trong Không gian kín chỉ
+              hiển thị trong danh sách và huy hiệu kín.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Tab tự ngủ sau 15 phút ảnh hưởng thế nào?<span aria-hidden="true"
+                >+</span
+              >
+            </summary>
+            <p>
+              Gom đóng trang tài khoản không được chọn sau 15 phút và giữ phiên
+              đăng nhập trên máy. Khi mở lại, trang tải lại trong cùng phiên.
+              Tab ngủ không nhận thông báo nền, số chưa đọc có thể cũ và bản
+              nháp mà website chưa lưu có thể mất.
             </p>
           </details>
           <details>
