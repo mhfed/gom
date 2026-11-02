@@ -1,38 +1,39 @@
-# Gom — GitHub Pages cá nhân
+# Gom — Cloudflare Pages
 
-Website: <https://vidongls.github.io/gom/>. Repository: <https://github.com/vidongls/gom>, fork từ `mhfed/gom`.
+Website: https://gom-df6.pages.dev/. Repository: https://github.com/vidongls/gom, fork từ mhfed/gom.
 
-## Cách xuất bản
+## Xuất bản
 
-- Mã nguồn landing page nằm trong `website/` trên nhánh `main`.
-- Nhánh `gh-pages` chỉ chứa nội dung của `website/`, với `index.html` ở thư mục gốc và `.nojekyll`.
-- Settings → Pages dùng **Deploy from a branch → gh-pages → /(root)**.
-- GitHub tự build và deploy khi nhánh `gh-pages` được cập nhật.
-- Workflow Pages Actions tự viết đã tắt do giới hạn billing; Pages tích hợp của GitHub vẫn deploy được từ nhánh `gh-pages`.
+- Mã nguồn landing page nằm trong thư mục website/.
+- Cloudflare Pages project: gom. Production branch: main.
+- Project dùng Direct Upload qua Wrangler; không cần build riêng.
+- Đẩy bản production hiện tại bằng lệnh:
 
-Sau khi sửa landing page và đẩy `main`, xuất bản lại nội dung từ checkout của fork:
+    npm run deploy:website
 
-```sh
-git subtree push --prefix=website origin gh-pages
-```
+- Tạo preview từ nhánh khác bằng lệnh:
 
-Kiểm tra workflow **pages build and deployment** trong [GitHub Actions](https://github.com/vidongls/gom/actions). Không sửa trực tiếp nhánh `gh-pages` nếu vẫn dùng cách xuất bản này.
+    npx wrangler pages deploy ./website --project-name=gom --branch=preview
+
+- Xem các lần deploy bằng lệnh:
+
+    npx wrangler pages deployment list --project-name=gom
+
+Project Direct Upload hiện tại không thể chuyển sang Git integration. Nếu sau này cần deploy tự động khi có commit, tạo project Pages mới có Git integration rồi chuyển domain sang project đó.
+
+Hướng dẫn chính thức: https://developers.cloudflare.com/pages/get-started/direct-upload/.
 
 ## Xem tại máy
 
-```sh
-python3 -m http.server 4173 --directory website --bind 127.0.0.1
-```
+    python3 -m http.server 4173 --directory website --bind 127.0.0.1
 
-Mở <http://127.0.0.1:4173>.
+Mở http://127.0.0.1:4173.
 
 ## Nội dung
 
-`website/index.html`, `website/styles.css` và `website/app.js` tạo trang tĩnh, không có dependency hoặc CDN. Các cuộc trò chuyện là minh họa. URL canonical và Open Graph trỏ về website cá nhân; nút tải, phiên bản và tài liệu trỏ đến fork `vidongls/gom`.
+website/index.html, website/styles.css và website/app.js tạo trang tĩnh, không có dependency hoặc CDN. Các cuộc trò chuyện là minh họa. URL canonical và Open Graph trỏ về Cloudflare Pages; nút tải, phiên bản và tài liệu trỏ đến fork vidongls/gom.
 
-- `website/index.html`: nội dung, FAQ, thông tin phiên bản và liên kết tải.
-- `website/styles.css`: bố cục responsive và màu thương hiệu.
-- `website/app.js`: menu điện thoại, tab nền tảng và minh họa chat nổi.
-- `website/assets/`: logo Gom và logo nền tảng từ source app; xem `providers/SOURCES.md` để biết nguồn.
-
-Hướng dẫn chính thức: [Configuring a publishing source for GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+- website/index.html: nội dung, FAQ, thông tin phiên bản và liên kết tải.
+- website/styles.css: bố cục responsive và màu thương hiệu.
+- website/app.js: menu điện thoại, tab nền tảng và minh họa chat nổi.
+- website/assets/: logo Gom và logo nền tảng từ source app; xem providers/SOURCES.md để biết nguồn.

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0b7a75" />
     <meta
       name="description"
-      content="Gom mang Zalo, Telegram, WhatsApp, Messenger, Gmail và nhiều nền tảng về một cửa sổ. Nhiều tài khoản, chat nổi và không gian riêng trên macOS và Windows."
+      content="Gom mang Zalo, Telegram, WhatsApp, Messenger, Gmail và nhiều nền tảng về một cửa sổ. Bản 0.8.4 dành cho macOS Apple Silicon; Windows đang được chuẩn bị."
     />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="vi_VN" />
@@ -16,8 +16,8 @@
       content="Bớt chuyển cửa sổ. Thêm kết nối. Các nền tảng quen thuộc, trong một không gian của bạn."
     />
     <title>Gom — Trò chuyện, gọn một nơi.</title>
-    <link rel="canonical" href="https://vidongls.github.io/gom/" />
-    <meta property="og:url" content="https://vidongls.github.io/gom/" />
+    <link rel="canonical" href="https://gom-df6.pages.dev/" />
+    <meta property="og:url" content="https://gom-df6.pages.dev/" />
     <link rel="icon" href="./assets/gom-mark.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/app-icon.png" />
     <link rel="stylesheet" href="./styles.css" />
@@ -130,7 +130,7 @@
         <a
           class="release-pill"
           href="https://github.com/vidongls/gom/releases/tag/v0.8.4"
-          ><span class="status-dot"></span> Gom 0.8.4 đã có mặt
+          ><span class="status-dot"></span> Gom 0.8.4 cho macOS đã có mặt
           <span class="pill-divider"></span> Khám phá bản mới
           <svg class="icon"><use href="#arrow" /></svg
         ></a>
@@ -149,14 +149,15 @@
             ><svg class="icon"><use href="#apple" /></svg> Tải cho macOS
             <svg class="icon action-arrow"><use href="#download" /></svg
           ></a>
-          <a
-            class="button button-secondary"
-            href="https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe"
-            ><svg class="icon"><use href="#windows" /></svg> Tải cho Windows</a
+          <span
+            class="button button-secondary button-unavailable"
+            aria-disabled="true"
+            ><svg class="icon"><use href="#windows" /></svg> Windows 0.8.4
+            đang chuẩn bị</span
           >
         </div>
         <p class="hero-note">
-          Mac Apple Silicon · Windows 10/11 x64 <span>·</span>
+          macOS Apple Silicon · Windows đang chuẩn bị <span>·</span>
           <a href="#cai-dat">Hướng dẫn cài đặt</a>
         </p>
 
@@ -691,7 +692,10 @@
             <li>
               <span class="step-number">01</span>
               <h3>Cài Gom lên máy</h3>
-              <p>Chọn bản dành cho macOS hoặc Windows. Cài đặt và mở Gom.</p>
+              <p>
+                Hiện có bản 0.8.4 cho macOS Apple Silicon. Bản Windows đang
+                được chuẩn bị.
+              </p>
               <a class="text-link" href="#tai-gom"
                 >Chọn bản tải xuống <span>↗</span></a
               >
@@ -778,15 +782,13 @@
                 ><strong>Tải cho macOS</strong
                 ><small>Apple Silicon · macOS 13+ · .dmg</small></span
               ><svg class="icon"><use href="#download" /></svg></a
-            ><a
-              class="os-download"
-              href="https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe"
-              ><svg class="os-icon icon"><use href="#windows" /></svg
-              ><span
-                ><strong>Tải cho Windows</strong
-                ><small>Windows 10 / 11 · 64-bit · .exe</small></span
-              ><svg class="icon"><use href="#download" /></svg
-            ></a>
+            ><div class="os-download os-download-unavailable" role="note">
+              <svg class="os-icon icon"><use href="#windows" /></svg>
+              <span
+                ><strong>Windows 0.8.4 đang chuẩn bị</strong
+                ><small>Bộ cài Windows chưa có trong bản phát hành này</small></span
+              >
+            </div>
             <p>
               Chưa có bản dành cho Mac Intel và Linux.<br />&#32;<a
                 href="#cai-dat"
@@ -862,7 +864,7 @@
           </details>
           <details id="cai-dat">
             <summary>
-              macOS hoặc Windows hiện cảnh báo khi cài thì sao?<span
+              macOS hiện cảnh báo khi cài thì sao?<span
                 aria-hidden="true"
                 >+</span
               >
@@ -877,13 +879,16 @@
                   Anyway</strong
                 >.
               </p>
+            </div>
+          </details>
+          <details>
+            <summary>
+              Đã có bản Windows 0.8.4 chưa?<span aria-hidden="true">+</span>
+            </summary>
+            <div>
               <p>
-                Bản Windows chưa ký Authenticode nên SmartScreen có thể cảnh
-                báo; Smart App Control hoặc chính sách tổ chức có thể chặn cài
-                đặt. Hãy kiểm tra nguồn tải trước khi mở.
-                <a href="https://github.com/vidongls/gom#cài-đặt"
-                  >Xem hướng dẫn cài đặt đầy đủ ↗</a
-                >
+                Chưa. Bản 0.8.4 hiện phát hành cho macOS Apple Silicon; bộ cài
+                Windows sẽ được bổ sung sau.
               </p>
             </div>
           </details>

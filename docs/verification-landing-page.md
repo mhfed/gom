@@ -1,5 +1,14 @@
 # Kiểm chứng landing page Gom — 02/11/2026
 
+## Cloudflare Pages production — 02/11/2026
+
+- Cloudflare Pages project `gom` dùng Direct Upload; URL production: <https://gom-df6.pages.dev/>.
+- Production deployment: <https://918aeb42.gom-df6.pages.dev/>; nhánh `main`, 16 asset.
+- Kiểm tra HTTP: URL production trả `200`; HTML công khai có canonical Cloudflare, nút tải DMG 0.8.4 cho macOS Apple Silicon và thông báo Windows đang chuẩn bị. Không còn liên kết tải `Setup.exe`.
+- Trang release `v0.8.4` trả `200`; URL DMG và ZIP macOS đều chuyển tới asset công khai và trả `200`.
+- Canonical và Open Graph trỏ về URL Cloudflare. Lệnh deploy được lưu trong `npm run deploy:website`.
+- Release 0.8.4 được phát hành cho macOS trước; Windows không có trong release này do runner GitHub không khởi chạy vì billing. Landing hiển thị rõ trạng thái đó.
+
 ## Fork cá nhân đã xuất bản — 02/11/2026
 
 - Repository: `vidongls/gom`, có quyền quản trị.

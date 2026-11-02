@@ -9,6 +9,7 @@
   "main": "dist/main.cjs",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "deploy:website": "wrangler pages deploy ./website --project-name=gom --branch=main",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/*.test.ts",
     "start": "npm run build && electron .",
@@ -46,6 +47,7 @@
     "playwright-core": "1.64.1",
     "prettier": "3.9.10",
     "sharp": "0.35.5",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "wrangler": "^4.156.1"
   }
 }

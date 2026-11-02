@@ -1,23 +1,22 @@
-# Biên bản đóng gói Gom 0.8.4
+# Biên bản phát hành Gom 0.8.4
 
 ## macOS Apple Silicon
 
-- `npm run build`: thành công.
-- `npm run make`: tạo `Gom-macOS-arm64-0.8.4.dmg` và `Gom-darwin-arm64-0.8.4.zip`.
+- `npm run build` và `npm run make` đã tạo DMG và ZIP.
 - `codesign --verify --deep --strict`: thành công với `Gom.app`.
 - `hdiutil verify`: DMG hợp lệ.
 - SHA-256:
-  - DMG: `3de61853402ca136cc1e7d1a0017bfedf5a70850c3227fd35c6c79699b948f02`
-  - ZIP: `9dec26909f219b0e251dac8cbd85c4194c39d228a82ff264ba3095224f4e2109`
+  - DMG: `53e51cb28742d0fbcb50a74008ff29a02b78a19f255edc7a409ae13c516be4d7`
+  - ZIP: `afc432671cc09142c86cacfc9202e77728b7451d3ef326dfe94aef3fe0738a21`
 
 ## Windows x64
 
-Đóng gói Squirrel cần Mono và Wine khi chạy ngoài Windows. Máy build macOS hiện không có hai công cụ này; gói Windows sẽ được tạo trên runner Windows và bổ sung kết quả cùng checksum trước khi phát hành.
+Windows chưa có trong release 0.8.4. Thư mục app đã đóng gói nhưng chưa tạo bộ cài Squirrel; workflow GitHub hiện không khởi chạy do khóa billing tài khoản. Landing page ghi rõ Windows đang được chuẩn bị.
 
-## Còn chờ trước khi phát hành
+## GitHub Release
 
-- Runner Windows hoàn tất kiểm tra phát hành và tải đủ asset lên draft GitHub Release.
-- Đối chiếu bảy asset/checksum Mac và Windows, sau đó mới công bố release.
-- Hợp nhất landing page lên `main` và xác nhận GitHub Pages deploy thành công.
-
-Không thử đăng nhập bằng tài khoản WhatsApp thật trong quá trình đóng gói. Bộ cài Mac chưa được cài trên máy người dùng; Windows chưa được đóng gói trên máy này.
+- Fork: `vidongls/gom`.
+- Tag: `v0.8.4`.
+- Release: <https://github.com/vidongls/gom/releases/tag/v0.8.4>.
+- Asset công khai: DMG, ZIP và `SHA256SUMS-Gom-0.8.4-macos.txt`.
+- Release note ghi rõ Windows chưa có trong bản phát hành này.
