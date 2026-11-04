@@ -259,6 +259,7 @@ export interface AppState {
   presentation: Presentation;
   commandOpen: boolean;
   actionFeedback?: string;
+  automation?: "recording" | "macro" | "auto-click" | null;
   accounts: Account[];
   accountBusy: boolean;
   catalogWarning: string;
@@ -287,8 +288,22 @@ export type HeaderAction =
   | "theme"
   | "settings"
   | "resources"
-  | "backup";
+  | "backup"
+  | "workspace-save"
+  | "workspace-delete";
+export interface MacroEditorView {
+  token: number;
+  slot: number;
+  repeats: number;
+  steps: Array<{ label: string; delay: number }>;
+}
 export interface DesktopBridge {
+  stopAutomation(): Promise<void>;
+  macroEditor(
+    action: "save" | "play" | "cancel",
+    data: { token: number; delays?: number[]; repeats?: number },
+  ): Promise<AccountResult>;
+  onMacroEditor(callback: (data: MacroEditorView | null) => void): () => void;
   backup(
     action: "export" | "preview" | "restore" | "cancel" | "folder",
     data: { lockVersion: number; token?: string },

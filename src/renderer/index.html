@@ -224,30 +224,6 @@
               hidden
             ></span>
           </button>
-          <div class="workspace-profiles" aria-label="Không gian làm việc">
-            <select id="workspace-profile" aria-label="Chọn không gian làm việc">
-              <option value="">Mặc định</option>
-            </select>
-            <button
-              id="workspace-profile-save"
-              class="icon-button"
-              type="button"
-              title="Lưu bố cục hiện tại thành không gian mới"
-              aria-label="Lưu bố cục hiện tại thành không gian mới"
-            >
-              <svg aria-hidden="true"><use href="#i-plus" /></svg>
-            </button>
-            <button
-              id="workspace-profile-delete"
-              class="icon-button workspace-delete"
-              type="button"
-              title="Xóa không gian đang chọn"
-              aria-label="Xóa không gian đang chọn"
-              hidden
-            >
-              <svg aria-hidden="true"><use href="#i-trash" /></svg>
-            </button>
-          </div>
           <button
             id="private-space-toggle"
             class="workspace-toggle"
@@ -268,6 +244,16 @@
           >
             <svg aria-hidden="true"><use href="#i-moon" /></svg
             ><span id="focus-toolbar-time"></span>
+          </button>
+          <button
+            id="automation-stop"
+            class="automation-stop"
+            type="button"
+            hidden
+            aria-label="Dừng khẩn cấp tự động hóa"
+            title="Dừng ngay Auto Click hoặc Macro"
+          >
+            <span aria-hidden="true">■</span> Dừng
           </button>
           <button
             id="quick-switch"
@@ -854,9 +840,9 @@
               <div class="inline-note">
                 <svg aria-hidden="true"><use href="#i-info" /></svg>
                 <p>
-                  Khi tab ngủ, nền tảng không gửi thông báo tới Gom. Số chưa
-                  đọc là số gần nhất và có thể cũ cho đến khi bạn mở lại tab.
-                  Bản nháp chưa được nền tảng tự lưu có thể bị mất.
+                  Khi tab ngủ, nền tảng không gửi thông báo tới Gom. Số chưa đọc
+                  là số gần nhất và có thể cũ cho đến khi bạn mở lại tab. Bản
+                  nháp chưa được nền tảng tự lưu có thể bị mất.
                 </p>
               </div>
             </div>
@@ -1489,8 +1475,8 @@
           <h3>Tạo nhắc việc</h3>
           <p class="hint">
             Chọn tài khoản đang mở cuộc trò chuyện. Gom lưu liên kết nội bộ nếu
-            nền tảng có URL riêng; nếu không, nút mở sẽ đưa bạn vào tài khoản
-            để chọn lại.
+            nền tảng có URL riêng; nếu không, nút mở sẽ đưa bạn vào tài khoản để
+            chọn lại.
           </p>
           <label class="field-label" for="reminder-account"
             >Tài khoản cần quay lại</label
@@ -1595,9 +1581,12 @@
       <form id="workspace-save-form">
         <h2 id="workspace-save-title">Lưu không gian làm việc</h2>
         <p class="hint">
-          Lưu các tab nền tảng, tài khoản đang chọn và giao diện. Thông tin đăng nhập vẫn thuộc tài khoản hiện có.
+          Lưu các tab nền tảng, tài khoản đang chọn và giao diện. Thông tin đăng
+          nhập vẫn thuộc tài khoản hiện có.
         </p>
-        <label class="field-label" for="workspace-profile-name">Tên không gian</label>
+        <label class="field-label" for="workspace-profile-name"
+          >Tên không gian</label
+        >
         <input
           id="workspace-profile-name"
           type="text"
@@ -1605,25 +1594,98 @@
           autocomplete="off"
           required
         />
-        <p id="workspace-profile-name-error" class="form-error" role="alert"></p>
+        <p
+          id="workspace-profile-name-error"
+          class="form-error"
+          role="alert"
+        ></p>
         <div class="dialog-actions">
-          <button id="workspace-save-cancel" type="button" class="secondary">Hủy</button>
+          <button id="workspace-save-cancel" type="button" class="secondary">
+            Hủy
+          </button>
           <button type="submit" class="primary">Lưu không gian</button>
         </div>
       </form>
     </dialog>
-    <dialog id="workspace-delete-dialog" aria-labelledby="workspace-delete-title">
+    <dialog
+      id="workspace-delete-dialog"
+      aria-labelledby="workspace-delete-title"
+    >
       <div class="workspace-delete-content">
         <h2 id="workspace-delete-title">Xóa không gian làm việc?</h2>
         <p class="hint">
-          Bố cục <strong id="workspace-delete-name"></strong> sẽ bị xóa. Tài khoản và phiên đăng nhập vẫn được giữ.
+          Bố cục <strong id="workspace-delete-name"></strong> sẽ bị xóa. Tài
+          khoản và phiên đăng nhập vẫn được giữ.
         </p>
         <p id="workspace-delete-error" class="form-error" role="alert"></p>
         <div class="dialog-actions">
-          <button id="workspace-delete-cancel" type="button" class="secondary">Hủy</button>
-          <button id="workspace-delete-confirm" type="button" class="primary">Xóa</button>
+          <button id="workspace-delete-cancel" type="button" class="secondary">
+            Hủy
+          </button>
+          <button id="workspace-delete-confirm" type="button" class="primary">
+            Xóa
+          </button>
         </div>
       </div>
+    </dialog>
+    <dialog id="macro-editor-dialog" aria-labelledby="macro-editor-title">
+      <form id="macro-editor-form">
+        <div class="macro-editor-heading">
+          <div>
+            <p class="macro-editor-eyebrow">TỰ ĐỘNG HÓA</p>
+            <h2 id="macro-editor-title">Thiết lập macro</h2>
+          </div>
+          <button
+            id="macro-editor-close"
+            type="button"
+            class="icon-button"
+            aria-label="Đóng thiết lập macro"
+          >
+            ×
+          </button>
+        </div>
+        <p class="hint">
+          Điều chỉnh khoảng chờ trước từng thao tác. Thay đổi được lưu vào macro
+          này.
+        </p>
+        <label class="macro-repeat-label" for="macro-repeat"
+          >Số lần lặp <span>1–10.000 lần</span></label
+        >
+        <input
+          id="macro-repeat"
+          type="number"
+          min="1"
+          max="10000"
+          step="1"
+          required
+          inputmode="numeric"
+        />
+        <div class="macro-steps-heading">
+          <strong>Các bước</strong><span>Chờ trước bước · mili giây</span>
+        </div>
+        <div
+          id="macro-steps"
+          class="macro-steps"
+          aria-label="Thời gian chờ từng bước"
+        ></div>
+        <p class="hint">
+          1.000 mili giây = 1 giây; tổng thời gian chờ tối đa 24 giờ.
+        </p>
+        <p
+          id="macro-editor-error"
+          class="form-error"
+          role="status"
+          aria-live="polite"
+        ></p>
+        <div class="dialog-actions">
+          <button id="macro-editor-save" type="button" class="secondary">
+            Lưu
+          </button>
+          <button id="macro-editor-play" type="submit" class="primary">
+            Lưu và chạy
+          </button>
+        </div>
+      </form>
     </dialog>
     <script src="shell.js"></script>
   </body>

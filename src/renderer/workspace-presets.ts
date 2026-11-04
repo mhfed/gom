@@ -1,16 +1,12 @@
 import type { AppState } from "../shared.ts";
 
-export function createWorkspacePresetUI(options: {
-  getState(): AppState;
-}) {
+export function createWorkspacePresetUI(options: { getState(): AppState }) {
   const $ = <T extends HTMLElement>(id: string) =>
     document.getElementById(id) as T;
-  const picker = $<HTMLSelectElement>("workspace-profile");
   const saveDialog = $<HTMLDialogElement>("workspace-save-dialog");
   const saveForm = $<HTMLFormElement>("workspace-save-form");
   const nameInput = $<HTMLInputElement>("workspace-profile-name");
   const deleteDialog = $<HTMLDialogElement>("workspace-delete-dialog");
-  let signature = "";
   let generation = 0;
   let busy = false;
   let holdsSurface = false;
@@ -24,7 +20,6 @@ export function createWorkspacePresetUI(options: {
     generation++;
     busy = false;
     holdsSurface = false;
-    signature = "";
     nameInput.value = "";
     $("workspace-delete-name").textContent = "";
     $("workspace-profile-name-error").textContent = "";
@@ -96,31 +91,18 @@ export function createWorkspacePresetUI(options: {
     }
   }
 
-  picker.onchange = () => {
-    const id = picker.value || null;
-    const lockVersion = options.getState().privateSpace?.lockVersion ?? -1;
-    void window.desktop
-      .workspaceProfile("switch", { id, lockVersion })
-      .then((result) => {
-        if (!result.ok) {
-          feedback(result.message || "Chưa chuyển được không gian.", true);
-          sync(options.getState());
-        }
-      })
-      .catch(() => {
-        feedback("Chưa chuyển được không gian. Bạn thử lại nhé.", true);
-        sync(options.getState());
-      });
-  };
-  $("workspace-profile-save").onclick = () =>
-    void open(saveDialog, nameInput);
-  $("workspace-profile-delete").onclick = () => {
-    const active = options.getState().workspaceProfiles?.items.find(
-      (item) => item.id === options.getState().workspaceProfiles?.activeId,
+  function openSave() {
+    return open(saveDialog, nameInput);
+  }
+  function openDelete() {
+    const profileState = options.getState().workspaceProfiles;
+    const active = profileState?.items.find(
+      (item) => item.id === profileState.activeId,
     );
-    $("workspace-delete-name").textContent = active?.name || "";
-    void open(deleteDialog, $("workspace-delete-confirm"));
-  };
+    if (!active) return;
+    $("workspace-delete-name").textContent = active.name;
+    return open(deleteDialog, $("workspace-delete-confirm"));
+  }
   saveForm.onsubmit = (event) => {
     event.preventDefault();
     void submit("save", { name: nameInput.value });
@@ -141,33 +123,10 @@ export function createWorkspacePresetUI(options: {
       if (!saveDialog.open && !deleteDialog.open) void releaseSurface();
     };
 
-  function sync(state: AppState) {
-    const profileState = state.workspaceProfiles || {
-      activeId: null,
-      items: [],
-    };
-    const next = JSON.stringify(profileState);
-    if (next !== signature) {
-      signature = next;
-      const choices = [new Option("Mặc định", "")];
-      for (const item of profileState.items)
-        choices.push(new Option(item.name, item.id));
-      picker.replaceChildren(...choices);
-    }
-    picker.value = profileState.activeId || "";
-    picker.disabled = state.accountBusy || state.importing;
-    $("workspace-profile-save").toggleAttribute(
-      "disabled",
-      state.accountBusy || state.importing || profileState.items.length >= 12,
-    );
-    const remove = $<HTMLButtonElement>("workspace-profile-delete");
-    remove.hidden = !profileState.activeId;
-    remove.disabled = state.accountBusy || state.importing;
-  }
-
   return {
     reset,
     isOpen: () => saveDialog.open || deleteDialog.open,
-    sync,
+    openSave,
+    openDelete,
   };
 }

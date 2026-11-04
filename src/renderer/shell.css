@@ -443,37 +443,6 @@ header .focus-toolbar {
   gap: 3px;
   flex: none;
 }
-.workspace-profiles {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--paper);
-}
-.workspace-profiles select {
-  width: 112px;
-  height: 28px;
-  padding: 0 5px;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  font-size: 11px;
-  text-overflow: ellipsis;
-}
-.workspace-profiles .icon-button {
-  width: 26px;
-  height: 28px;
-  border-radius: 6px;
-}
-.workspace-profiles .workspace-delete {
-  color: var(--danger);
-}
-.workspace-profiles .icon-button svg {
-  width: 15px;
-  height: 15px;
-}
 .tools svg,
 .account-picker svg {
   width: 17px;
@@ -2382,9 +2351,6 @@ dialog::backdrop {
   .tools {
     gap: 2px;
   }
-  .workspace-profiles select {
-    width: 82px;
-  }
 }
 @media (max-width: 800px) {
   .toolbar-brand {
@@ -4137,4 +4103,111 @@ header .shelf-toggle > svg {
 }
 header #focus-toolbar-time {
   display: inline;
+}
+
+/* The stop control remains in the toolbar while automation is active. */
+.automation-stop {
+  flex: none;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #bd3540;
+  border-radius: 8px;
+  background: #b42635;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.automation-stop:hover {
+  background: #931e2b;
+}
+.automation-stop span {
+  font-size: 9px;
+  margin-right: 4px;
+}
+#macro-editor-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(720px, calc(100vh - 32px));
+  padding: 24px;
+}
+#macro-editor-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.macro-editor-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.macro-editor-heading h2 {
+  margin: 2px 0 0;
+  font-size: 21px;
+  letter-spacing: -0.4px;
+}
+.macro-editor-eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.macro-repeat-label,
+.macro-steps-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 650;
+  margin: 14px 0 7px;
+}
+.macro-repeat-label span,
+.macro-steps-heading span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+#macro-repeat {
+  width: 130px;
+}
+.macro-steps {
+  overflow-y: auto;
+  max-height: min(330px, 42vh);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.macro-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+}
+.macro-step + .macro-step {
+  border-top: 1px solid var(--line);
+}
+.macro-step label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.macro-step-number {
+  display: grid;
+  place-items: center;
+  min-width: 25px;
+  height: 25px;
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.macro-step input {
+  width: 110px;
+  flex: none;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

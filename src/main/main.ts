@@ -6,6 +6,16 @@ import type { ConfigurationSource } from "./config-backup.ts";
 import { PrivateSpaceStore } from "./private-space.ts";
 import { privateState } from "./private-state.ts";
 import { FloatingChat } from "./floating-chat.ts";
+import { AutoClicker } from "./auto-click.ts";
+import {
+  MacroRecorder,
+  MacroPlayer,
+  macroWheelEvent,
+  withMacroDelays,
+  type Macro,
+  type MacroEvent,
+} from "./macro.ts";
+import { MacroStore } from "./macro-store.ts";
 import { ShelfStore } from "./shelf-store.ts";
 import { ShelfService } from "./shelf-service.ts";
 import { SHELF_LIMITS } from "../shelf-types.ts";
@@ -181,6 +191,631 @@ const chromeRoot =
 const sources = new ChromeSources(chromeRoot, "", process.platform);
 let win: BrowserWindow;
 let floating: FloatingChat | undefined;
+let autoClickEnabled = false;
+let autoClickInterval = 500;
+let autoClickCount = 100;
+let autoClickTarget:
+  | {
+      id: AccountId;
+      contents: WebContents;
+      epoch: number | undefined;
+      url: string;
+      bounds: Electron.Rectangle;
+      privacy: number;
+    }
+  | undefined;
+const autoClicker = new AutoClicker({
+  schedule: (fn, delay) => setTimeout(fn, delay),
+  cancel: (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>),
+  valid: () => {
+    const target = autoClickTarget;
+    if (
+      !target ||
+      !win ||
+      win.isDestroyed() ||
+      !win.isVisible() ||
+      !win.isFocused() ||
+      win.isMinimized() ||
+      closing ||
+      state.panel !== "service" ||
+      state.commandOpen ||
+      state.active !== target.id ||
+      !accessible(target.id) ||
+      privacyGeneration !== target.privacy ||
+      floating?.accountId === target.id ||
+      shelfService.summary().open ||
+      target.contents.isDestroyed() ||
+      target.contents.isCrashed() ||
+      views.peek(target.id)?.webContents !== target.contents ||
+      epochs.get(target.id) !== target.epoch ||
+      target.contents.getURL() !== target.url
+    )
+      return false;
+    const bounds = views.peek(target.id)?.getBounds();
+    return (
+      !!bounds &&
+      bounds.x === target.bounds.x &&
+      bounds.y === target.bounds.y &&
+      bounds.width === target.bounds.width &&
+      bounds.height === target.bounds.height
+    );
+  },
+  click: (x, y) => {
+    const contents = autoClickTarget!.contents;
+    contents.sendInputEvent({
+      type: "mouseDown",
+      x,
+      y,
+      button: "left",
+      clickCount: 1,
+    });
+    contents.sendInputEvent({
+      type: "mouseUp",
+      x,
+      y,
+      button: "left",
+      clickCount: 1,
+    });
+  },
+  changed: (running, completed) => {
+    if (!running) autoClickTarget = undefined;
+    showActionFeedback(
+      running
+        ? "Auto Click đang chạy · nhấn Ctrl/⌘ Shift Y để dừng"
+        : completed
+          ? `Auto Click đã hoàn tất ${completed} lần nhấp.`
+          : "Auto Click đã dừng.",
+    );
+  },
+});
+function autoClickShortcut(event: Electron.Event, input: Electron.Input) {
+  if (
+    !autoClickEnabled ||
+    input.type !== "keyDown" ||
+    input.key.toLowerCase() !== "y" ||
+    !(process.platform === "darwin" ? input.meta : input.control) ||
+    !input.shift ||
+    input.alt ||
+    input.isAutoRepeat ||
+    input.isComposing
+  )
+    return false;
+  event.preventDefault();
+  if (macroRecording || macroPlayer.running) cancelMacro();
+  if (autoClicker.running) {
+    autoClicker.stop();
+    return true;
+  }
+  const id = state.active;
+  const view = views.peek(id);
+  if (
+    !view ||
+    !win.isFocused() ||
+    !win.isVisible() ||
+    state.panel !== "service" ||
+    state.commandOpen ||
+    !accessible(id) ||
+    floating?.accountId === id ||
+    shelfService.summary().open ||
+    view.webContents.isDestroyed() ||
+    view.webContents.isCrashed()
+  ) {
+    showActionFeedback("Mở một trang trong Gom rồi thử lại Auto Click.");
+    return true;
+  }
+  const bounds = view.getBounds();
+  const content = win.getContentBounds();
+  const cursor = screen.getCursorScreenPoint();
+  const x = cursor.x - content.x - bounds.x;
+  const y = cursor.y - content.y - bounds.y;
+  if (x < 0 || y < 0 || x >= bounds.width || y >= bounds.height) {
+    showActionFeedback("Đưa chuột vào trang cần nhấp rồi nhấn phím tắt.");
+    return true;
+  }
+  autoClickTarget = {
+    id,
+    contents: view.webContents,
+    epoch: epochs.get(id),
+    url: view.webContents.getURL(),
+    bounds,
+    privacy: privacyGeneration,
+  };
+  autoClicker.start({
+    x,
+    y,
+    interval: autoClickInterval,
+    count: autoClickCount,
+  });
+  return true;
+}
+type MacroTarget = {
+  id: AccountId;
+  contents: WebContents;
+  epoch: number | undefined;
+  url: string;
+  bounds: Electron.Rectangle;
+  privacy: number;
+};
+let macroTarget: MacroTarget | undefined;
+let macroRecording = false;
+let macroSaving = false;
+let macroRecordingSlot = 1;
+let macroMouseDown = false;
+let macroMouseLastMove = 0;
+let macroPlaybackMouse = false;
+let macroGeneration = 0;
+let macroEditor:
+  | {
+      token: number;
+      slot: number;
+      space: "normal" | "private";
+      target: MacroTarget;
+      macro: Macro;
+    }
+  | undefined;
+const macroRecorder = new MacroRecorder(() => Date.now());
+function macroCurrent(target: MacroTarget | undefined) {
+  if (
+    !target ||
+    !win ||
+    win.isDestroyed() ||
+    !win.isVisible() ||
+    !win.isFocused() ||
+    win.isMinimized() ||
+    closing ||
+    state.panel !== "service" ||
+    state.commandOpen ||
+    accountEditorOpen ||
+    reminderSurfaceOpen ||
+    state.active !== target.id ||
+    !accessible(target.id) ||
+    privacyGeneration !== target.privacy ||
+    floating?.accountId === target.id ||
+    shelfService.summary().open ||
+    target.contents.isDestroyed() ||
+    target.contents.isCrashed() ||
+    views.peek(target.id)?.webContents !== target.contents ||
+    epochs.get(target.id) !== target.epoch ||
+    target.contents.getURL() !== target.url
+  )
+    return false;
+  const bounds = views.peek(target.id)?.getBounds();
+  return (
+    !!bounds &&
+    bounds.x === target.bounds.x &&
+    bounds.y === target.bounds.y &&
+    bounds.width === target.bounds.width &&
+    bounds.height === target.bounds.height
+  );
+}
+function currentMacroTarget(): MacroTarget | undefined {
+  const id = state.active,
+    view = views.peek(id);
+  if (!view || view.webContents.isDestroyed()) return;
+  const target = {
+    id,
+    contents: view.webContents,
+    epoch: epochs.get(id),
+    url: view.webContents.getURL(),
+    bounds: view.getBounds(),
+    privacy: privacyGeneration,
+  };
+  return macroCurrent(target) && /^https?:\/\//.test(target.url)
+    ? target
+    : undefined;
+}
+const macroPlayer = new MacroPlayer({
+  schedule: (fn, delay) => setTimeout(fn, delay),
+  cancel: (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>),
+  valid: () => macroCurrent(macroTarget),
+  send: (event) => {
+    const contents = macroTarget!.contents;
+    if (event.type === "mousePress") {
+      contents.sendInputEvent({
+        type: "mouseDown",
+        x: event.x,
+        y: event.y,
+        button: "left",
+        clickCount: 1,
+      });
+      macroPlaybackMouse = true;
+    } else if (event.type === "mouseRelease") {
+      contents.sendInputEvent({
+        type: "mouseUp",
+        x: event.x,
+        y: event.y,
+        button: "left",
+        clickCount: 1,
+      });
+      macroPlaybackMouse = false;
+    } else if (event.type === "mouseMove") {
+      contents.sendInputEvent({
+        type: "mouseMove",
+        x: event.x,
+        y: event.y,
+        modifiers: ["leftbuttondown"],
+      });
+    } else if (event.type === "mouseWheel") {
+      contents.sendInputEvent({
+        type: "mouseWheel",
+        x: event.x,
+        y: event.y,
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+        canScroll: true,
+      });
+    } else if (event.type === "mouseDown") {
+      contents.sendInputEvent(event);
+      contents.sendInputEvent({ ...event, type: "mouseUp" });
+    } else if (event.type === "keyDown") {
+      contents.sendInputEvent(event);
+      if (
+        Array.from(event.keyCode).length === 1 &&
+        !event.modifiers.some(
+          (m) => m === "control" || m === "meta" || m === "alt",
+        )
+      )
+        contents.sendInputEvent({ ...event, type: "char" });
+      contents.sendInputEvent({ ...event, type: "keyUp" });
+    }
+  },
+  changed: (running, complete) => {
+    if (!running && macroPlaybackMouse) {
+      const contents = macroTarget?.contents;
+      if (contents && !contents.isDestroyed()) {
+        try {
+          contents.sendInputEvent({
+            type: "mouseUp",
+            x: -1,
+            y: -1,
+            button: "left",
+            clickCount: 1,
+          });
+        } catch {}
+      }
+      macroPlaybackMouse = false;
+    }
+    if (!running) macroTarget = undefined;
+    showActionFeedback(
+      running
+        ? "Macro đang chạy · nhấn Ctrl/⌘ Shift U để dừng."
+        : complete
+          ? "Macro đã chạy xong."
+          : "Macro đã dừng.",
+    );
+  },
+});
+function cancelMacro() {
+  closeMacroEditor();
+  macroGeneration++;
+  if (macroRecording) {
+    if (macroTarget && !macroTarget.contents.isDestroyed())
+      macroTarget.contents.send("gom-macro-recording", false);
+    macroRecorder.cancel();
+    macroMouseDown = false;
+    macroRecording = false;
+    macroTarget = undefined;
+    showActionFeedback("Đã hủy bản ghi macro chưa lưu.");
+  }
+  macroPlayer.stop();
+}
+function startMacroRecording(slot: number) {
+  if (macroSaving) {
+    showActionFeedback("Đợi lưu macro xong rồi thử lại.");
+    return;
+  }
+  cancelMacro();
+  autoClicker.stop();
+  const target = currentMacroTarget();
+  if (!target) {
+    showActionFeedback("Mở một trang trong Gom để ghi macro.");
+    return;
+  }
+  macroTarget = target;
+  macroRecordingSlot = slot;
+  macroMouseDown = false;
+  macroMouseLastMove = 0;
+  macroRecording = true;
+  macroRecorder.start();
+  target.contents.send("gom-macro-recording", macroGeneration);
+  target.contents.focus();
+  showActionFeedback("Đang ghi macro · nhấn Ctrl/⌘ Shift U để lưu và dừng.");
+}
+async function finishMacroRecording() {
+  const target = macroTarget;
+  if (!macroRecording || !target || !macroCurrent(target)) {
+    cancelMacro();
+    return;
+  }
+  if (macroMouseDown) {
+    showActionFeedback("Thả chuột trước khi lưu macro.");
+    return;
+  }
+  macroRecording = false;
+  target.contents.send("gom-macro-recording", false);
+  const steps = macroRecorder.finish();
+  macroTarget = undefined;
+  if (!steps.length) {
+    showActionFeedback("Không có thao tác nào để lưu.");
+    return;
+  }
+  const generation = ++macroGeneration,
+    space = privateUnlocked ? "private" : "normal";
+  const macro: Macro = {
+    accountId: target.id,
+    url: target.url,
+    width: target.bounds.width,
+    height: target.bounds.height,
+    steps,
+  };
+  macroSaving = true;
+  try {
+    const saved = await macroStore.save(
+      space,
+      macro,
+      () =>
+        !closing &&
+        generation === macroGeneration &&
+        privacyGeneration === target.privacy,
+      macroRecordingSlot,
+    );
+    if (generation === macroGeneration)
+      showActionFeedback(
+        saved
+          ? `Đã lưu macro gồm ${steps.length} thao tác.`
+          : "Không lưu được macro.",
+      );
+  } catch {
+    if (generation === macroGeneration)
+      showActionFeedback("Không lưu được macro; bản cũ được giữ lại.");
+  } finally {
+    macroSaving = false;
+  }
+}
+async function playMacro(slot: number, repeats: number) {
+  if (macroSaving) {
+    showActionFeedback("Đợi lưu macro xong rồi thử lại.");
+    return;
+  }
+  cancelMacro();
+  autoClicker.stop();
+  const target = currentMacroTarget();
+  if (!target) {
+    showActionFeedback("Mở trang đã ghi macro để phát lại.");
+    return;
+  }
+  const generation = ++macroGeneration,
+    space = privateUnlocked ? "private" : "normal";
+  try {
+    const macro = await macroStore.load(space, slot);
+    if (generation !== macroGeneration || !macroCurrent(target)) return;
+    if (!macro) {
+      showActionFeedback("Chưa có macro đã lưu trong không gian này.");
+      return;
+    }
+    if (
+      macro.accountId !== target.id ||
+      macro.url !== target.url ||
+      macro.width !== target.bounds.width ||
+      macro.height !== target.bounds.height
+    ) {
+      showActionFeedback(
+        "Hãy mở đúng tài khoản, trang và kích thước cửa sổ đã ghi macro.",
+      );
+      return;
+    }
+    macroTarget = target;
+    target.contents.focus();
+    macroPlayer.start(macro.steps, repeats);
+  } catch {
+    if (generation === macroGeneration)
+      showActionFeedback("Không đọc được macro đã lưu.");
+  }
+}
+async function deleteMacro(slot: number) {
+  if (macroSaving) return;
+  const space = privateUnlocked ? "private" : "normal",
+    privacy = privacyGeneration;
+  const result = await dialog.showMessageBox(win, {
+    type: "question",
+    buttons: ["Giữ lại", "Xóa macro"],
+    defaultId: 0,
+    cancelId: 0,
+    title: "Xóa macro",
+    message: `Xóa macro ${slot}?`,
+    detail: "Macro này sẽ bị xóa khỏi máy.",
+  });
+  if (result.response !== 1 || closing || privacy !== privacyGeneration) return;
+  const generation = ++macroGeneration;
+  macroSaving = true;
+  try {
+    const deleted = await macroStore.remove(
+      space,
+      slot,
+      () =>
+        !closing &&
+        generation === macroGeneration &&
+        privacy === privacyGeneration,
+    );
+    if (generation === macroGeneration)
+      showActionFeedback(
+        deleted ? `Đã xóa macro ${slot}.` : "Không xóa được macro.",
+      );
+  } catch {
+    if (generation === macroGeneration)
+      showActionFeedback("Không xóa được macro.");
+  } finally {
+    macroSaving = false;
+  }
+}
+function closeMacroEditor() {
+  if (!macroEditor) return;
+  macroEditor = undefined;
+  if (win && !win.isDestroyed() && !win.webContents.isDestroyed())
+    win.webContents.send("macro-editor", null);
+  layout();
+  publish();
+}
+function describeMacroStep(event: MacroEvent): string {
+  switch (event.type) {
+    case "mousePress":
+      return "Nhấn chuột";
+    case "mouseRelease":
+      return "Thả chuột";
+    case "mouseMove":
+      return "Kéo chuột";
+    case "mouseWheel":
+      return "Cuộn trang";
+    case "mouseDown":
+      return "Nhấp chuột";
+    default:
+      return "Nhấn phím";
+  }
+}
+async function openMacroEditor(slot: number) {
+  if (macroSaving || macroEditor || accountEditorOpen || reminderSurfaceOpen)
+    return;
+  cancelMacro();
+  autoClicker.stop();
+  const target = currentMacroTarget();
+  if (!target) {
+    showActionFeedback("Mở trang đã ghi macro để chỉnh sửa.");
+    return;
+  }
+  const token = ++macroGeneration,
+    space = privateUnlocked ? "private" : "normal";
+  try {
+    const macro = await macroStore.load(space, slot);
+    if (token !== macroGeneration || !macroCurrent(target)) return;
+    if (!macro) {
+      showActionFeedback(`Macro ${slot} chưa có bản ghi.`);
+      return;
+    }
+    macroEditor = { token, slot, space, target, macro };
+    layout();
+    publish();
+    win.webContents.send("macro-editor", {
+      token,
+      slot,
+      repeats: macro.repeats ?? 1,
+      steps: macro.steps.map((step) => ({
+        label: describeMacroStep(step.event),
+        delay: step.delay,
+      })),
+    });
+    win.webContents.focus();
+  } catch {
+    if (token === macroGeneration)
+      showActionFeedback("Không đọc được macro đã lưu.");
+  }
+}
+async function macroEditorCommand(arg: unknown): Promise<AccountResult> {
+  const request = arg as {
+    action?: unknown;
+    data?: { token?: unknown; delays?: unknown; repeats?: unknown };
+  } | null;
+  const editor = macroEditor,
+    data = request?.data;
+  if (
+    !editor ||
+    !data ||
+    data.token !== editor.token ||
+    editor.token !== macroGeneration ||
+    editor.target.privacy !== privacyGeneration
+  )
+    return {
+      ok: false,
+      message: "Không gian đã thay đổi. Mở lại macro để thử.",
+    };
+  if (request?.action === "cancel") {
+    closeMacroEditor();
+    return { ok: true };
+  }
+  if (request?.action !== "save" && request?.action !== "play")
+    return { ok: false, message: "Thao tác không hợp lệ." };
+  if (macroSaving) return { ok: false, message: "Đợi lưu macro xong." };
+  const repeats = data.repeats;
+  if (
+    typeof repeats !== "number" ||
+    !Number.isSafeInteger(repeats) ||
+    repeats < 1 ||
+    repeats > 10000
+  )
+    return { ok: false, message: "Số lần lặp phải từ 1 đến 10.000." };
+  const updated = withMacroDelays(editor.macro, data.delays);
+  if (!updated)
+    return {
+      ok: false,
+      message: "Thời gian chờ phải là số nguyên không âm; tổng tối đa 24 giờ.",
+    };
+  updated.repeats = repeats;
+  if (
+    request.action === "play" &&
+    (updated.accountId !== editor.target.id ||
+      updated.url !== editor.target.url ||
+      updated.width !== editor.target.bounds.width ||
+      updated.height !== editor.target.bounds.height)
+  )
+    return {
+      ok: false,
+      message: "Mở đúng tài khoản, trang và kích thước cửa sổ đã ghi macro.",
+    };
+  macroSaving = true;
+  try {
+    const valid = () =>
+      !closing &&
+      macroEditor === editor &&
+      macroGeneration === editor.token &&
+      privacyGeneration === editor.target.privacy;
+    const saved = await macroStore.save(
+      editor.space,
+      updated,
+      valid,
+      editor.slot,
+    );
+    if (!saved || !valid())
+      return { ok: false, message: "Không lưu được macro. Hãy thử lại." };
+    editor.macro = updated;
+    if (request.action === "save")
+      return { ok: true, message: "Đã lưu thời gian chờ và số lần lặp." };
+    const target = editor.target;
+    closeMacroEditor();
+    if (!macroCurrent(target))
+      return { ok: false, message: "Trang đã thay đổi; mở lại macro để chạy." };
+    macroTarget = target;
+    target.contents.focus();
+    macroPlayer.start(updated.steps, repeats);
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Không lưu được macro; bản cũ được giữ lại." };
+  } finally {
+    macroSaving = false;
+  }
+}
+function macroShortcut(event: Electron.Event, input: Electron.Input) {
+  if (
+    input.type !== "keyDown" ||
+    input.key.toLowerCase() !== "u" ||
+    !(process.platform === "darwin" ? input.meta : input.control) ||
+    !input.shift ||
+    input.alt ||
+    input.isAutoRepeat ||
+    input.isComposing ||
+    (!macroRecording && !macroPlayer.running)
+  )
+    return false;
+  event.preventDefault();
+  if (macroRecording) void finishMacroRecording();
+  else cancelMacro();
+  return true;
+}
+function recordMacroEvent(event: MacroEvent) {
+  if (!macroRecording) return;
+  if (!macroCurrent(macroTarget) || !macroRecorder.record(event)) {
+    cancelMacro();
+    showActionFeedback("Đã hủy bản ghi: trang thay đổi hoặc vượt giới hạn.");
+  }
+}
 let reminderService: ReminderService | undefined;
 let reminderSurfaceOpen = false;
 let closing = false,
@@ -387,6 +1022,28 @@ const reminderStore = new ReminderStore(
     },
   },
 );
+const macroStore = new MacroStore(join(app.getPath("userData"), "macros"), {
+  encrypt: async (text) => {
+    if (
+      !(await safeStorage.isAsyncEncryptionAvailable()) ||
+      (process.platform === "linux" &&
+        safeStorage.getSelectedStorageBackend() === "basic_text")
+    )
+      throw new Error("macro-key-unavailable");
+    return (await safeStorage.encryptStringAsync(text)).toString("base64");
+  },
+  decrypt: async (encoded) => {
+    if (
+      !(await safeStorage.isAsyncEncryptionAvailable()) ||
+      (process.platform === "linux" &&
+        safeStorage.getSelectedStorageBackend() === "basic_text")
+    )
+      throw new Error("macro-key-unavailable");
+    return (
+      await safeStorage.decryptStringAsync(Buffer.from(encoded, "base64"))
+    ).result;
+  },
+});
 const membershipJournalPath = join(
   app.getPath("userData"),
   "private-membership.json",
@@ -553,6 +1210,7 @@ function refreshHeaderRevision() {
     epochs.get(state.active),
     accountEditorOpen,
     reminderSurfaceOpen,
+    !!macroEditor,
     state.commandOpen,
     state.accountBusy,
     state.importing,
@@ -593,6 +1251,13 @@ function visibleState(): AppState {
   };
   return {
     ...privateState(state, privateUnlocked),
+    automation: macroRecording
+      ? "recording"
+      : macroPlayer.running
+        ? "macro"
+        : autoClicker.running
+          ? "auto-click"
+          : null,
     shelf: shelfService.summary(),
     workspaceProfiles: {
       activeId: activeWorkspaceProfileIds[workspaceKey],
@@ -647,7 +1312,11 @@ function restoreWorkspace() {
   )
     activeWorkspaceProfileIds[key] = null;
   const source = workspaceNavigation();
-  const next = normalizeWorkspaceNavigation(source, state.accounts, privateUnlocked);
+  const next = normalizeWorkspaceNavigation(
+    source,
+    state.accounts,
+    privateUnlocked,
+  );
   const profile = workspaceProfiles[key].find(
     (item) => item.id === activeWorkspaceProfileIds[key],
   );
@@ -757,6 +1426,8 @@ function normalizeWorkspaceProfiles(
   return profiles;
 }
 function switchWorkspace(toPrivate: boolean) {
+  cancelMacro();
+  autoClicker.stop();
   const changed = privateUnlocked !== toPrivate;
   if (changed || privateUnlocked) {
     floating?.conceal();
@@ -922,8 +1593,7 @@ async function updateWorkspaceProfile(
     if (
       foldedName === "mặc định" ||
       profiles.some(
-        (profile) =>
-          profile.name.toLocaleLowerCase() === foldedName,
+        (profile) => profile.name.toLocaleLowerCase() === foldedName,
       )
     )
       return { ok: false, message: "Tên này đã được dùng trong không gian." };
@@ -962,7 +1632,10 @@ async function updateWorkspaceProfile(
     }
     return lockVersion === privacyGeneration
       ? { ok: true, message: "Đã lưu không gian làm việc." }
-      : { ok: false, message: "Không gian đã thay đổi. Mở lại bảng để thử lại." };
+      : {
+          ok: false,
+          message: "Không gian đã thay đổi. Mở lại bảng để thử lại.",
+        };
   }
   if (action === "switch") {
     const targetId = data.id === null || data.id === "" ? null : data.id;
@@ -991,7 +1664,10 @@ async function updateWorkspaceProfile(
     }
     return lockVersion === privacyGeneration
       ? { ok: true }
-      : { ok: false, message: "Không gian đã thay đổi. Mở lại bảng để thử lại." };
+      : {
+          ok: false,
+          message: "Không gian đã thay đổi. Mở lại bảng để thử lại.",
+        };
   }
   if (action === "delete") {
     const targetId =
@@ -1021,7 +1697,10 @@ async function updateWorkspaceProfile(
     }
     return lockVersion === privacyGeneration
       ? { ok: true, message: "Đã xóa không gian làm việc." }
-      : { ok: false, message: "Không gian đã thay đổi. Mở lại bảng để thử lại." };
+      : {
+          ok: false,
+          message: "Không gian đã thay đổi. Mở lại bảng để thử lại.",
+        };
   }
   return { ok: false, message: "Thao tác không gian chưa hợp lệ." };
 }
@@ -1640,7 +2319,57 @@ function guard(contents: WebContents, id: AccountId) {
       return;
     void contents.insertCSS(MESSENGER_CHROME_CSS).catch(() => {});
   });
+  contents.on("before-mouse-event", (_event, mouse) => {
+    if (!macroRecording || macroTarget?.contents !== contents) return;
+    const { x, y } = mouse;
+    if (
+      !Number.isSafeInteger(x) ||
+      !Number.isSafeInteger(y) ||
+      x < 0 ||
+      y < 0 ||
+      x >= macroTarget.bounds.width ||
+      y >= macroTarget.bounds.height
+    )
+      return;
+    if (
+      mouse.type === "mouseDown" &&
+      mouse.button === "left" &&
+      !macroMouseDown
+    ) {
+      macroMouseDown = true;
+      recordMacroEvent({ type: "mousePress", x, y });
+    } else if (
+      mouse.type === "mouseMove" &&
+      macroMouseDown &&
+      Date.now() - macroMouseLastMove >= 30
+    ) {
+      macroMouseLastMove = Date.now();
+      recordMacroEvent({ type: "mouseMove", x, y });
+    } else if (
+      mouse.type === "mouseUp" &&
+      mouse.button === "left" &&
+      macroMouseDown
+    ) {
+      macroMouseDown = false;
+      recordMacroEvent({ type: "mouseRelease", x, y });
+    }
+  });
   contents.on("before-input-event", (event, input) => {
+    if (macroShortcut(event, input) || autoClickShortcut(event, input)) return;
+    if (
+      macroRecording &&
+      macroTarget?.contents === contents &&
+      input.type === "keyDown" &&
+      !input.isComposing &&
+      !["Shift", "Control", "Alt", "Meta"].includes(input.key)
+    ) {
+      const modifiers: Array<"shift" | "control" | "alt" | "meta"> = [];
+      if (input.shift) modifiers.push("shift");
+      if (input.control) modifiers.push("control");
+      if (input.alt) modifiers.push("alt");
+      if (input.meta) modifiers.push("meta");
+      recordMacroEvent({ type: "keyDown", keyCode: input.key, modifiers });
+    }
     const copyShortcut =
       input.type === "keyDown" &&
       input.key.toLowerCase() === "c" &&
@@ -1875,6 +2604,10 @@ function createView(id: AccountId) {
   view.webContents.on(
     "did-start-navigation",
     (_e, _url, inPlace, isMainFrame) => {
+      if (isMainFrame && autoClickTarget?.contents === view.webContents)
+        autoClicker.stop();
+      if (isMainFrame && macroTarget?.contents === view.webContents)
+        cancelMacro();
       if (isCurrent(id, view.webContents) && isMainFrame && !inPlace) {
         navigationFailed.delete(id);
         epochs.set(id, (epochs.get(id) ?? 0) + 1);
@@ -1932,6 +2665,22 @@ function shelfCoversPage() {
 }
 function layout() {
   if (!win || win.isDestroyed()) return;
+  if (
+    (macroRecording || macroPlayer.running) &&
+    (state.panel !== "service" ||
+      state.commandOpen ||
+      shelfService.summary().open ||
+      state.active !== macroTarget?.id)
+  )
+    cancelMacro();
+  if (
+    autoClicker.running &&
+    (state.panel !== "service" ||
+      state.commandOpen ||
+      shelfService.summary().open ||
+      state.active !== autoClickTarget?.id)
+  )
+    autoClicker.stop();
   const [width, height] = win.getContentSize();
   layoutViews(
     [...views.entries()].filter(([id]) => id !== floating?.accountId),
@@ -1939,6 +2688,7 @@ function layout() {
     height,
     state.active,
     !accessible(state.active) ||
+      !!macroEditor ||
       state.commandOpen ||
       (state.panel === "service" && state.connections[state.active].reason)
       ? "settings"
@@ -1966,6 +2716,8 @@ function activate(id: AccountId, focusPage = true) {
   activateAwake(id, focusPage);
 }
 function activateAwake(id: AccountId, focusPage = true) {
+  if (autoClickTarget && autoClickTarget.id !== id) autoClicker.stop();
+  if (macroTarget && macroTarget.id !== id) cancelMacro();
   if (accountEditorOpen || reminderSurfaceOpen) return;
   const account = findAccount(id);
   if (
@@ -2414,8 +3166,7 @@ function hibernationDue(id: AccountId, now: number) {
   return (
     !!account &&
     !(
-      state.active === id &&
-      state.providerTabs.open.includes(account.provider)
+      state.active === id && state.providerTabs.open.includes(account.provider)
     ) &&
     backgroundAt !== undefined &&
     now - backgroundAt >= BACKGROUND_HIBERNATION_MS
@@ -2442,8 +3193,7 @@ function tick() {
     for (const id of recovery.due(
       now,
       online,
-      (id) =>
-        !hibernationDue(id, now) && !hibernatingAccounts.has(id),
+      (id) => !hibernationDue(id, now) && !hibernatingAccounts.has(id),
     ))
       reloadProvider(id);
   for (const [id, view] of views.entries()) void detect(id, view.webContents);
@@ -3540,7 +4290,170 @@ async function showNavigationMenu(
     selected = () =>
       action === "float-chat" && !pageCurrent() ? undefined : action;
   };
+  const workspaceKey: WorkspaceKey = privateUnlocked ? "private" : "normal";
+  const profiles = workspaceProfiles[workspaceKey];
+  const activeProfileId = activeWorkspaceProfileIds[workspaceKey];
+  const chooseWorkspace = (profileId: string | null) => () => {
+    selected = () => {
+      void workspaceProfileCommand({
+        action: "switch",
+        data: { id: profileId, lockVersion: generation },
+      })
+        .then((result) => {
+          if (!result.ok)
+            showActionFeedback(
+              result.message || "Chưa chuyển được không gian làm việc.",
+            );
+        })
+        .catch(() =>
+          showActionFeedback("Chưa chuyển được không gian làm việc."),
+        );
+    };
+  };
   const items: Electron.MenuItemConstructorOptions[] = [
+    {
+      id: "header-workspaces",
+      label: "Không gian làm việc",
+      submenu: [
+        {
+          label: "Mặc định",
+          type: "radio",
+          checked: activeProfileId === null,
+          click: chooseWorkspace(null),
+        },
+        ...profiles.map((profile) => ({
+          id: `workspace-profile-${profile.id}`,
+          label: profile.name,
+          type: "radio" as const,
+          checked: activeProfileId === profile.id,
+          click: chooseWorkspace(profile.id),
+        })),
+        { type: "separator" },
+        {
+          label: "Lưu bố cục hiện tại…",
+          enabled: profiles.length < 12,
+          click: choose("workspace-save"),
+        },
+        {
+          label: "Xóa bố cục đang dùng…",
+          enabled: activeProfileId !== null,
+          click: choose("workspace-delete"),
+        },
+      ],
+    },
+    { type: "separator" },
+    {
+      id: "header-auto-click",
+      label: autoClicker.running ? "Auto Click · Đang chạy" : "Auto Click",
+      submenu: [
+        {
+          label: autoClickEnabled ? "Tắt Auto Click" : "Bật Auto Click",
+          click: () => {
+            selected = () => {
+              autoClickEnabled = !autoClickEnabled;
+              if (!autoClickEnabled) autoClicker.stop();
+              showActionFeedback(
+                autoClickEnabled
+                  ? "Đưa chuột vào trang, nhấn Ctrl/⌘ Shift Y để bắt đầu hoặc dừng."
+                  : "Đã tắt Auto Click.",
+              );
+            };
+          },
+        },
+        { label: "Bắt đầu / dừng: Ctrl/⌘ Shift Y", enabled: false },
+        { type: "separator" },
+        {
+          label: "Khoảng cách giữa các lần nhấp",
+          submenu: [100, 250, 500, 1000, 2000, 5000].map((ms) => ({
+            label: `${ms / 1000} giây`,
+            type: "radio" as const,
+            checked: autoClickInterval === ms,
+            click: () => {
+              selected = () => {
+                autoClicker.stop();
+                autoClickInterval = ms;
+              };
+            },
+          })),
+        },
+        {
+          label: "Số lần nhấp",
+          submenu: [10, 50, 100, 500, 1000, 10000].map((count) => ({
+            label: count.toLocaleString("vi-VN"),
+            type: "radio" as const,
+            checked: autoClickCount === count,
+            click: () => {
+              selected = () => {
+                autoClicker.stop();
+                autoClickCount = count;
+              };
+            },
+          })),
+        },
+      ],
+    },
+    {
+      id: "header-macro",
+      label: macroRecording
+        ? "Macro · Đang ghi"
+        : macroPlayer.running
+          ? "Macro · Đang chạy"
+          : "Macro",
+      submenu: [
+        { label: "Kết thúc ghi / dừng: Ctrl/⌘ Shift U", enabled: false },
+        { label: "Macro ghi cả phím được gõ", enabled: false },
+        { type: "separator" },
+        ...[1, 2, 3, 4, 5].map((slot) => ({
+          id: `macro-slot-${slot}`,
+          label: `Macro ${slot}`,
+          submenu: [
+            {
+              label: "Ghi / thay bản ghi…",
+              enabled: pageCurrent() && !macroSaving,
+              click: () => {
+                selected = () => startMacroRecording(slot);
+              },
+            },
+            {
+              label: "Phát một lần",
+              enabled: pageCurrent() && !macroSaving,
+              click: () => {
+                selected = () => void playMacro(slot, 1);
+              },
+            },
+            {
+              label: "Lặp 5 lần",
+              enabled: pageCurrent() && !macroSaving,
+              click: () => {
+                selected = () => void playMacro(slot, 5);
+              },
+            },
+            {
+              label: "Lặp 10 lần",
+              enabled: pageCurrent() && !macroSaving,
+              click: () => {
+                selected = () => void playMacro(slot, 10);
+              },
+            },
+            {
+              label: "Chỉnh thời gian và số lần lặp…",
+              enabled: pageCurrent() && !macroSaving,
+              click: () => {
+                selected = () => void openMacroEditor(slot);
+              },
+            },
+            { type: "separator" as const },
+            {
+              label: "Xóa macro…",
+              enabled: !macroSaving,
+              click: () => {
+                selected = () => void deleteMacro(slot);
+              },
+            },
+          ],
+        })),
+      ],
+    },
     {
       id: "header-focus",
       label: state.preferences.focus
@@ -4092,6 +5005,8 @@ function beginAutomaticUpdate() {
   }
 }
 async function quit(installUpdate = false, restart = false) {
+  cancelMacro();
+  autoClicker.stop();
   if (closing) return;
   closing = true;
   clearTimeout(actionFeedbackTimer);
@@ -4476,11 +5391,7 @@ else {
             ok: false,
             message: "Chưa mở được tài khoản của nhắc việc.",
           };
-        if (
-          target &&
-          existingIsLive &&
-          view.webContents.getURL() !== target
-        )
+        if (target && existingIsLive && view.webContents.getURL() !== target)
           void view.webContents.loadURL(target).catch(() => {});
         showWindow();
         const message = target
@@ -4503,6 +5414,26 @@ else {
       accountEditorOpen = false;
       shelfService.close();
       layout();
+    });
+    ipcMain.on("provider-macro-wheel", (event, data: unknown) => {
+      const target = macroTarget;
+      if (
+        !macroRecording ||
+        !target ||
+        !data ||
+        typeof data !== "object" ||
+        (data as { token?: unknown }).token !== macroGeneration ||
+        event.sender !== target.contents ||
+        event.senderFrame !== target.contents.mainFrame ||
+        !macroCurrent(target)
+      )
+        return;
+      const wheel = macroWheelEvent(
+        data,
+        target.bounds.width,
+        target.bounds.height,
+      );
+      if (wheel) recordMacroEvent(wheel);
     });
     ipcMain.on("provider-notification-click", (event) => {
       if (closing || event.senderFrame !== event.sender.mainFrame) return;
@@ -4578,6 +5509,12 @@ else {
       if (providerId !== undefined && !accessibleProvider(providerId))
         return { ok: false };
       switch (command) {
+        case "automation-stop":
+          cancelMacro();
+          autoClicker.stop();
+          return;
+        case "macro-editor":
+          return macroEditorCommand(arg);
         case "backup":
           return backupCommand(arg);
         case "resources": {
@@ -5037,7 +5974,16 @@ else {
         },
       ]),
     );
+    win.webContents.on("before-input-event", (event, input) => {
+      if (!macroShortcut(event, input)) autoClickShortcut(event, input);
+    });
+    win.on("blur", () => {
+      cancelMacro();
+      autoClicker.stop();
+    });
     win.on("resize", () => {
+      cancelMacro();
+      autoClicker.stop();
       layout();
       scheduleSave();
     });

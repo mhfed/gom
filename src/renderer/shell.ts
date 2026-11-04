@@ -1086,6 +1086,7 @@ function render(state: AppState) {
         state.privateSpace.lockVersion !== previous.privateSpace?.lockVersion));
   if (spaceChanged) scrubPrivateUI();
   current = state;
+  setProperty($("automation-stop"), "hidden", !state.automation);
   const actionFeedback = $("global-action-feedback");
   if (state.actionFeedback) {
     if (previous?.actionFeedback !== state.actionFeedback) {
@@ -1104,7 +1105,6 @@ function render(state: AppState) {
     actionFeedback.textContent = "";
   }
   privateSpaceUI.sync(state);
-  workspacePresetUI.sync(state);
   shelfUI.render(state);
   reminderUI.sync(state);
   focusUI.sync(state);
@@ -1352,15 +1352,21 @@ function render(state: AppState) {
       );
   lastPanel = state.panel;
   command.sync(
-    privateSpaceUI.isOpen() ||
-      reminderUI.isOpen() ||
-      workspacePresetUI.isOpen()
+    privateSpaceUI.isOpen() || reminderUI.isOpen() || workspacePresetUI.isOpen()
       ? { ...state, commandOpen: false }
       : state,
   );
   if (!previous) showTab(activeTab);
 }
 async function headerAction(action: HeaderAction) {
+  if (action === "workspace-save") {
+    await workspacePresetUI.openSave();
+    return;
+  }
+  if (action === "workspace-delete") {
+    await workspacePresetUI.openDelete();
+    return;
+  }
   if (action === "add-account") {
     await openEditor();
     return;
@@ -1749,3 +1755,94 @@ void window.desktop.state().then(render);
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   if (current) render(current);
 });
+
+// Macro settings are hosted in the trusted shell; the main process owns data and playback.
+const macroDialog = $<HTMLDialogElement>("macro-editor-dialog");
+const macroForm = $<HTMLFormElement>("macro-editor-form");
+const macroSteps = $("macro-steps");
+const macroError = $("macro-editor-error");
+let macroEditorToken: number | undefined;
+let macroEditorBusy = false;
+function clearMacroEditor() {
+  macroEditorToken = undefined;
+  macroEditorBusy = false;
+  macroSteps.replaceChildren();
+  macroError.textContent = "";
+  if (macroDialog.open) macroDialog.close();
+}
+window.desktop.onMacroEditor((data) => {
+  if (!data) {
+    clearMacroEditor();
+    return;
+  }
+  clearMacroEditor();
+  macroEditorToken = data.token;
+  $("macro-editor-title").textContent = `Thiết lập macro ${data.slot}`;
+  $<HTMLInputElement>("macro-repeat").value = String(data.repeats);
+  const fragment = document.createDocumentFragment();
+  data.steps.forEach((step, index) => {
+    const row = document.createElement("div");
+    row.className = "macro-step";
+    const label = document.createElement("label");
+    label.htmlFor = `macro-delay-${index}`;
+    const number = document.createElement("span");
+    number.className = "macro-step-number";
+    number.textContent = String(index + 1);
+    const title = document.createElement("span");
+    title.textContent = step.label;
+    label.append(number, title);
+    const input = document.createElement("input");
+    input.type = "number";
+    input.id = label.htmlFor;
+    input.value = String(step.delay);
+    input.min = "0";
+    input.max = "86400000";
+    input.step = "1";
+    input.required = true;
+    input.inputMode = "numeric";
+    row.append(label, input);
+    fragment.append(row);
+  });
+  macroSteps.replaceChildren(fragment);
+  macroDialog.showModal();
+  $<HTMLInputElement>("macro-repeat").focus();
+});
+async function sendMacroEditor(action: "save" | "play" | "cancel") {
+  if (macroEditorBusy || macroEditorToken === undefined) return;
+  const token = macroEditorToken;
+  if (action !== "cancel" && !macroForm.reportValidity()) return;
+  macroEditorBusy = true;
+  $<HTMLButtonElement>("macro-editor-save").disabled = true;
+  $<HTMLButtonElement>("macro-editor-play").disabled = true;
+  try {
+    const delays = [
+      ...macroSteps.querySelectorAll<HTMLInputElement>("input"),
+    ].map((input) => input.valueAsNumber);
+    const result = await window.desktop.macroEditor(action, {
+      token,
+      delays,
+      repeats: $<HTMLInputElement>("macro-repeat").valueAsNumber,
+    });
+    if (macroEditorToken === token)
+      macroError.textContent =
+        result.message || (result.ok ? "Đã lưu." : "Không thực hiện được.");
+  } catch {
+    if (macroEditorToken === token)
+      macroError.textContent = "Không thực hiện được. Hãy thử lại.";
+  } finally {
+    macroEditorBusy = false;
+    $<HTMLButtonElement>("macro-editor-save").disabled = false;
+    $<HTMLButtonElement>("macro-editor-play").disabled = false;
+  }
+}
+macroForm.onsubmit = (event) => {
+  event.preventDefault();
+  void sendMacroEditor("play");
+};
+$("macro-editor-save").onclick = () => void sendMacroEditor("save");
+$("macro-editor-close").onclick = () => void sendMacroEditor("cancel");
+macroDialog.oncancel = (event) => {
+  event.preventDefault();
+  void sendMacroEditor("cancel");
+};
+$("automation-stop").onclick = () => void window.desktop.stopAutomation();

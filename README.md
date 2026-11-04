@@ -26,8 +26,8 @@ Landing page của Gom nằm trong [`website/`](website/), dùng HTML/CSS/JS tĩ
 
 Phiên bản hiện tại: **0.8.4**, phát hành ngày **02/11/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
 
-| Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
-| -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                            |
+| -------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
 | Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.dmg)         |
 | Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe) |
 
@@ -91,6 +91,22 @@ Logo mới áp dụng cho toàn bộ nền tảng đó và được lưu trên m
 
 Đóng tab giữ lại dữ liệu đăng nhập. Với website riêng, hãy lưu nội dung đang soạn trước khi đóng tab vì khả năng khôi phục bản nháp phụ thuộc website.
 
+### Auto Click
+
+Mở trang muốn dùng, chọn **··· Công cụ → Auto Click → Bật Auto Click**. Trong cùng menu, chọn khoảng cách giữa các lần nhấp (0,1–5 giây) và số lần nhấp (10–10.000). Mặc định là 0,5 giây và 100 lần.
+
+Đưa con trỏ tới vị trí trên trang rồi nhấn **⌘ Shift Y** trên Mac hoặc **Ctrl Shift Y** trên Windows để bắt đầu. Nhấn lại phím tắt để dừng; phím tắt chỉ hoạt động khi Gom đang được chọn. Gom nhấp vào vị trí đã chọn, không di chuyển theo con trỏ, và tự dừng khi hoàn tất, đổi tài khoản, trang điều hướng, đổi kích thước hoặc cửa sổ mất tiêu điểm. Nút đỏ **Dừng** trên thanh công cụ xuất hiện khi Auto Click đang chạy; bấm để ngắt ngay. Mở menu Auto Click để tắt tính năng khi không dùng.
+
+Auto Click hoạt động trong trang nền tảng hoặc website đang mở trong cửa sổ chính. Điểm nhấp được tính theo vị trí trên trang: nếu nội dung thay đổi hay cuộn trong khi chạy, hãy dừng và chọn lại điểm. Một số website hoặc trò chơi có thể không nhận nhấp mô phỏng.
+
+### Macro
+
+Mở **··· Công cụ → Macro**, chọn một trong năm ô rồi chọn **Ghi / thay bản ghi…**. Gom ghi nhấp trái, kéo chuột, cuộn và phím bấm trong trang đang mở. Nhấn **⌘ Shift U** trên Mac hoặc **Ctrl Shift U** trên Windows để dừng ghi và lưu. Macro được mã hóa trên máy; không gian thường và kín có các ô riêng. Ghi lại vào cùng ô sẽ thay bản cũ; chọn **Xóa macro…** để xóa một ô.
+
+Để chạy lại, mở đúng tài khoản và trang với cùng kích thước cửa sổ như lúc ghi, rồi chọn ô macro và **Phát một lần**, **Lặp 5 lần** hoặc **Lặp 10 lần**. Chọn **Chỉnh thời gian và số lần lặp…** để đặt số lần từ 1 đến 10.000 và thời gian chờ trước từng thao tác (tổng tối đa 24 giờ), rồi bấm **Lưu và chạy** hoặc **Lưu**. Nút đỏ **Dừng** trên thanh công cụ ngắt Macro hoặc Auto Click ngay; khi đang ghi, nút này hủy bản ghi chưa lưu. Dùng **⌘/Ctrl Shift U** để lưu bản ghi đang mở hoặc dừng phát Macro. Gom cũng hủy bản ghi chưa lưu hoặc dừng phát khi đổi tài khoản, trang điều hướng, cửa sổ mất tiêu điểm hoặc đổi kích thước. Một bản ghi có tối đa 500 thao tác trong hai phút đầu.
+
+Macro ghi lại cả phím bạn gõ; không nhập mật khẩu hoặc mã xác thực khi đang ghi. Nhập bằng bộ gõ tiếng Việt chưa được hỗ trợ. Nội dung trang thay đổi có thể làm vị trí nhấp lệch; một số website không nhận thao tác mô phỏng.
+
 ### Chat nổi và bong bóng
 
 Mở tab muốn dùng, rồi chọn **Tách thành chat nổi** trong menu tên tài khoản hoặc **··· Công cụ**. Gom chuyển trang đang dùng sang cửa sổ nhỏ, giữ phiên đăng nhập và tải lại đúng một lần sau khi áp dụng kích thước popup. Lưu hoặc sao chép bản nháp quan trọng trước khi tách: lần tải lại ban đầu có thể làm mất bản nháp tùy nền tảng. Thu/mở bong bóng và đưa tab về Gom không tải lại trang.
@@ -117,7 +133,7 @@ Chọn **WhatsApp** từ nút **+** rồi liên kết thiết bị bằng luồn
 
 ### Tiết kiệm bộ nhớ và không gian làm việc
 
-Tài khoản nền có thể tự ngủ sau 15 phút; chọn lại để tải lại trang trong cùng phiên. Tab đang ngủ không nhận thông báo nền, số chưa đọc có thể cũ và bản nháp chưa lưu có thể mất. Lưu nhiều **không gian làm việc có tên** để chuyển nhanh giữa các bố cục tab; danh sách tài khoản và phiên đăng nhập vẫn thuộc Không gian thường hoặc Không gian kín như trước.
+Tài khoản nền có thể tự ngủ sau 15 phút; chọn lại để tải lại trang trong cùng phiên. Tab đang ngủ không nhận thông báo nền, số chưa đọc có thể cũ và bản nháp chưa lưu có thể mất. Mở **··· Công cụ → Không gian làm việc** để đổi bố cục; tại đây cũng có thể lưu bố cục hiện tại hoặc xóa bố cục đang dùng. Danh sách tài khoản và phiên đăng nhập vẫn thuộc Không gian thường hoặc Không gian kín như trước.
 
 ### Header gọn
 

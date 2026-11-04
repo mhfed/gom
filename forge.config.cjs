@@ -32,6 +32,7 @@ const runtimePaths = new Set([
   "/dist/logos/discord.svg",
   "/dist/logos/slack.svg",
   "/dist/logos/tinder.svg",
+  "/dist/logos/whatsapp.svg",
   "/dist/logos/zalo.png",
   "/dist/logos/SOURCES.md",
 ]);

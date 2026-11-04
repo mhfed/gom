@@ -1,6 +1,15 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge, AppState, ProviderId } from "../shared.ts";
 const bridge: DesktopBridge = {
+  stopAutomation: () => ipcRenderer.invoke("desktop", "automation-stop"),
+  macroEditor: (action, data) =>
+    ipcRenderer.invoke("desktop", "macro-editor", { action, data }),
+  onMacroEditor(callback) {
+    const listener = (_: unknown, data: Parameters<typeof callback>[0]) =>
+      callback(data);
+    ipcRenderer.on("macro-editor", listener);
+    return () => ipcRenderer.removeListener("macro-editor", listener);
+  },
   backup: (action, data) =>
     ipcRenderer.invoke("desktop", "backup", { action, data }),
   resources: (action, data) =>
