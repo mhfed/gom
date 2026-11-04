@@ -69,17 +69,21 @@ export async function replaceProviderCookies(
   const selected = [...unique.values()];
   if (!selected.length) throw new Error("invalid-provider-cookies");
   const beforeMap = new Map<string, Awaited<ReturnType<Jar["get"]>>[number]>();
-  for (const domain of allowedDomains) {
-    for (const name of allowedNames) {
-      for (const cookie of await jar.get({ domain, name })) {
-        if (
-          cookie.name === name &&
-          cookie.domain &&
-          cookieHostInScope(cookie.domain, allowedDomains)
-        )
-          beforeMap.set(cookieKey(cookie), cookie);
+  try {
+    for (const domain of allowedDomains) {
+      for (const name of allowedNames) {
+        for (const cookie of await jar.get({ domain, name })) {
+          if (
+            cookie.name === name &&
+            cookie.domain &&
+            cookieHostInScope(cookie.domain, allowedDomains)
+          )
+            beforeMap.set(cookieKey(cookie), cookie);
+        }
       }
     }
+  } catch {
+    throw new Error("destination-cookie-read-failed");
   }
   const before = [...beforeMap.values()];
   if (

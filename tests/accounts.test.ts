@@ -216,6 +216,45 @@ test("Instagram verification failure rolls back imported cookies and keeps its e
   assert.equal(values.size, 0);
 });
 
+test("provider import identifies destination cookie reads that fail before writes", async () => {
+  const written: LoginCookie[] = [];
+  const jar = {
+    get: async () => {
+      throw Error("private-cookie-store-error");
+    },
+    set: async (cookie: LoginCookie) => {
+      written.push(cookie);
+    },
+    remove: async () => {},
+    flushStore: async () => {},
+  };
+  const instagramCookie = (name: string, value: string): LoginCookie => ({
+    url: "https://instagram.com/",
+    domain: ".instagram.com",
+    name,
+    value,
+    path: "/",
+    secure: true,
+    httpOnly: true,
+  });
+
+  await assert.rejects(
+    replaceProviderCookies(
+      jar,
+      [
+        instagramCookie("sessionid", "new-session"),
+        instagramCookie("ds_user_id", "new-user"),
+      ],
+      ["instagram.com"],
+      ["sessionid", "ds_user_id"],
+      undefined,
+      true,
+    ),
+    /destination-cookie-read-failed/,
+  );
+  assert.deepEqual(written, []);
+});
+
 for (const phase of ["existing session at commit"]) {
   test(`protected import preserves ${phase} destination before any writes`, async () => {
     const existing = [

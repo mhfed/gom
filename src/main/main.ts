@@ -3883,8 +3883,9 @@ async function importProviderSession(
       state.notice = `${label} hiện có phiên. Phiên đang dùng được giữ nguyên.`;
       return { status: finalDestination };
     }
-    phase = `ghi phiên vào tài khoản ${label} đích`;
+    phase = `mở view ${label} đích`;
     const target = views.activate(targetId);
+    phase = "đưa view đích về cửa sổ chính";
     attachProviderViewToMain(
       targetId,
       floating?.accountId,
@@ -3892,8 +3893,11 @@ async function importProviderSession(
       win.contentView,
       target,
     );
+    phase = "cập nhật bố cục cửa sổ";
     layout();
+    phase = "dừng trang đích trước khi nhập phiên";
     target.webContents.stop();
+    phase = `kiểm tra cookie hiện có của tài khoản ${label} đích`;
     await replaceProviderCookies(
       partition(targetId).cookies,
       verified,
@@ -3902,7 +3906,9 @@ async function importProviderSession(
       () => verifyProvider(target.webContents, provider),
       true,
     );
+    phase = `kích hoạt tài khoản ${label} đích`;
     activate(targetId);
+    phase = "cập nhật trạng thái đăng nhập";
     status(targetId, "authenticated");
     state.notice = `Đã dùng phiên ${label} có sẵn.`;
     return { status: "imported" };
@@ -3915,7 +3921,12 @@ async function importProviderSession(
           : error instanceof Error && error.message === "rollback-failed"
             ? "rollback-failed"
             : error instanceof Error &&
-                ["verification-failed", "commit-failed"].includes(
+                [
+                  "verification-failed",
+                  "commit-failed",
+                  "destination-cookie-read-failed",
+                  "invalid-provider-cookies",
+                ].includes(
                   error.message,
                 )
               ? error.message
@@ -3933,6 +3944,8 @@ async function importProviderSession(
       "app-bound": `Chrome bảo vệ phiên ${label} bằng App-Bound Encryption (v20), định dạng Gom không thể nhập. Hãy đăng nhập trực tiếp trong Gom.`,
       "rollback-failed": `Chưa khôi phục được cookie ${label}. Hãy mở lại tài khoản để kiểm tra phiên.`,
       "commit-failed": `Không ghi được phiên ${label}. Gom đã hoàn tác lần nhập để giữ dữ liệu tài khoản đích.`,
+      "destination-cookie-read-failed": `Không kiểm tra được cookie hiện có của tài khoản ${label} đích. Gom chưa thay đổi dữ liệu đích; hãy mở lại tài khoản rồi thử lại.`,
+      "invalid-provider-cookies": `Profile Chrome đã đăng nhập nhưng phiên ${label} không có đủ cookie cần thiết để chuyển. Hãy kiểm tra profile nguồn rồi thử lại.`,
       unsupported: "Định dạng cookie Chrome này chưa được hỗ trợ.",
     };
     state.notice =
