@@ -24,16 +24,16 @@ Landing page của Gom nằm trong [`website/`](website/), dùng HTML/CSS/JS tĩ
 
 ## Tải Gom
 
-Phiên bản hiện tại: **0.8.4**, phát hành ngày **02/11/2026** cho Mac Apple Silicon và Windows x64. Chọn bộ cài phù hợp với máy của bạn:
+Phiên bản Mac hiện tại: **0.8.8** cho Apple Silicon. Windows x64 hiện dùng bản **0.8.3**. Chọn bộ cài phù hợp với máy của bạn:
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                            |
 | -------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.dmg)         |
-| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-win32-x64-0.8.4-Setup.exe) |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.8/Gom-macOS-arm64-0.8.8.dmg)         |
+| Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe) |
 
-Bản Mac có thêm [gói ZIP](https://github.com/vidongls/gom/releases/download/v0.8.4/Gom-macOS-arm64-0.8.4.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.8/Gom-darwin-arm64-0.8.8.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.8.4](https://github.com/vidongls/gom/releases/tag/v0.8.4), [kết quả kiểm chứng](docs/verification-0.8.4.md) hoặc [tất cả phiên bản](https://github.com/vidongls/gom/releases).
+Xem [nội dung bản 0.8.8](https://github.com/mhfed/gom/releases/tag/v0.8.8) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -49,7 +49,7 @@ Xem [nội dung bản 0.8.4](https://github.com/vidongls/gom/releases/tag/v0.8.4
 
 ### Trên Mac
 
-1. Tải và mở tệp **Gom-macOS-arm64-0.8.4.dmg**.
+1. Tải và mở tệp **Gom-macOS-arm64-0.8.8.dmg**.
 2. Kéo **Gom.app** vào **Applications**.
 3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 
@@ -59,7 +59,7 @@ DMG cũng kèm **Mo-Gom.command**. Sau khi kéo app vào Applications, bạn có
 
 ### Trên Windows
 
-1. Tải **Gom-win32-x64-0.8.4-Setup.exe**.
+1. Tải **Gom-win32-x64-0.8.3-Setup.exe**.
 2. Chạy tệp Setup và đợi quá trình cài đặt hoàn tất.
 3. Mở **Gom** từ Start menu nếu app chưa tự mở.
 
