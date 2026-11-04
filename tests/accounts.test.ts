@@ -7,6 +7,7 @@ import { DatabaseSync } from "node:sqlite";
 import { ChromeSources } from "../src/main/local-accounts.ts";
 import {
   replaceLoginCookies,
+  replaceProviderCookies,
   type LoginCookie,
 } from "../src/main/cookie-transaction.ts";
 
@@ -174,6 +175,45 @@ test("destination verification failure restores the old pair after a successful 
   );
   assert.equal(values.get("c_user"), "old-user");
   assert.equal(values.get("xs"), "old-session");
+});
+
+test("Instagram verification failure rolls back imported cookies and keeps its error reason", async () => {
+  const values = new Map<string, LoginCookie>();
+  const jar = {
+    get: async () => [...values.values()],
+    set: async (cookie: LoginCookie) => {
+      values.set(cookie.name, cookie);
+    },
+    remove: async (_url: string, name: string) => {
+      values.delete(name);
+    },
+    flushStore: async () => {},
+  };
+  const instagramCookie = (name: string, value: string): LoginCookie => ({
+    url: "https://instagram.com/",
+    domain: ".instagram.com",
+    name,
+    value,
+    path: "/",
+    secure: true,
+    httpOnly: true,
+  });
+
+  await assert.rejects(
+    replaceProviderCookies(
+      jar,
+      [
+        instagramCookie("sessionid", "new-session"),
+        instagramCookie("ds_user_id", "new-user"),
+      ],
+      ["instagram.com"],
+      ["sessionid", "ds_user_id"],
+      async () => false,
+      true,
+    ),
+    /verification-failed/,
+  );
+  assert.equal(values.size, 0);
 });
 
 for (const phase of ["existing session at commit"]) {

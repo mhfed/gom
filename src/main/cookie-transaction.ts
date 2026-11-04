@@ -90,8 +90,18 @@ export async function replaceProviderCookies(
   try {
     for (const cookie of selected) await jar.set(cookie);
     await jar.flushStore();
-    if (verify && !(await verify())) throw new Error("verification-failed");
-  } catch {
+    if (verify) {
+      let authenticated = false;
+      try {
+        authenticated = await verify();
+      } catch {}
+      if (!authenticated) throw new Error("verification-failed");
+    }
+  } catch (error) {
+    const failure =
+      error instanceof Error && error.message === "verification-failed"
+        ? "verification-failed"
+        : "commit-failed";
     try {
       for (const cookie of selected) await jar.remove(cookie.url, cookie.name);
       for (const cookie of before) {
@@ -114,7 +124,7 @@ export async function replaceProviderCookies(
     } catch {
       throw new Error("rollback-failed");
     }
-    throw new Error("commit-failed");
+    throw new Error(failure);
   }
 }
 export async function replaceLoginCookies(

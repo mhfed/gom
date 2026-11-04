@@ -3490,7 +3490,11 @@ async function verifyTinder(contents: WebContents) {
 }
 async function verifyProvider(contents: WebContents, provider: ProviderId) {
   if (provider === "tinder") return verifyTinder(contents);
-  await contents.loadURL(providerDefinition(provider).entry);
+  try {
+    await contents.loadURL(providerDefinition(provider).entry);
+  } catch {
+    return false;
+  }
   const until = Date.now() + 35000;
   while (Date.now() < until && !contents.isDestroyed()) {
     const value = await contents
@@ -3802,6 +3806,7 @@ async function importProviderSession(
   let stageSession: Session | undefined;
   let cookies: LoginCookie[] = [];
   let verified: LoginCookie[] = [];
+  let phase = "kiểm tra tài khoản đích";
   try {
     const destination = await providerDestination(targetId, provider);
     if (destination) {
@@ -3811,7 +3816,9 @@ async function importProviderSession(
           : `Tài khoản ${label} chưa tải xong. Đợi trang đăng nhập hiện ra rồi thử lại.`;
       return { status: destination };
     }
+    phase = "đọc profile Chrome";
     cookies = await sources.loginCookies(sourceId, provider);
+    phase = "mở phiên kiểm tra tách biệt";
     stageSession = session.fromPartition("import-" + crypto.randomUUID());
     stage = new BrowserWindow({
       show: false,
@@ -3831,9 +3838,12 @@ async function importProviderSession(
       if (navigationPolicy(provider, url) !== "internal")
         event.preventDefault();
     });
+    phase = "đưa phiên Chrome vào bước kiểm tra";
     for (const cookie of cookies) await stageSession.cookies.set(cookie);
+    phase = `xác minh phiên ${label} trên Chrome`;
     if (!(await verifyProvider(stage.webContents, provider)))
       throw new ImportFailure("verification-failed");
+    phase = "đọc lại phiên đã xác minh";
     for (const domain of COOKIE_SCOPES[provider]) {
       for (const name of AUTH_COOKIE_NAMES[provider]) {
         const staged = await stageSession.cookies.get({ domain, name });
@@ -3867,6 +3877,7 @@ async function importProviderSession(
       state.notice = `${label} hiện có phiên. Phiên đang dùng được giữ nguyên.`;
       return { status: finalDestination };
     }
+    phase = `ghi phiên vào tài khoản ${label} đích`;
     const target = views.activate(targetId);
     if (!win.contentView.children.includes(target))
       win.contentView.addChildView(target);
@@ -3892,7 +3903,12 @@ async function importProviderSession(
           ? "already-connected"
           : error instanceof Error && error.message === "rollback-failed"
             ? "rollback-failed"
-            : "import-failed";
+            : error instanceof Error &&
+                ["verification-failed", "commit-failed"].includes(
+                  error.message,
+                )
+              ? error.message
+              : "import-failed";
     const messages: Record<string, string> = {
       "needs-login": `Profile Chrome chưa có phiên ${label} còn hiệu lực. Đăng nhập trên Chrome rồi thử lại.`,
       "needs-os-authorization":
@@ -3900,16 +3916,17 @@ async function importProviderSession(
           ? "Không thể mở khóa dữ liệu phiên Chrome bằng tài khoản Windows hiện tại. Bạn có thể đăng nhập trực tiếp trong app."
           : "macOS chưa cho phép Gom đọc Chrome Safe Storage. Bạn có thể đăng nhập trực tiếp trong app.",
       "source-busy": "Chrome đang bận. Bạn đợi một chút rồi thử lại.",
-      "verification-failed": `Không xác minh được phiên ${label}. Phiên đích vẫn được giữ; hãy đăng nhập trực tiếp trong Gom.`,
+      "verification-failed": `Không xác minh được phiên ${label}. Gom đã hoàn tác lần nhập để giữ dữ liệu tài khoản đích; hãy kiểm tra profile Chrome rồi thử lại hoặc đăng nhập trực tiếp trong Gom.`,
       "source-unavailable": "Không đọc được profile Chrome đã chọn.",
       "unsupported-session": `${label} lưu phiên trong vùng dữ liệu không thể nhập an toàn bằng cookie. Hãy đăng nhập trực tiếp trong Gom${provider === "telegram" || provider === "zalo" ? " hoặc quét QR" : ""}.`,
       "app-bound": `Chrome bảo vệ phiên ${label} bằng App-Bound Encryption (v20), định dạng Gom không thể nhập. Hãy đăng nhập trực tiếp trong Gom.`,
       "rollback-failed": `Chưa khôi phục được cookie ${label}. Hãy mở lại tài khoản để kiểm tra phiên.`,
+      "commit-failed": `Không ghi được phiên ${label}. Gom đã hoàn tác lần nhập để giữ dữ liệu tài khoản đích.`,
       unsupported: "Định dạng cookie Chrome này chưa được hỗ trợ.",
     };
     state.notice =
       messages[code] ??
-      `Chưa nhập được phiên ${label}. Phiên tài khoản đích vẫn được giữ.`;
+      `Chưa nhập được phiên ${label} khi ${phase}. Gom đã giữ nguyên dữ liệu tài khoản đích.`;
     return { status: code };
   } finally {
     cookies.forEach((cookie) => (cookie.value = ""));
