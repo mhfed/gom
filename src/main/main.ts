@@ -133,6 +133,7 @@ import {
   replaceProviderCookies,
   type LoginCookie,
 } from "./cookie-transaction.ts";
+import { attachProviderViewToMain } from "./provider-view.ts";
 import { OperationGate } from "./operation-gate.ts";
 import { ViewRegistry, flushBeforeClose } from "./view-registry.ts";
 import {
@@ -3598,8 +3599,13 @@ async function importMessenger(sourceId: string, targetId: AccountId) {
       return { status: finalDestination };
     }
     const target = views.activate(targetId);
-    if (!win.contentView.children.includes(target))
-      win.contentView.addChildView(target);
+    attachProviderViewToMain(
+      targetId,
+      floating?.accountId,
+      () => floating?.returnToMain(false),
+      win.contentView,
+      target,
+    );
     layout();
     target.webContents.stop();
     await replaceLoginCookies(
@@ -3879,8 +3885,13 @@ async function importProviderSession(
     }
     phase = `ghi phiên vào tài khoản ${label} đích`;
     const target = views.activate(targetId);
-    if (!win.contentView.children.includes(target))
-      win.contentView.addChildView(target);
+    attachProviderViewToMain(
+      targetId,
+      floating?.accountId,
+      () => floating?.returnToMain(false),
+      win.contentView,
+      target,
+    );
     layout();
     target.webContents.stop();
     await replaceProviderCookies(
