@@ -190,7 +190,7 @@ async function assertToolbar(provider, accountId) {
   );
   assert.equal(
     await page.locator("#account-select-label").textContent(),
-    account.name,
+    `${account.name}${account.clientLabel ? " · " + account.clientLabel : ""}`,
   );
   assert.equal(
     await page.locator("#account-select").getAttribute("aria-haspopup"),
@@ -214,6 +214,7 @@ async function selectAccount(accountId) {
         .filter((item) => item.id?.startsWith("account-"))
         .map((item) => ({
           id: item.id,
+          label: item.label,
           type: item.type,
           checked: item.checked,
         })),
@@ -222,6 +223,7 @@ async function selectAccount(accountId) {
       .filter((account) => !account.archived && account.provider === provider)
       .map((account) => ({
         id: `account-${account.id}`,
+        label: `${account.name}${account.clientLabel ? " · " + account.clientLabel : ""}`,
         type: "radio",
         checked: account.id === before.active,
       })),
@@ -289,6 +291,8 @@ try {
     await page.locator("#account-provider").selectOption(provider);
     await page.locator("#account-name").fill("Công việc " + provider);
     await page.locator("#account-avatar").fill("💼");
+    if (provider === "messenger")
+      await page.locator("#account-client-label").fill("Khách hàng An");
     await page.locator("#account-editor-save").click();
     const s = await wait(
       (s) =>
@@ -300,6 +304,8 @@ try {
     const account = s.accounts.find(
       (a) => a.provider === provider && a.id !== provider,
     );
+    if (provider === "messenger")
+      assert.equal(account.clientLabel, "Khách hàng An");
     added[provider] = account.id;
     await assertToolbar(provider, account.id);
     await wait(
@@ -326,7 +332,7 @@ try {
       { id: account.id, url: providers[provider], provider },
     );
   }
-  assert.equal((await snapshot()).accounts.length, 11);
+  assert.equal((await snapshot()).accounts.length, 12);
   const before = await viewIds();
   await remote(
     "telegram",
@@ -379,8 +385,37 @@ try {
     "<img src=x onerror=window.bad=1>",
   );
   await page.evaluate(
-    (id) => window.desktop.editAccount(id, "Công việc", "💼"),
+    (id) => window.desktop.editAccount(id, "Công việc", "💼", "Brand Bloom"),
     added.zalo,
+  );
+  await wait(
+    (s) =>
+      s.accounts.find((account) => account.id === added.zalo)?.clientLabel ===
+      "Brand Bloom",
+    "edit account client label",
+  );
+  await page.evaluate((id) => window.desktop.activate(id), added.zalo);
+  await wait((s) => s.active === added.zalo, "activate labeled account");
+  await assertToolbar("zalo", added.zalo);
+  await selectAccount("zalo");
+  await wait((s) => s.active === "zalo", "select labeled account peer");
+  await selectAccount(added.zalo);
+  await wait((s) => s.active === added.zalo, "select labeled account");
+  assert.equal(
+    await page
+      .locator(
+        `#account-manager [data-account-id="${added.zalo}"] .account-client-label-value`,
+      )
+      .textContent(),
+    "Brand Bloom",
+  );
+  await page.evaluate(
+    (id) => window.desktop.editAccount(id, "Công việc", "💼", ""),
+    added.zalo,
+  );
+  await wait(
+    (s) => s.accounts.find((account) => account.id === added.zalo)?.clientLabel === undefined,
+    "clear account client label",
   );
   await page.evaluate((id) => window.desktop.moveAccount(id, -1), added.zalo);
   assert.deepEqual(
@@ -543,7 +578,7 @@ try {
         .every((a) => s.statuses[a.id] === "authenticated"),
     "six authenticated after relaunch",
   );
-  assert.equal((await snapshot()).accounts.length, 11);
+  assert.equal((await snapshot()).accounts.length, 12);
   assert.equal((await snapshot()).preferences.notifications.telegram, "mute");
   assert.equal(
     (await snapshot()).preferences.notifications[added.telegram],

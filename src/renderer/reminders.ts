@@ -32,7 +32,7 @@ export function createReminderUI(options: { getState(): AppState }) {
   let holdsSurface = false;
   let surfaceSeenOpen = false;
   let surfaceLockVersion: number | undefined;
-  let filter: "pending" | "done" = "pending";
+  let filter: "triage" | "pending" | "done" = "triage";
   let accountSignature = "";
   let listSignature = "";
   let editor: { id: string; value: string; error: string } | undefined;
@@ -72,7 +72,7 @@ export function createReminderUI(options: { getState(): AppState }) {
     holdsSurface = false;
     surfaceSeenOpen = false;
     surfaceLockVersion = undefined;
-    filter = "pending";
+    filter = "triage";
     editor = undefined;
     accountSignature = listSignature = "";
     form.reset();
@@ -105,7 +105,7 @@ export function createReminderUI(options: { getState(): AppState }) {
     const provider = state.providers.find(
       (entry) => entry.id === value.provider,
     );
-    return `${provider?.label || "Website"} · ${value.name}${value.archived ? " · Đã gỡ" : ""}`;
+    return `${provider?.label || "Website"} · ${value.name}${value.clientLabel ? ` · ${value.clientLabel}` : ""}${value.archived ? " · Đã gỡ" : ""}`;
   }
   function renderAccounts(state: AppState) {
     const accounts = state.accounts.filter((entry) => !entry.archived);
@@ -261,23 +261,116 @@ export function createReminderUI(options: { getState(): AppState }) {
     form.append(label, input, error, actions);
     row.append(form);
   }
+  function reminderRow(state: AppState, item: ReplyReminder, now: number) {
+    const row = document.createElement("article");
+    row.className = "reminder-item";
+    row.dataset.reminderId = item.id;
+    const heading = document.createElement("p");
+    heading.className = "reminder-item-note";
+    heading.textContent = item.note;
+    const source = document.createElement("p");
+    source.className = "reminder-item-source";
+    source.textContent = accountLabel(state, item.accountId);
+    const time = document.createElement("time");
+    time.dateTime = new Date(item.dueAt).toISOString();
+    const overdue = item.completedAt === null && item.dueAt <= now;
+    time.className = "reminder-item-time" + (overdue ? " overdue" : "");
+    time.textContent =
+      (overdue ? "Đã đến giờ · " : "") + dateLabel(item.dueAt);
+    const actions = document.createElement("div");
+    actions.className = "reminder-item-actions";
+    const available = state.accounts.some(
+      (entry) => entry.id === item.accountId && !entry.archived,
+    );
+    const readonly = state.reminders?.unavailable === true;
+    actions.append(
+      button(
+        item.hasConversationLink ? "Mở cuộc trò chuyện" : "Mở tài khoản",
+        "open",
+        item,
+        !available,
+      ),
+    );
+    if (item.completedAt === null)
+      actions.append(
+        button("Để sau 15 phút", "snooze", item, readonly),
+        button("Đổi giờ", "reschedule", item, readonly),
+        button("Hoàn tất", "complete", item, readonly),
+      );
+    actions.append(button("Xóa", "remove", item, readonly));
+    row.append(heading, source, time, actions);
+    renderEditor(row, item, readonly);
+    return row;
+  }
+  function unreadAccountRow(state: AppState, accountId: string) {
+    const account = state.accounts.find((entry) => entry.id === accountId)!;
+    const unread = state.unread[accountId];
+    const row = document.createElement("article");
+    row.className = "reminder-item reminder-unread";
+    row.dataset.unreadAccountId = accountId;
+    const heading = document.createElement("p");
+    heading.className = "reminder-item-note";
+    heading.textContent = "Tin chưa đọc";
+    const source = document.createElement("p");
+    source.className = "reminder-item-source";
+    source.textContent = accountLabel(state, accountId);
+    const time = document.createElement("p");
+    time.className = "reminder-item-time";
+    const kind = unread.kind === "conversations" ? "hội thoại" : "tin nhắn";
+    time.textContent = `${unread.approximate ? "Khoảng " : ""}${unread.count!} ${kind} chưa đọc`;
+    row.append(heading, source, time);
+    if (state.statuses[accountId] === "sleeping") {
+      const stale = document.createElement("p");
+      stale.className = "reminder-item-stale";
+      stale.textContent = "Tài khoản đang ngủ · số có thể cũ";
+      row.append(stale);
+    }
+    const actions = document.createElement("div");
+    actions.className = "reminder-item-actions";
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "reminder-action";
+    open.dataset.unreadAction = "open";
+    open.textContent = "Mở tài khoản";
+    open.disabled = busy || account.archived;
+    open.onclick = () => void openUnreadAccount(accountId);
+    actions.append(open);
+    row.append(actions);
+    return row;
+  }
   function renderList(state: AppState) {
     const items = state.reminders?.items || [];
     const pending = items.filter((item) => item.completedAt === null);
     const done = items.filter((item) => item.completedAt !== null);
     text($("reminder-pending"), `Đang chờ (${pending.length})`);
     text($("reminder-done"), `Đã xong (${done.length})`);
-    for (const name of ["pending", "done"] as const) {
+    const dueItems = pending.filter((item) => item.dueAt <= Date.now());
+    const unreadAccounts = state.accounts.filter((entry) => {
+      const unread = state.unread[entry.id];
+      return !entry.archived && unread?.count !== null && (unread?.count ?? 0) > 0;
+    });
+    const unavailableCount = state.accounts.filter(
+      (entry) => !entry.archived && state.unread[entry.id]?.count == null,
+    ).length;
+    text($("reminder-triage"), `Cần xử lý (${dueItems.length + unreadAccounts.length})`);
+    text(
+      $("reminder-unread-unavailable"),
+      unavailableCount
+        ? `${unavailableCount} tài khoản chưa đo được số tin chưa đọc.`
+        : "",
+    );
+    $("reminder-unread-unavailable").hidden = unavailableCount === 0;
+    for (const name of ["triage", "pending", "done"] as const) {
       const tab = $("reminder-" + name);
       attr(tab, "aria-selected", String(filter === name));
       const tabIndex = filter === name ? 0 : -1;
       if (tab.tabIndex !== tabIndex) tab.tabIndex = tabIndex;
     }
     attr($("reminder-results"), "aria-labelledby", "reminder-" + filter);
-    const rows = (filter === "pending" ? pending : done)
+    const rows = (filter === "pending" ? pending : filter === "done" ? done : dueItems)
       .slice()
       .sort((a, b) =>
-        filter === "pending"
+        filter !== "done"
           ? a.dueAt - b.dueAt
           : (b.completedAt || 0) - (a.completedAt || 0),
       );
@@ -295,6 +388,17 @@ export function createReminderUI(options: { getState(): AppState }) {
         state.accounts.some((a) => a.id === item.accountId && !a.archived),
         item.dueAt <= now,
       ]),
+      filter === "triage"
+        ? [
+            unreadAccounts.map((entry) => [
+              entry.id,
+              accountLabel(state, entry.id),
+              state.unread[entry.id],
+              state.statuses[entry.id],
+            ]),
+            unavailableCount,
+          ]
+        : null,
       filter,
       busy,
       state.reminders?.unavailable,
@@ -304,56 +408,63 @@ export function createReminderUI(options: { getState(): AppState }) {
     if (signature !== listSignature) {
       listSignature = signature;
       list.replaceChildren();
-      for (const item of rows) {
-        const row = document.createElement("article");
-        row.className = "reminder-item";
-        row.dataset.reminderId = item.id;
-        const heading = document.createElement("p");
-        heading.className = "reminder-item-note";
-        heading.textContent = item.note;
-        const source = document.createElement("p");
-        source.className = "reminder-item-source";
-        source.textContent = accountLabel(state, item.accountId);
-        const time = document.createElement("time");
-        time.dateTime = new Date(item.dueAt).toISOString();
-        const overdue = item.completedAt === null && item.dueAt <= now;
-        time.className = "reminder-item-time" + (overdue ? " overdue" : "");
-        time.textContent =
-          (overdue ? "Đã đến giờ · " : "") + dateLabel(item.dueAt);
-        const actions = document.createElement("div");
-        actions.className = "reminder-item-actions";
-        const available = state.accounts.some(
-          (entry) => entry.id === item.accountId && !entry.archived,
-        );
-        const readonly = state.reminders?.unavailable === true;
-        actions.append(
-          button(
-            item.hasConversationLink ? "Mở cuộc trò chuyện" : "Mở tài khoản",
-            "open",
-            item,
-            !available,
-          ),
-        );
-        if (item.completedAt === null)
-          actions.append(
-            button("Để sau 15 phút", "snooze", item, readonly),
-            button("Đổi giờ", "reschedule", item, readonly),
-            button("Hoàn tất", "complete", item, readonly),
-          );
-        actions.append(button("Xóa", "remove", item, readonly));
-        row.append(heading, source, time, actions);
-        renderEditor(row, item, readonly);
-        list.append(row);
+      if (filter === "triage") {
+        const dueHeading = document.createElement("h3");
+        dueHeading.className = "reminder-section-title";
+        dueHeading.textContent = "Việc đến hạn";
+        list.append(dueHeading);
+        for (const item of rows) list.append(reminderRow(state, item, now));
+        const unreadHeading = document.createElement("h3");
+        unreadHeading.className = "reminder-section-title";
+        unreadHeading.textContent = "Tài khoản có tin chưa đọc";
+        list.append(unreadHeading);
+        for (const entry of unreadAccounts)
+          list.append(unreadAccountRow(state, entry.id));
+      } else {
+        for (const item of rows) list.append(reminderRow(state, item, now));
       }
     }
     const empty = $("reminder-empty");
-    if (empty.hidden !== rows.length > 0) empty.hidden = rows.length > 0;
+    const hasRows =
+      filter === "triage"
+        ? rows.length + unreadAccounts.length > 0
+        : rows.length > 0;
+    if (empty.hidden !== hasRows) empty.hidden = hasRows;
     text(
       empty,
       filter === "pending"
         ? "Chưa có việc đang chờ. Thêm một nhắc việc để quay lại sau."
-        : "Việc đã hoàn tất sẽ nằm ở đây.",
+        : filter === "done"
+          ? "Việc đã hoàn tất sẽ nằm ở đây."
+          : "Hiện chưa có việc đến hạn hoặc tài khoản có tin chưa đọc.",
     );
+  }
+
+  async function openUnreadAccount(accountId: string) {
+    if (busy) return;
+    const account = options
+      .getState()
+      .accounts.find((entry) => entry.id === accountId && !entry.archived);
+    if (!account) return;
+    const release = holdsSurface;
+    const lockVersion = epoch();
+    reset();
+    const closedToken = generation;
+    try {
+      if (release)
+        await window.desktop.reminder("surface", {
+          open: false,
+          lockVersion,
+        });
+      if (!current(closedToken, lockVersion)) return;
+      await window.desktop.activate(accountId);
+    } catch {
+      if (!current(closedToken, lockVersion)) return;
+      const reopenToken = generation + 1;
+      await open();
+      if (current(reopenToken, lockVersion) && dialog.open)
+        feedback("Chưa mở được tài khoản. Bạn thử lại nhé.");
+    }
   }
   function sync(state: AppState) {
     const nextSpace = space(state);
@@ -407,7 +518,7 @@ export function createReminderUI(options: { getState(): AppState }) {
     const token = ++generation;
     const lockVersion = epoch();
     lastSpace = space(options.getState());
-    filter = "pending";
+    filter = "triage";
     editor = undefined;
     form.reset();
     noteCount();
@@ -536,7 +647,8 @@ export function createReminderUI(options: { getState(): AppState }) {
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) close();
   });
-  for (const [index, value] of (["pending", "done"] as const).entries()) {
+  const tabs = ["triage", "pending", "done"] as const;
+  for (const [index, value] of tabs.entries()) {
     const control = $("reminder-" + value);
     control.onclick = () => {
       filter = value;
@@ -549,12 +661,10 @@ export function createReminderUI(options: { getState(): AppState }) {
       event.preventDefault();
       filter =
         event.key === "Home"
-          ? "pending"
+          ? "triage"
           : event.key === "End"
             ? "done"
-            : index === 0
-              ? "done"
-              : "pending";
+            : tabs[(index + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
       editor = undefined;
       sync(options.getState());
       $("reminder-" + filter).focus();

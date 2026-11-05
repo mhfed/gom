@@ -24,16 +24,16 @@ Landing page của Gom nằm trong [`website/`](website/), dùng HTML/CSS/JS tĩ
 
 ## Tải Gom
 
-Phiên bản Mac hiện tại: **0.8.9** cho Apple Silicon. Windows x64 hiện dùng bản **0.8.3**. Chọn bộ cài phù hợp với máy của bạn:
+Phiên bản Mac hiện tại: **0.9.0** cho Apple Silicon. Windows x64 hiện dùng bản **0.8.3**. Chọn bộ cài phù hợp với máy của bạn:
 
 | Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                            |
 | -------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.8.9/Gom-macOS-arm64-0.8.9.dmg)         |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.9.0/Gom-macOS-arm64-0.9.0.dmg)         |
 | Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe) |
 
-Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.8.9/Gom-darwin-arm64-0.8.9.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.9.0/Gom-darwin-arm64-0.9.0.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.8.9](https://github.com/mhfed/gom/releases/tag/v0.8.9) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.9.0](https://github.com/mhfed/gom/releases/tag/v0.9.0) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -49,7 +49,7 @@ Xem [nội dung bản 0.8.9](https://github.com/mhfed/gom/releases/tag/v0.8.9) h
 
 ### Trên Mac
 
-1. Tải và mở tệp **Gom-macOS-arm64-0.8.9.dmg**.
+1. Tải và mở tệp **Gom-macOS-arm64-0.9.0.dmg**.
 2. Kéo **Gom.app** vào **Applications**.
 3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 

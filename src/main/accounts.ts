@@ -27,6 +27,17 @@ const clean = (value: string, max: number) =>
   )
     .slice(0, max)
     .join("");
+function normalizeClientLabel(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") throw Error("invalid-client-label");
+  const label = value.trim();
+  if (
+    /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/.test(label) ||
+    Array.from(label).length > 60
+  )
+    throw Error("invalid-client-label");
+  return label || undefined;
+}
 export function initials(name: string) {
   return name
     .trim()
@@ -100,11 +111,13 @@ function readCatalog(
       !clean(a.name, 40) ||
       typeof a.avatar !== "string" ||
       typeof a.archived !== "boolean" ||
+      (a.clientLabel !== undefined && typeof a.clientLabel !== "string") ||
       (a.private !== undefined && typeof a.private !== "boolean") ||
       ids.has(a.id)
     )
       throw Error("invalid-catalog");
     accountPartition(a);
+    const clientLabel = normalizeClientLabel(a.clientLabel);
     ids.add(a.id);
     return {
       id: a.id,
@@ -112,6 +125,7 @@ function readCatalog(
       name: clean(a.name, 40),
       avatar: clean(a.avatar, 8) || initials(clean(a.name, 40)),
       archived: a.archived,
+      ...(clientLabel === undefined ? {} : { clientLabel }),
       ...(a.private === undefined ? {} : { private: a.private }),
     };
   });
@@ -138,6 +152,7 @@ export function createAccount(
   name: string,
   avatar = "",
   uuid = randomUUID(),
+  clientLabel?: string,
 ): Account {
   if (
     !validProviderId(provider) ||
@@ -146,12 +161,14 @@ export function createAccount(
     typeof avatar !== "string"
   )
     throw Error("invalid-account-name");
-  const account = {
+  const label = normalizeClientLabel(clientLabel);
+  const account: Account = {
     id: "acc_" + uuid,
     provider,
     name: clean(name, 40),
     avatar: clean(avatar, 8) || initials(clean(name, 40)),
     archived: false,
+    ...(label === undefined ? {} : { clientLabel: label }),
   };
   accountPartition(account);
   return account;
@@ -161,6 +178,7 @@ export function editAccount(
   id: string,
   name: string,
   avatar: string,
+  clientLabel?: string,
 ): Account[] {
   if (
     typeof name !== "string" ||
@@ -169,15 +187,20 @@ export function editAccount(
     !accounts.some((a) => a.id === id)
   )
     throw Error("invalid-account-name");
-  return accounts.map((a) =>
-    a.id === id
-      ? {
-          ...a,
-          name: clean(name, 40),
-          avatar: clean(avatar, 8) || initials(clean(name, 40)),
-        }
-      : a,
-  );
+  const normalizedLabel = normalizeClientLabel(clientLabel);
+  return accounts.map((a) => {
+    if (a.id !== id) return a;
+    const next = {
+      ...a,
+      name: clean(name, 40),
+      avatar: clean(avatar, 8) || initials(clean(name, 40)),
+    };
+    if (clientLabel !== undefined) {
+      if (normalizedLabel === undefined) delete next.clientLabel;
+      else next.clientLabel = normalizedLabel;
+    }
+    return next;
+  });
 }
 export function archiveAccount(accounts: Account[], id: string): Account[] {
   const a = accounts.find((a) => a.id === id && !a.archived);

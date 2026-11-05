@@ -2,6 +2,8 @@
 
 Nhắc trả lời giúp bạn ghi việc cần quay lại, chọn tài khoản và hẹn giờ trong Gom. Tính năng có từ [Gom 0.8.2](https://github.com/mhfed/gom/releases/tag/v0.8.2) trên Mac Apple Silicon và Windows x64.
 
+Mở nhanh từ `⌘/Ctrl K` rồi tìm **Tạo nhắc trả lời**. Gom chọn sẵn tài khoản đang mở và tự lưu liên kết cuộc trò chuyện nếu nền tảng cung cấp URL riêng.
+
 ## Tạo nhắc việc
 
 1. Bấm biểu tượng **Nhắc trả lời** trên thanh công cụ.

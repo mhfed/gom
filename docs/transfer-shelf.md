@@ -29,9 +29,15 @@ Bạn chọn người nhận, kiểm tra nội dung và bấm gửi trong nền 
 
 Xóa từng món bằng nút X. **Dọn mục chưa ghim** hiển thị số món trước khi bạn xác nhận và giữ nguyên các món đã ghim. Xóa trong khay không xóa tệp gốc hay bản sao bạn đã lưu ra ngoài.
 
+## Mẫu trả lời
+
+Mở mục **Mẫu** trong Khay để tạo câu trả lời thường dùng. Mỗi mẫu có tên và nội dung; bạn có thể tìm theo cả hai, sửa hoặc xóa mẫu. Tên tối đa 120 ký tự Unicode, nội dung tối đa 64 KiB, tối đa 100 mẫu trong mỗi không gian.
+
+Bấm **Sao chép** cạnh mẫu để chép nội dung vào clipboard. Sau đó bạn tự chọn cuộc trò chuyện, dán, kiểm tra rồi gửi trong nền tảng. Gom không tự chèn mẫu vào ô soạn và không tự gửi tin.
+
 ## Không gian và dữ liệu
 
-Không gian thường và Không gian kín có khay riêng. Khi đổi không gian hoặc khóa, Gom đóng khay, xóa nội dung đang hiển thị và hủy các thao tác chưa hoàn tất thuộc không gian cũ. Di chuyển tài khoản giữa hai không gian không tự di chuyển các món trong khay.
+Không gian thường và Không gian kín có Khay và Mẫu riêng. Nội dung được lưu mã hóa trên máy, không đưa vào bản sao lưu cấu hình hay đồng bộ mạng. Khi đổi không gian hoặc khóa, Gom đóng khay, xóa nội dung đang hiển thị và hủy các thao tác chưa hoàn tất thuộc không gian cũ. Di chuyển tài khoản giữa hai không gian không tự di chuyển các món trong khay.
 
 Kho Khay được mã hóa trên máy bằng khóa do tài khoản hệ điều hành bảo vệ. Mật khẩu Không gian kín khóa quyền truy cập qua giao diện Gom. Nội dung bạn đã chủ động sao chép vào clipboard hoặc lưu ra ngoài vẫn ở ngoài Gom sau khi khóa.
 

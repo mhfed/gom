@@ -40,6 +40,185 @@ async function files(root: string): Promise<string[]> {
   return result;
 }
 
+async function writeEncryptedIndex(root: string, space: string, value: unknown) {
+  const key = Buffer.from(
+    await codec.decrypt((await readFile(join(root, "key.enc"))).toString()),
+    "base64",
+  );
+  const nonce = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, nonce);
+  cipher.setAAD(Buffer.from(`gom-shelf:v1:${space}:index`));
+  const payload = Buffer.from(JSON.stringify(value));
+  const encrypted = Buffer.concat([cipher.update(payload), cipher.final()]);
+  await writeFile(
+    join(root, space, "index.enc"),
+    Buffer.concat([
+      Buffer.from("GS01"),
+      nonce,
+      cipher.getAuthTag(),
+      encrypted,
+    ]),
+  );
+}
+
+test("stores encrypted templates per namespace and migrates shelf index v1 without losing items", async (t) => {
+  const { root, store } = await fixture(t);
+  const body = "Xin chào 😀\r\nDòng hai\tgiữ khoảng trắng  ";
+  const added = await store.addTemplate("normal", {
+    title: "  Báo giá  ",
+    body,
+  });
+  assert.equal(added.ok, true);
+  assert.equal(added.snapshot?.templates[0].title, "Báo giá");
+  assert.equal(
+    added.snapshot?.templates[0].body,
+    "Xin chào 😀\nDòng hai\tgiữ khoảng trắng  ",
+  );
+  assert.equal(
+    (await store.addTemplate("private", {
+      title: "Kín",
+      body: "Không gian kín",
+    })).ok,
+    true,
+  );
+  const item = await store.addText("normal", "Nội dung Khay cũ");
+  assert.equal(item.ok, true);
+  const id = added.snapshot!.templates[0].id;
+  assert.equal(
+    (await store.updateTemplate("private", id, {
+      title: "Không được đổi",
+      body: "Không được đọc",
+    })).ok,
+    false,
+  );
+  assert.equal((await store.removeTemplate("private", id)).ok, false);
+  const saved = store.list("normal");
+  saved.templates[0].body = "mutated caller copy";
+  assert.notEqual(store.list("normal").templates[0].body, "mutated caller copy");
+  for (const path of await files(root)) {
+    const bytes = await readFile(path);
+    for (const secret of ["Báo giá", "Xin chào", "Không gian kín"])
+      assert.equal(bytes.includes(Buffer.from(secret)), false);
+  }
+  const next = new ShelfStore(root, codec);
+  await next.load();
+  assert.equal(next.list("normal").templates[0].body, added.snapshot?.templates[0].body);
+  assert.equal(next.list("private").templates[0].title, "Kín");
+  assert.equal(next.list("normal").items[0].text, "Nội dung Khay cũ");
+
+  // Simulate an authenticated v1 index written by an earlier app version.
+  await writeEncryptedIndex(root, "normal", {
+    version: 1,
+    revision: 7,
+    items: next.list("normal").items,
+  });
+  const migrated = new ShelfStore(root, codec);
+  await migrated.load();
+  assert.equal(migrated.list("normal").unavailable, false);
+  assert.deepEqual(migrated.list("normal").templates, []);
+  assert.equal(migrated.list("normal").items[0].text, "Nội dung Khay cũ");
+  assert.equal(
+    (await migrated.addTemplate("normal", {
+      title: "Sau nâng cấp",
+      body: "Mục cũ vẫn còn",
+    })).ok,
+    true,
+  );
+  const afterMigration = new ShelfStore(root, codec);
+  await afterMigration.load();
+  assert.equal(afterMigration.list("normal").items[0].text, "Nội dung Khay cũ");
+  assert.equal(afterMigration.list("normal").templates[0].title, "Sau nâng cấp");
+});
+
+test("validates template fields and count without evicting previous entries", async (t) => {
+  const { store } = await fixture(t);
+  const saved = await store.addTemplate("normal", {
+    title: "Gửi lịch",
+    body: "Thứ ba lúc 10 giờ",
+  });
+  assert.equal(saved.ok, true);
+  const original = store.list("normal").templates[0];
+  for (const value of [
+    { title: "", body: "Có chữ" },
+    { title: "   ", body: "Có chữ" },
+    { title: "Tựa", body: "  \n  " },
+    { title: "Tựa\u0000", body: "Có chữ" },
+    { title: "😀".repeat(121), body: "Có chữ" },
+    { title: "Tựa", body: "x".repeat(SHELF_LIMITS.textBytes + 1) },
+  ])
+    assert.equal((await store.addTemplate("normal", value)).ok, false);
+  assert.equal(
+    (await store.updateTemplate("normal", original.id, {
+      title: "Tựa hợp lệ",
+      body: "x".repeat(SHELF_LIMITS.textBytes + 1),
+    })).ok,
+    false,
+  );
+  assert.deepEqual(store.list("normal").templates, [original]);
+  for (let index = 1; index < SHELF_LIMITS.templates; index++)
+    assert.equal(
+      (await store.addTemplate("normal", {
+        title: `Mẫu ${index}`,
+        body: "Đã lưu",
+      })).ok,
+      true,
+    );
+  assert.equal(
+    (await store.addTemplate("normal", {
+      title: "Vượt giới hạn",
+      body: "Không được xóa mẫu cũ",
+    })).ok,
+    false,
+  );
+  assert.equal(store.list("normal").templates.length, SHELF_LIMITS.templates);
+  assert.equal(
+    store.list("normal").templates.some((template) => template.id === original.id),
+    true,
+  );
+  assert.equal(
+    (await store.removeTemplate("normal", original.id)).ok,
+    true,
+  );
+});
+
+test("a full set of maximum-size JSON-escaped templates survives restart", async (t) => {
+  const { root, store } = await fixture(t);
+  const body = '"\\'.repeat(SHELF_LIMITS.textBytes / 2);
+  for (let index = 0; index < SHELF_LIMITS.templates; index++)
+    assert.equal(
+      (await store.addTemplate("normal", {
+        title: `Mẫu ${index}`,
+        body,
+      })).ok,
+      true,
+    );
+  const before = store.list("normal");
+  assert.equal(before.templates.length, SHELF_LIMITS.templates);
+  assert.ok(
+    (await lstat(join(root, "normal", "index.enc"))).size > 8 * 1024 * 1024,
+  );
+  const next = new ShelfStore(root, codec);
+  await next.load();
+  assert.equal(next.list("normal").unavailable, false);
+  assert.deepEqual(next.list("normal"), before);
+});
+
+test("template mutations honor privacy guards before committing", async (t) => {
+  const { root, store } = await fixture(t);
+  assert.equal(
+    (await store.addTemplate(
+      "normal",
+      { title: "Đến muộn", body: "Không được giữ" },
+      () => false,
+    )).ok,
+    false,
+  );
+  assert.deepEqual(store.list("normal").templates, []);
+  const next = new ShelfStore(root, codec);
+  await next.load();
+  assert.deepEqual(next.list("normal").templates, []);
+});
+
 test("restarts with separate encrypted namespaces and preserves LF, tabs, binary bytes", async (t) => {
   const { root, store } = await fixture(t);
   const text = "secret first\nsecond\tthird";

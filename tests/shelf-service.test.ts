@@ -14,7 +14,7 @@ import {
   ShelfService,
   type ShelfEnvironment,
 } from "../src/main/shelf-service.ts";
-import type { ShelfItem, ShelfResult } from "../src/shelf-types.ts";
+import type { ShelfItem, ShelfResult, ShelfTemplate } from "../src/shelf-types.ts";
 
 async function fileSymlink(source: string, link: string): Promise<boolean> {
   try {
@@ -39,10 +39,12 @@ function fixture() {
     live: true,
   };
   const records: Record<string, ShelfItem[]> = { normal: [], private: [] };
+  const templates: Record<string, ShelfTemplate[]> = { normal: [], private: [] };
   const payloads = new Map<string, Buffer>();
   let sequence = 0;
   const snapshot = (space: string) => ({
     items: records[space].map((x) => ({ ...x })),
+    templates: templates[space].map((x) => ({ ...x })),
     totalBytes: records[space].reduce((n, x) => n + x.bytes, 0),
     revision: sequence,
     unavailable: false,
@@ -106,10 +108,50 @@ function fixture() {
     pin: async () => ({ ok: false }),
     remove: async () => ({ ok: false }),
     clearUnpinned: async () => ({ ok: false }),
+    addTemplate: async (
+      space: string,
+      input: { title: string; body: string },
+      valid = () => true,
+    ): Promise<ShelfResult> => {
+      if (!valid()) return { ok: false };
+      const now = ++sequence;
+      templates[space].push({
+        id: `template-${now}`,
+        ...input,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { ok: true, snapshot: snapshot(space) };
+    },
+    updateTemplate: async (
+      space: string,
+      id: string,
+      input: { title: string; body: string },
+      valid = () => true,
+    ): Promise<ShelfResult> => {
+      if (!valid()) return { ok: false };
+      const template = templates[space].find((item) => item.id === id);
+      if (!template) return { ok: false };
+      Object.assign(template, input, { updatedAt: ++sequence });
+      return { ok: true, snapshot: snapshot(space) };
+    },
+    removeTemplate: async (
+      space: string,
+      id: string,
+      valid = () => true,
+    ): Promise<ShelfResult> => {
+      if (!valid()) return { ok: false };
+      const index = templates[space].findIndex((item) => item.id === id);
+      if (index < 0) return { ok: false };
+      templates[space].splice(index, 1);
+      return { ok: true, snapshot: snapshot(space) };
+    },
   };
   const clipboard: { text?: string; data?: Buffer }[] = [];
+  const templateClipboard: string[] = [];
   let picked: string[] = [];
   let destination: string | undefined;
+  let clipboardReads = 0;
   let reader: ShelfEnvironment["readClipboard"] = async () => ({
     kind: "text",
     text: "hello\nthere",
@@ -118,10 +160,14 @@ function fixture() {
   let imageCalls = 0;
   const env: ShelfEnvironment = {
     current: () => context,
-    readClipboard: () => reader(),
+    readClipboard: () => {
+      clipboardReads++;
+      return reader();
+    },
     writeClipboard: async (item, data) => {
       clipboard.push(item.text !== undefined ? { text: item.text } : { data });
     },
+    writeText: (text) => templateClipboard.push(text),
     pickFiles: () => picker(),
     saveFile: async () => destination,
     imagePreview: async () => {
@@ -139,7 +185,10 @@ function fixture() {
     request,
     store,
     records,
+    templates,
     clipboard,
+    templateClipboard,
+    clipboardReads: () => clipboardReads,
     context,
     env,
     setReader: (r: typeof reader) => (reader = r),
@@ -149,6 +198,88 @@ function fixture() {
     imageCalls: () => imageCalls,
   };
 }
+
+test("shelf template requests validate fields, support CRUD, and copy only the stored body on demand", async () => {
+  const f = fixture();
+  assert.equal(
+    (await f.request("add-template", { title: "Trả lời", body: "Xin chào" })).ok,
+    true,
+  );
+  const id = f.templates.normal[0].id;
+  assert.equal(
+    (
+      await f.request("add-template", {
+        title: "Thiếu nội dung",
+        extra: "unexpected",
+      })
+    ).ok,
+    false,
+  );
+  assert.equal(
+    (await f.request("update-template", { templateId: id, title: "Thiếu body" })).ok,
+    false,
+  );
+  const update = await f.request("update-template", {
+    templateId: id,
+    title: "Trả lời mới",
+    body: "Xin chào\nDòng tiếp theo",
+  });
+  assert.equal(update.ok, true);
+  assert.equal(update.snapshot?.templates[0].title, "Trả lời mới");
+  assert.equal(update.snapshot?.templates[0].body, "Xin chào\nDòng tiếp theo");
+  const readsBeforeCopy = f.clipboardReads();
+  const copied = await f.request("copy-template", { templateId: id });
+  assert.equal(copied.ok, true);
+  assert.deepEqual(f.templateClipboard, ["Xin chào\nDòng tiếp theo"]);
+  assert.deepEqual(f.clipboard, []);
+  assert.equal(f.clipboardReads(), readsBeforeCopy);
+  assert.equal(
+    (await f.request("copy-template", { templateId: id, text: "override" })).ok,
+    false,
+  );
+  assert.equal((await f.request("remove-template", { templateId: id })).ok, true);
+  assert.deepEqual((await f.request("list")).snapshot?.templates, []);
+});
+
+test("template IDs cannot cross namespaces and missing copies reveal no template data", async () => {
+  const f = fixture();
+  await f.request("add-template", {
+    title: "Bí mật khách hàng",
+    body: "Nội dung riêng tư",
+  });
+  const id = f.templates.normal[0].id;
+  f.context.space = "private";
+  f.context.epoch++;
+  const result = await f.request("copy-template", { templateId: id });
+  assert.equal(result.ok, false);
+  assert.doesNotMatch(JSON.stringify(result), /Bí mật khách hàng|Nội dung riêng tư/);
+  assert.deepEqual(f.templateClipboard, []);
+  assert.equal((await f.request("remove-template", { templateId: id })).ok, false);
+  assert.deepEqual((await f.request("list")).snapshot?.templates, []);
+});
+
+test("a queued template copy is cancelled after the privacy epoch changes", async () => {
+  const f = fixture();
+  await f.request("add-template", {
+    title: "Mẫu kín",
+    body: "Không được sao chép sau khi khóa",
+  });
+  const id = f.templates.normal[0].id;
+  let finish!: (value: { kind: "text"; text: string }) => void;
+  f.setReader(() => new Promise((resolve) => (finish = resolve)));
+  const blocker = f.request("clipboard");
+  await new Promise((resolve) => setImmediate(resolve));
+  const copy = f.request("copy-template", { templateId: id });
+  await new Promise((resolve) => setImmediate(resolve));
+  f.context.epoch++;
+  f.context.space = "private";
+  finish({ kind: "text", text: "unused" });
+  assert.equal((await blocker).ok, false);
+  const result = await copy;
+  assert.equal(result.ok, false);
+  assert.doesNotMatch(JSON.stringify(result), /Mẫu kín|Không được sao chép/);
+  assert.deepEqual(f.templateClipboard, []);
+});
 
 test("shelf rejects stale and malformed requests without exposing namespace contents", async () => {
   const f = fixture();

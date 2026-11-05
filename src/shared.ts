@@ -56,6 +56,7 @@ export interface Account {
   name: string;
   avatar: string;
   archived: boolean;
+  clientLabel?: string;
   private?: boolean;
 }
 export interface AccountResult {
@@ -373,11 +374,13 @@ export interface DesktopBridge {
     provider: ProviderId,
     name: string,
     avatar: string,
+    clientLabel?: string,
   ): Promise<AccountResult>;
   editAccount(
     id: AccountId,
     name: string,
     avatar: string,
+    clientLabel?: string,
   ): Promise<AccountResult>;
   moveAccount(id: AccountId, direction: -1 | 1): Promise<AccountResult>;
   archiveAccount(id: AccountId): Promise<AccountResult>;

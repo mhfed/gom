@@ -52,10 +52,20 @@ const bridge: DesktopBridge = {
     ipcRenderer.invoke("desktop", "provider-add", { name, url }),
   accountEditor: (open) =>
     ipcRenderer.invoke("desktop", "account-editor", open),
-  addAccount: (provider, name, avatar) =>
-    ipcRenderer.invoke("desktop", "account-add", { provider, name, avatar }),
-  editAccount: (id, name, avatar) =>
-    ipcRenderer.invoke("desktop", "account-edit", { id, name, avatar }),
+  addAccount: (provider, name, avatar, clientLabel) =>
+    ipcRenderer.invoke("desktop", "account-add", {
+      provider,
+      name,
+      avatar,
+      clientLabel,
+    }),
+  editAccount: (id, name, avatar, clientLabel) =>
+    ipcRenderer.invoke("desktop", "account-edit", {
+      id,
+      name,
+      avatar,
+      clientLabel,
+    }),
   moveAccount: (id, direction) =>
     ipcRenderer.invoke("desktop", "account-move", { id, direction }),
   archiveAccount: (id) =>

@@ -22,6 +22,7 @@ export interface ShelfEnvironment {
     { kind: "text"; text: string } | { kind: "image"; data: Buffer } | null
   >;
   writeClipboard(item: ShelfItem, data?: Buffer): Promise<void>;
+  writeText(text: string): void;
   pickFiles(): Promise<string[] | undefined>;
   saveFile(name: string): Promise<string | undefined>;
   imagePreview(data: Buffer): Promise<Buffer | null>;
@@ -37,6 +38,9 @@ type Store = Pick<
   | "remove"
   | "clearUnpinned"
   | "readBinary"
+  | "addTemplate"
+  | "updateTemplate"
+  | "removeTemplate"
 >;
 const stale = (): ShelfResult => ({
   ok: false,
@@ -58,8 +62,24 @@ const actions = new Set([
   "copy",
   "export",
   "preview",
+  "add-template",
+  "update-template",
+  "remove-template",
+  "copy-template",
 ]);
-const keys = new Set(["action", "lockVersion", "id", "text", "pinned", "open"]);
+const keys = new Set([
+  "action",
+  "lockVersion",
+  "id",
+  "text",
+  "pinned",
+  "open",
+  "templateId",
+  "title",
+  "body",
+]);
+const exactKeys = (raw: object, names: string[]) =>
+  Object.keys(raw).sort().join() === names.sort().join();
 
 // Read dimensions before asking the native image decoder to allocate pixels.
 // Other formats remain ordinary files; only PNG/JPEG receive image treatment.
@@ -312,6 +332,76 @@ export class ShelfService {
           ok: false,
           message: snapshot.error || "Chưa đọc được khay. Bạn thử mở lại Gom.",
         };
+      if (r.action === "add-template") {
+        if (
+          !exactKeys(raw, ["action", "lockVersion", "title", "body"]) ||
+          typeof r.title !== "string" ||
+          typeof r.body !== "string"
+        )
+          return invalid();
+        return changed(
+          await this.store.addTemplate(
+            context.space,
+            { title: r.title, body: r.body },
+            valid,
+          ),
+        );
+      }
+      if (r.action === "update-template") {
+        if (
+          !exactKeys(raw, [
+            "action",
+            "lockVersion",
+            "templateId",
+            "title",
+            "body",
+          ]) ||
+          typeof r.templateId !== "string" ||
+          typeof r.title !== "string" ||
+          typeof r.body !== "string"
+        )
+          return invalid();
+        return changed(
+          await this.store.updateTemplate(
+            context.space,
+            r.templateId,
+            { title: r.title, body: r.body },
+            valid,
+          ),
+        );
+      }
+      if (r.action === "remove-template") {
+        if (
+          !exactKeys(raw, ["action", "lockVersion", "templateId"]) ||
+          typeof r.templateId !== "string"
+        )
+          return invalid();
+        return changed(
+          await this.store.removeTemplate(context.space, r.templateId, valid),
+        );
+      }
+      if (r.action === "copy-template") {
+        if (
+          !exactKeys(raw, ["action", "lockVersion", "templateId"]) ||
+          typeof r.templateId !== "string"
+        )
+          return invalid();
+        return await this.binary(context, async () => {
+          if (!valid()) return stale();
+          const template = this.store
+            .list(context.space)
+            .templates.find((entry) => entry.id === r.templateId);
+          if (!template)
+            return {
+              ok: false,
+              message: "Mẫu không còn trong Khay đang mở.",
+            };
+          // Keep the final privacy guard and clipboard write in one synchronous turn.
+          if (!valid()) return stale();
+          this.env.writeText(template.body);
+          return respond({ ok: true, message: "Đã sao chép mẫu." });
+        });
+      }
       if (r.action === "add-text") {
         if (typeof r.text !== "string") return invalid();
         return changed(await this.store.addText(context.space, r.text, valid));

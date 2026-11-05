@@ -58,11 +58,12 @@ export function createConfigurationBackup(
 ): ConfigurationBackup {
   const accounts = source.accounts
     .filter((a) => !a.private)
-    .map(({ id, provider, name, avatar, archived }) => ({
+    .map(({ id, provider, name, avatar, archived, clientLabel }) => ({
       id,
       provider,
       name,
       avatar,
+      ...(clientLabel ? { clientLabel } : {}),
       archived,
     }));
   const ids = new Set(accounts.map((a) => a.id)),
@@ -75,7 +76,7 @@ export function createConfigurationBackup(
   return parseConfigurationBackup(
     JSON.stringify({
       format: "gom-config",
-      version: 1,
+      version: 2,
       createdAt: now,
       accounts,
       providers: customProviderMetadata(
@@ -113,7 +114,7 @@ export function parseConfigurationBackup(text: string): ConfigurationBackup {
   ]);
   if (
     raw.format !== "gom-config" ||
-    raw.version !== 1 ||
+    ![1, 2].includes(raw.version) ||
     !Number.isSafeInteger(raw.createdAt) ||
     raw.createdAt <= 0 ||
     !Number.isFinite(new Date(raw.createdAt).getTime())
@@ -126,7 +127,12 @@ export function parseConfigurationBackup(text: string): ConfigurationBackup {
   )
     throw Error("invalid-backup");
   for (const a of raw.accounts)
-    keys(a, ["id", "provider", "name", "avatar", "archived"]);
+    keys(
+      a,
+      raw.version === 1
+        ? ["id", "provider", "name", "avatar", "archived"]
+        : ["id", "provider", "name", "avatar", "archived", "clientLabel"],
+    );
   for (const p of raw.providers) keys(p, ["id", "label", "entry"]);
   const ids = new Set<string>(raw.accounts.map((a: any) => a.id));
   const accounts = validateCatalogSubset({
@@ -213,7 +219,7 @@ export function parseConfigurationBackup(text: string): ConfigurationBackup {
   );
   return {
     format: "gom-config",
-    version: 1,
+    version: raw.version,
     createdAt: raw.createdAt,
     accounts,
     providers: customProviderMetadata(providers),
@@ -258,8 +264,14 @@ export function mergeConfigurationBackup(
   const importedProviders = new Set<string>(
     document.accounts.map((a) => a.provider),
   );
+  const importedAccounts = document.accounts.map((account) => {
+    const existing = byId.get(account.id);
+    return document.version === 1 && existing?.clientLabel
+      ? { ...account, clientLabel: existing.clientLabel }
+      : { ...account };
+  });
   const accounts = [
-    ...document.accounts,
+    ...importedAccounts,
     ...current.accounts.filter((a) => !importedIds.has(a.id)),
   ].map((a) => ({ ...a }));
   if (accounts.length > 104 || providers.filter((p) => p.custom).length > 100)

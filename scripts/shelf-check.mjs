@@ -676,6 +676,32 @@ try {
         (await viewFor("persist:zalo")).document,
         before.document,
       );
+      await good("add-template", {
+        title: "Kịch bản thử",
+        body: "Nội dung chỉ nằm trong Khay",
+      });
+      await page.locator("#shelf-tab-templates").click();
+      await page.locator("#shelf-template-panel").waitFor({
+        state: "visible",
+      });
+      assert.equal(
+        await page
+          .locator('[data-template-id]')
+          .filter({ hasText: "Kịch bản thử" })
+          .count(),
+        1,
+      );
+      const whileTemplates = await viewFor("persist:zalo");
+      assert.equal(whileTemplates.id, before.id);
+      assert.deepEqual(
+        whileTemplates.document,
+        before.document,
+        "opening Mẫu keeps the provider document token and draft",
+      );
+      await page.locator("#shelf-tab-items").click();
+      const afterTemplates = await viewFor("persist:zalo");
+      assert.equal(afterTemplates.id, before.id);
+      assert.deepEqual(afterTemplates.document, before.document);
       await activate("telegram");
       assert.equal((await state()).shelf.open, true);
       await activate("zalo");

@@ -35,6 +35,7 @@ try {
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
   await page.evaluate(() => {
     window.calls = [];
+    window.activateCalls = [];
     window.addCount = 0;
     window.state = {
       privateSpace: {
@@ -46,10 +47,53 @@ try {
       },
       accounts: [
         { id: "a", provider: "zalo", name: "Công việc", archived: false },
+        {
+          id: "b",
+          provider: "messenger",
+          name: "Khách hàng B",
+          archived: false,
+        },
+        {
+          id: "c",
+          provider: "telegram",
+          name: "Khách hàng C",
+          archived: false,
+        },
         { id: "old", provider: "zalo", name: "Tài khoản cũ", archived: true },
       ],
-      providers: [{ id: "zalo", label: "Zalo" }],
+      providers: [
+        { id: "zalo", label: "Zalo" },
+        { id: "messenger", label: "Messenger" },
+        { id: "telegram", label: "Telegram" },
+      ],
       active: "a",
+      statuses: { b: "sleeping" },
+      unread: {
+        a: {
+          count: 0,
+          kind: "messages",
+          approximate: false,
+          source: "platform",
+        },
+        b: {
+          count: 3,
+          kind: "conversations",
+          approximate: true,
+          source: "loaded",
+        },
+        c: {
+          count: null,
+          kind: "messages",
+          approximate: false,
+          source: "unavailable",
+        },
+        old: {
+          count: 7,
+          kind: "messages",
+          approximate: false,
+          source: "platform",
+        },
+      },
       commandOpen: false,
       accountBusy: false,
       importing: false,
@@ -69,6 +113,15 @@ try {
             id: "archived",
             accountId: "old",
             note: "Việc của tài khoản đã gỡ",
+            dueAt: Date.now() + 3600000,
+            completedAt: null,
+            createdAt: 2,
+            notifiedAt: null,
+          },
+          {
+            id: "future",
+            accountId: "b",
+            note: "Việc chưa đến hạn",
             dueAt: Date.now() + 3600000,
             completedAt: null,
             createdAt: 2,
@@ -134,6 +187,9 @@ try {
         window.emit();
         return { ok: true };
       },
+      activate: async (id) => {
+        window.activateCalls.push(id);
+      },
     };
     const initialState = window.state;
     window.state = undefined;
@@ -162,6 +218,60 @@ try {
   const closed = await idleMutations();
   await page.evaluate(() => window.ui.open());
   const open = await idleMutations();
+  assert.equal(
+    await page.locator("#reminder-triage").getAttribute("aria-selected"),
+    "true",
+    "the Cần xử lý view opens by default",
+  );
+  assert.equal(await page.locator(".reminder-item").count(), 2);
+  assert.equal(await page.locator('[data-reminder-id="future"]').count(), 0);
+  assert.equal(await page.locator('[data-reminder-id="archived"]').count(), 0);
+  assert.equal(
+    await page
+      .locator('[data-unread-account-id="b"] .reminder-item-source')
+      .textContent(),
+    "Messenger · Khách hàng B",
+  );
+  assert.match(
+    await page
+      .locator('[data-unread-account-id="b"] .reminder-item-time')
+      .textContent(),
+    /Khoảng 3 hội thoại chưa đọc/,
+  );
+  assert.match(
+    await page.locator('[data-unread-account-id="b"]').textContent(),
+    /tài khoản đang ngủ|có thể cũ/i,
+  );
+  assert.match(
+    await page.locator("#reminder-unread-unavailable").textContent(),
+    /1 tài khoản chưa đo được/,
+  );
+  assert.equal(
+    await page.locator('[data-unread-account-id="c"]').count(),
+    0,
+    "unavailable counts are summarized instead of being treated as unread zero",
+  );
+  await page
+    .locator('[data-unread-account-id="b"] [data-unread-action="open"]')
+    .click();
+  await page.waitForFunction(() => window.activateCalls.includes("b"));
+  assert.equal(
+    await page.locator("#reminders-dialog").isVisible(),
+    false,
+    "opening an unread account releases the reminder surface first",
+  );
+  await page.evaluate(() => window.ui.open());
+  await page.locator("#reminder-pending").click();
+  assert.equal(
+    await page.locator('[data-reminder-id="future"]').count(),
+    1,
+    "future reminders remain in the existing Đang chờ view",
+  );
+  await page.evaluate(() => {
+    window.originalItems = window.originalItems.filter(
+      (item) => item.id !== "future",
+    );
+  });
   const custom = await page
     .locator('[data-reminder-id="pending"] [data-reminder-action="reschedule"]')
     .count();
@@ -215,7 +325,7 @@ try {
   );
   assert.equal(
     await page.locator("#reminder-account option").count(),
-    1,
+    3,
     "archived accounts cannot receive new reminders",
   );
   await edit().click();
@@ -434,7 +544,13 @@ try {
     "completed rows cannot reschedule",
   );
   await page.keyboard.press("Home");
+  assert.equal(
+    await page.locator("#reminder-triage").getAttribute("aria-selected"),
+    "true",
+    "Home moves to the first tab, Cần xử lý",
+  );
   assert.equal(await page.locator(".reminder-item").count(), 2);
+  await page.locator("#reminder-pending").click();
   await page.evaluate(() => {
     window.state.accounts[0].name = "Công việc đã đổi";
     window.state.providers[0].label = "Zalo mới";

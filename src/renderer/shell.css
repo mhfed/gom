@@ -1864,6 +1864,7 @@ input[aria-invalid="true"] {
 }
 .reminder-filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
@@ -1882,6 +1883,22 @@ input[aria-invalid="true"] {
   max-height: 360px;
   overflow: auto;
   padding-right: 3px;
+}
+.reminder-section-title {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.reminder-unread {
+  padding-top: 12px;
+}
+.reminder-unread .reminder-item-note {
+  font-size: 12px;
+}
+.reminder-item-stale {
+  margin: 5px 0 0;
+  font-size: 11px;
+  color: var(--warning);
 }
 .reminder-item {
   padding: 16px 0;
@@ -2933,6 +2950,13 @@ dialog::backdrop {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.welcome-account-client-label {
+  overflow: hidden;
+  color: var(--accent);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .welcome-account > svg {
   width: 15px;
   height: 15px;
@@ -3088,6 +3112,23 @@ dialog::backdrop {
   margin: 0 0 14px;
   flex: none;
 }
+.shelf-tabs {
+  display: flex;
+  gap: 5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.shelf-tabs button {
+  padding: 6px 9px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.shelf-tabs button[aria-selected="true"] {
+  color: var(--accent);
+  background: var(--selected);
+  font-weight: 650;
+}
 .shelf-search {
   display: flex;
   align-items: center;
@@ -3228,13 +3269,72 @@ dialog::backdrop {
 }
 #shelf-list {
   flex: 1;
-  min-height: 60px;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
   margin: 12px -4px 0;
   padding: 0 4px 6px;
+}
+.shelf-template-heading,
+.shelf-template-editor-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 7px;
+}
+.shelf-template-heading {
+  margin-top: 10px;
+}
+.shelf-template-heading h3 {
+  margin: 0;
+  font-size: 13px;
+}
+.shelf-template-heading button,
+.shelf-template-editor-actions button {
+  padding: 6px 8px;
+  color: var(--accent);
+  font-size: 11px;
+}
+.shelf-template-editor {
+  display: grid;
+  gap: 7px;
+  flex: none;
+  padding: 9px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+}
+.shelf-template-editor input,
+.shelf-template-editor textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+.shelf-template-editor textarea {
+  resize: vertical;
+  min-height: 70px;
+  max-height: 150px;
+  line-height: 1.5;
+}
+.shelf-template-editor-actions {
+  justify-content: flex-end;
+}
+.shelf-template-error:empty {
+  display: none;
+}
+.shelf-template-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 10px;
 }
 .shelf-card {
   border: 1px solid var(--line);
@@ -3243,6 +3343,46 @@ dialog::backdrop {
   margin-bottom: 9px;
   background: var(--paper);
   overflow-wrap: anywhere;
+}
+.shelf-template-card {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: var(--paper);
+  overflow-wrap: anywhere;
+}
+.shelf-template-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 650;
+}
+.shelf-template-preview {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.shelf-template-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+.shelf-template-actions button {
+  padding: 5px 6px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.shelf-template-actions [data-template-action="copy"] {
+  margin-right: auto;
+  color: var(--accent);
 }
 .shelf-card-heading {
   display: flex;

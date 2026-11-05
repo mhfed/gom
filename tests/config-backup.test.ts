@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { PROVIDER_ORDER } from "../src/shared.ts";
 import assert from "node:assert/strict";
 import sharp from "sharp";
 import { defaultAccounts, createAccount } from "../src/main/accounts.ts";
@@ -48,9 +49,54 @@ test("portable backup omits private accounts, private-only sites and transient s
     "private",
   ])
     assert.equal(encoded.includes(secret), false, secret);
-  assert.equal(backup.accounts.length, 8);
+  assert.equal(backup.accounts.length, PROVIDER_ORDER.length);
   assert.equal(backup.format, "gom-config");
+  assert.equal(backup.version, 2);
   assert.deepEqual(parseConfigurationBackup(encoded), backup);
+});
+test("v2 backup round-trips ordinary client labels, excludes private labels, and imports v1", () => {
+  const current = source();
+  current.accounts[0].clientLabel = "  Khách hàng An  ";
+  const hidden = {
+    ...createAccount("telegram", "Private work"),
+    clientLabel: "PRIVATE_BRAND_LABEL",
+    private: true,
+  };
+  current.accounts.push(hidden);
+  const backup = createConfigurationBackup(current, now);
+  assert.equal(backup.version, 2);
+  assert.equal(backup.accounts[0].clientLabel, "Khách hàng An");
+  assert.equal(JSON.stringify(backup).includes("PRIVATE_BRAND_LABEL"), false);
+  assert.equal(
+    parseConfigurationBackup(JSON.stringify(backup)).accounts[0].clientLabel,
+    "Khách hàng An",
+  );
+  const v1 = structuredClone(backup) as any;
+  v1.version = 1;
+  for (const account of v1.accounts) delete account.clientLabel;
+  const importedV1 = parseConfigurationBackup(JSON.stringify(v1));
+  assert.equal(importedV1.version, 1);
+  assert.equal(importedV1.accounts[0].clientLabel, undefined);
+  current.accounts[0].clientLabel = "Khách hàng An";
+  const mergedV1 = mergeConfigurationBackup(current, importedV1);
+  assert.equal(
+    mergedV1.accounts.find((account) => account.id === current.accounts[0].id)
+      ?.clientLabel,
+    "Khách hàng An",
+    "v1 restores preserve a local label the older format could not contain",
+  );
+  const absentV2 = structuredClone(backup) as any;
+  delete absentV2.accounts[0].clientLabel;
+  const mergedV2 = mergeConfigurationBackup(
+    current,
+    parseConfigurationBackup(JSON.stringify(absentV2)),
+  );
+  assert.equal(
+    mergedV2.accounts.find((account) => account.id === current.accounts[0].id)
+      ?.clientLabel,
+    undefined,
+    "v2 can intentionally restore an account without a label",
+  );
 });
 test("portable backup preserves a custom site, account order, choices, and bounded PNG logo", async () => {
   const current = source(),
@@ -90,7 +136,7 @@ test("rejects malformed, oversized, future-version, private, bad references and 
   );
   for (const mutate of [
     (b: any) => {
-      b.version = 2;
+      b.version = 3;
     },
     (b: any) => {
       b.cookies = [];
@@ -242,7 +288,7 @@ test("portable ordinary subsets can be empty or wholly archived while installati
     private: true,
   });
   const backup = createConfigurationBackup(current, now);
-  assert.equal(backup.accounts.length, 8);
+  assert.equal(backup.accounts.length, PROVIDER_ORDER.length);
   assert.ok(backup.accounts.every((a) => a.archived));
   assert.equal(JSON.stringify(backup).includes("PRIVATE_ACTIVE"), false);
   current.accounts = current.accounts.filter((a) => a.private);

@@ -80,6 +80,22 @@ try {
         mime: "text/plain",
       },
     ];
+    window.templates = [
+      {
+        id: "template-hostile",
+        title: "Chào <img src=x onerror=alert(1)>",
+        body: "Xin chào <script>alert(1)</script>\nCảm ơn bạn.",
+        createdAt: 1,
+        updatedAt: 3,
+      },
+      {
+        id: "template-shipping",
+        title: "Báo giá",
+        body: "Thời gian giao hàng dự kiến là ngày mai.",
+        createdAt: 2,
+        updatedAt: 2,
+      },
+    ];
     window.state = {
       privateSpace: { unlocked: false, lockVersion: 0 },
       shelf: {
@@ -92,6 +108,7 @@ try {
     };
     window.snapshot = () => ({
       items: structuredClone(window.items),
+      templates: structuredClone(window.templates),
       totalBytes: 3163,
       revision: window.state.shelf.revision,
       unavailable: false,
@@ -130,6 +147,23 @@ try {
           bytes: 4,
           mime: "text/plain",
         });
+      if (request.action === "add-template")
+        window.templates.unshift({
+          id: "template-added",
+          title: request.title,
+          body: request.body,
+          createdAt: 5,
+          updatedAt: 5,
+        });
+      if (request.action === "update-template")
+        Object.assign(
+          window.templates.find((item) => item.id === request.templateId),
+          { title: request.title, body: request.body, updatedAt: Date.now() },
+        );
+      if (request.action === "remove-template")
+        window.templates = window.templates.filter(
+          (item) => item.id !== request.templateId,
+        );
       if (
         [
           "pin",
@@ -138,6 +172,9 @@ try {
           "add-text",
           "clipboard",
           "pick-files",
+          "add-template",
+          "update-template",
+          "remove-template",
         ].includes(request.action)
       ) {
         window.state.shelf.revision++;
@@ -151,6 +188,9 @@ try {
           "add-text",
           "clipboard",
           "pick-files",
+          "add-template",
+          "update-template",
+          "remove-template",
         ].includes(request.action)
       )
         window.emit();
@@ -188,6 +228,84 @@ try {
     { closed: 0, open: 0 },
     "five identical closed and loaded-open snapshots must produce zero DOM mutations",
   );
+
+  await page.locator("#shelf-tab-templates").click();
+  assert.equal(
+    await page.locator("#shelf-tab-templates").getAttribute("aria-selected"),
+    "true",
+  );
+  assert.equal(await page.locator(".shelf-template-card").count(), 2);
+  assert.equal(
+    await page.locator(".shelf-template-card img, .shelf-template-card script").count(),
+    0,
+    "template text is rendered inertly",
+  );
+  assert.match(
+    await page.locator('[data-template-id="template-hostile"]').textContent(),
+    /<img src=x/,
+  );
+  assert.equal(await page.locator(".shelf-filters").isVisible(), false);
+  assert.equal(await page.locator(".shelf-compose").isVisible(), false);
+  assert.equal(await page.locator(".shelf-footer").isVisible(), false);
+  await page.locator("#shelf-search").fill("báo giá");
+  assert.equal(await page.locator(".shelf-template-card").count(), 1);
+  assert.equal(
+    await page.locator(".shelf-template-card").getAttribute("data-template-id"),
+    "template-shipping",
+    "search matches template titles",
+  );
+  await page.locator("#shelf-search").fill("giao hàng");
+  assert.equal(await page.locator(".shelf-template-card").count(), 1);
+  await page.locator("#shelf-search").fill("không có kết quả");
+  assert.match(await page.locator("#shelf-list").textContent(), /Chưa tìm thấy/);
+  await page.locator("#shelf-search").fill("");
+  assert.equal(
+    await page.evaluate(() => window.calls.filter((call) => call.action === "copy-template").length),
+    0,
+    "templates are never copied on load or search",
+  );
+  await page
+    .locator('[data-template-id="template-shipping"] [data-template-action="copy"]')
+    .click();
+  assert.ok(
+    await page.evaluate(() =>
+      window.calls.some(
+        (call) =>
+          call.action === "copy-template" &&
+          call.templateId === "template-shipping" &&
+          call.lockVersion === 0,
+      ),
+    ),
+    "only the explicit Sao chép control requests clipboard output",
+  );
+  assert.match(await page.locator("#shelf-status").textContent(), /Đã sao chép mẫu/);
+  await page.locator("#shelf-template-add").click();
+  await page.locator("#shelf-template-title").fill("Báo <img src=x>");
+  await page.locator("#shelf-template-body").fill("Dòng mới\n<script>alert(1)</script>");
+  await page.locator("#shelf-template-save").click();
+  await page.waitForFunction(() => window.templates.some((item) => item.id === "template-added"));
+  assert.deepEqual(
+    await page.evaluate(() => {
+      const call = window.calls.filter((item) => item.action === "add-template").at(-1);
+      return { title: call.title, body: call.body };
+    }),
+    { title: "Báo <img src=x>", body: "Dòng mới\n<script>alert(1)</script>" },
+  );
+  await page
+    .locator('[data-template-id="template-added"] [data-template-action="edit"]')
+    .click();
+  await page.locator("#shelf-template-title").fill("Báo đã sửa");
+  await page.locator("#shelf-template-body").fill("Đã cập nhật");
+  await page.locator("#shelf-template-save").click();
+  await page.waitForFunction(() =>
+    window.calls.some((item) => item.action === "update-template" && item.title === "Báo đã sửa"),
+  );
+  await page
+    .locator('[data-template-id="template-added"] [data-template-action="remove"]')
+    .click();
+  await page.waitForFunction(() => !window.templates.some((item) => item.id === "template-added"));
+  await page.locator("#shelf-search").fill("");
+  await page.locator("#shelf-tab-items").click();
 
   assert.equal(
     await page.locator("#shelf-list img[onerror]").count(),
@@ -238,9 +356,19 @@ try {
         ?.src.startsWith("data:image/png"),
   );
   await page.locator('[data-shelf-filter="all"]').click();
-  await page
-    .locator('[data-shelf-id="text"] [data-shelf-action="pin"]')
-    .click();
+  const pinText = page.locator(
+    '[data-shelf-id="text"] [data-shelf-action="pin"]',
+  );
+  await pinText.focus();
+  assert.equal(
+    await page.evaluate(
+      () =>
+        document.activeElement?.closest("[data-shelf-id]")?.dataset.shelfId,
+    ),
+    "text",
+    "the pin control has keyboard focus before activation",
+  );
+  await page.keyboard.press("Enter");
   await page.waitForFunction(
     () =>
       document
@@ -362,7 +490,7 @@ try {
       layout.footer.bottom <= 640 &&
         layout.close.top >= 52 &&
         layout.close.bottom <= 640,
-      "footer and close remain in the viewport",
+      `footer and close remain in the viewport: ${JSON.stringify(layout)}`,
     );
   }
   for (const width of [400, 940]) {
@@ -385,6 +513,11 @@ try {
   await page.evaluate(() => {
     window.holdAction = "clipboard";
   });
+  await page.locator("#shelf-tab-templates").click();
+  await page.locator("#shelf-template-add").click();
+  await page.locator("#shelf-template-title").fill("PRIVATE_TEMPLATE_DRAFT");
+  await page.locator("#shelf-template-body").fill("PRIVATE_TEMPLATE_BODY");
+  await page.locator("#shelf-tab-items").click();
   await page.locator("#shelf-from-clipboard").click();
   await page.evaluate(() => {
     window.state.privateSpace = { unlocked: true, lockVersion: 1 };
@@ -402,6 +535,9 @@ try {
   assert.equal(await page.locator("#shelf-list").textContent(), "");
   assert.equal(await page.locator("#shelf-search").inputValue(), "");
   assert.equal(await page.locator("#shelf-text").inputValue(), "");
+  assert.equal(await page.locator("#shelf-template-title").inputValue(), "");
+  assert.equal(await page.locator("#shelf-template-body").inputValue(), "");
+  assert.equal(await page.locator("#shelf-template-editor").isVisible(), false);
   assert.equal(await page.locator("#shelf-status").textContent(), "");
   await page.evaluate(() => {
     window.holdAction = "";

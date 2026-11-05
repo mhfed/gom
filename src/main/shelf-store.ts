@@ -12,6 +12,7 @@ import {
   type ShelfItem,
   type ShelfResult,
   type ShelfSnapshot,
+  type ShelfTemplate,
 } from "../shelf-types.ts";
 
 export type ShelfNamespace = "normal" | "private";
@@ -23,11 +24,17 @@ export interface ShelfKeyCodec {
 type Guard = () => boolean;
 type State = {
   items: ShelfItem[];
+  templates: ShelfTemplate[];
   revision: number;
   unavailable: boolean;
   error: string;
 };
-type Index = { version: 1; revision: number; items: ShelfItem[] };
+type Index = {
+  version: 2;
+  revision: number;
+  items: ShelfItem[];
+  templates: ShelfTemplate[];
+};
 const spaces: ShelfNamespace[] = ["normal", "private"];
 const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -53,19 +60,35 @@ const maxFixedItemBytes = Buffer.byteLength(
     text: "",
   }),
 );
+const maxFixedTemplateBytes = Buffer.byteLength(
+  JSON.stringify({
+    id: "f".repeat(36),
+    title: "",
+    body: "",
+    createdAt: Number.MAX_SAFE_INTEGER,
+    updatedAt: Number.MAX_SAFE_INTEGER,
+  }),
+);
 const maxEncodedIndexBytes =
   envelopeBytes +
   Buffer.byteLength(
     JSON.stringify({
-      version: 1,
+      version: 2,
       revision: Number.MAX_SAFE_INTEGER,
       items: [],
+      templates: [],
     }),
   ) +
   SHELF_LIMITS.items *
     (maxFixedItemBytes +
       1 +
-      6 * (SHELF_LIMITS.textBytes + maxNameBytes + maxMimeLength));
+      6 * (SHELF_LIMITS.textBytes + maxNameBytes + maxMimeLength)) +
+  SHELF_LIMITS.templates *
+    (maxFixedTemplateBytes +
+      1 +
+      6 *
+        (SHELF_LIMITS.textBytes +
+          SHELF_LIMITS.templateTitleChars * 4));
 
 const errorMessage =
   "Chưa đọc hoặc lưu được Khay. Dữ liệu đã lưu được giữ nguyên.";
@@ -117,13 +140,19 @@ function validateIndex(value: unknown): Index {
     throw new Error();
   const data = value as Record<string, unknown>;
   if (
-    Object.keys(data).sort().join() !== "items,revision,version" ||
-    data.version !== 1 ||
+    (data.version !== 1 && data.version !== 2) ||
+    Object.keys(data).sort().join() !==
+      (data.version === 1
+        ? "items,revision,version"
+        : "items,revision,templates,version") ||
     !Number.isSafeInteger(data.revision) ||
     (data.revision as number) < 0 ||
     !Array.isArray(data.items) ||
     data.items.length > SHELF_LIMITS.items
   )
+    throw new Error();
+  const templates = data.version === 1 ? [] : data.templates;
+  if (!Array.isArray(templates) || templates.length > SHELF_LIMITS.templates)
     throw new Error();
   const ids = new Set<string>();
   for (const raw of data.items) {
@@ -163,8 +192,43 @@ function validateIndex(value: unknown): Index {
       throw new Error();
     ids.add(item.id);
   }
+  const templateIds = new Set<string>();
+  for (const raw of templates) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw))
+      throw new Error();
+    const template = raw as ShelfTemplate;
+    if (
+      Object.keys(template).sort().join() !==
+        "body,createdAt,id,title,updatedAt" ||
+      typeof template.id !== "string" ||
+      !uuid.test(template.id) ||
+      ids.has(template.id) ||
+      templateIds.has(template.id) ||
+      typeof template.title !== "string" ||
+      !template.title.trim() ||
+      template.title.trim() !== template.title ||
+      unsafeName.test(template.title) ||
+      Array.from(template.title).length > SHELF_LIMITS.templateTitleChars ||
+      typeof template.body !== "string" ||
+      !template.body.trim() ||
+      template.body !== template.body.replace(/\r\n?/g, "\n") ||
+      unsafeText.test(template.body) ||
+      Buffer.byteLength(template.body) > SHELF_LIMITS.textBytes ||
+      !Number.isSafeInteger(template.createdAt) ||
+      template.createdAt <= 0 ||
+      !Number.isSafeInteger(template.updatedAt) ||
+      template.updatedAt < template.createdAt
+    )
+      throw new Error();
+    templateIds.add(template.id);
+  }
   if (total(data.items) > SHELF_LIMITS.totalBytes) throw new Error();
-  return data as Index;
+  return {
+    version: 2,
+    revision: data.revision as number,
+    items: data.items as ShelfItem[],
+    templates: templates as ShelfTemplate[],
+  };
 }
 
 export class ShelfStore {
@@ -172,8 +236,8 @@ export class ShelfStore {
   private readonly codec: ShelfKeyCodec;
   private key: Buffer | null = null;
   private states: Record<ShelfNamespace, State> = {
-    normal: { items: [], revision: 0, unavailable: true, error: errorMessage },
-    private: { items: [], revision: 0, unavailable: true, error: errorMessage },
+    normal: { items: [], templates: [], revision: 0, unavailable: true, error: errorMessage },
+    private: { items: [], templates: [], revision: 0, unavailable: true, error: errorMessage },
   };
   private queue: Promise<void> = Promise.resolve();
   private loading: Promise<void> | null = null;
@@ -226,6 +290,7 @@ export class ShelfStore {
     if (!validSpace(space))
       return {
         items: [],
+        templates: [],
         totalBytes: 0,
         revision: 0,
         unavailable: true,
@@ -240,6 +305,12 @@ export class ShelfStore {
             Number(b.pinned) - Number(a.pinned) ||
             b.createdAt - a.createdAt ||
             b.id.localeCompare(a.id),
+        ),
+      templates: state.templates
+        .map((template) => ({ ...template }))
+        .sort(
+          (a, b) =>
+            b.updatedAt - a.updatedAt || b.id.localeCompare(a.id),
         ),
       totalBytes: total(state.items),
       revision: state.revision,
@@ -361,6 +432,79 @@ export class ShelfStore {
     });
   }
 
+  addTemplate(
+    space: ShelfNamespace,
+    input: { title: string; body: string },
+    valid: Guard = () => true,
+  ): Promise<ShelfResult> {
+    return this.mutateTemplates(space, valid, async (templates) => {
+      const value = this.templateInput(input);
+      if (!value) return "Tên hoặc nội dung mẫu không hợp lệ hoặc vượt giới hạn.";
+      if (templates.length >= SHELF_LIMITS.templates)
+        return "Đã có 100 mẫu. Hãy xóa mẫu trước khi thêm.";
+      const now = Math.max(Date.now(), ...templates.map((item) => item.updatedAt + 1));
+      templates.push({
+        id: randomUUID(),
+        ...value,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+  }
+
+  updateTemplate(
+    space: ShelfNamespace,
+    id: string,
+    input: { title: string; body: string },
+    valid: Guard = () => true,
+  ): Promise<ShelfResult> {
+    return this.mutateTemplates(space, valid, async (templates) => {
+      const template = templates.find((item) => item.id === id);
+      const value = this.templateInput(input);
+      if (!template) return "Không tìm thấy mẫu trong Khay.";
+      if (!value) return "Tên hoặc nội dung mẫu không hợp lệ hoặc vượt giới hạn.";
+      Object.assign(template, value, {
+        updatedAt: Math.max(
+          Date.now(),
+          template.updatedAt + 1,
+          ...templates.map((item) => item.updatedAt + 1),
+        ),
+      });
+    });
+  }
+
+  removeTemplate(
+    space: ShelfNamespace,
+    id: string,
+    valid: Guard = () => true,
+  ): Promise<ShelfResult> {
+    return this.mutateTemplates(space, valid, async (templates) => {
+      const index = templates.findIndex((item) => item.id === id);
+      if (index < 0) return "Không tìm thấy mẫu trong Khay.";
+      templates.splice(index, 1);
+    });
+  }
+
+  private templateInput(
+    input: { title: string; body: string },
+  ): { title: string; body: string } | null {
+    if (!input || typeof input !== "object") return null;
+    const { title, body } = input;
+    const normalizedBody =
+      typeof body === "string" ? body.replace(/\r\n?/g, "\n") : "";
+    const normalizedTitle = typeof title === "string" ? title.trim() : "";
+    if (
+      !normalizedTitle ||
+      unsafeName.test(normalizedTitle) ||
+      Array.from(normalizedTitle).length > SHELF_LIMITS.templateTitleChars ||
+      !normalizedBody.trim() ||
+      unsafeText.test(normalizedBody) ||
+      Buffer.byteLength(normalizedBody) > SHELF_LIMITS.textBytes
+    )
+      return null;
+    return { title: normalizedTitle, body: normalizedBody };
+  }
+
   readBinary(space: ShelfNamespace, id: string): Promise<Buffer | null> {
     return this.serial(async () => {
       if (
@@ -432,9 +576,10 @@ export class ShelfStore {
           };
         check(valid);
         const index: Index = {
-          version: 1,
+          version: 2,
           revision: state.revision + 1,
           items,
+          templates: state.templates.map((template) => ({ ...template })),
         };
         validateIndex(index);
         await this.atomic(
@@ -444,11 +589,61 @@ export class ShelfStore {
         );
         this.states[space] = {
           items,
+          templates: index.templates,
           revision: index.revision,
           unavailable: false,
           error: "",
         };
         await this.cleanup(space).catch(() => undefined);
+        return { ok: true, snapshot: this.list(space) };
+      } catch (error) {
+        if (error instanceof Cancelled)
+          return { ok: false, message: cancelledMessage };
+        this.fail(space);
+        return { ok: false, message: errorMessage };
+      }
+    });
+  }
+
+  private mutateTemplates(
+    space: ShelfNamespace,
+    valid: Guard,
+    action: (templates: ShelfTemplate[]) => Promise<string | void>,
+  ): Promise<ShelfResult> {
+    return this.serial(async () => {
+      if (!validSpace(space) || this.states[space].unavailable || !this.key)
+        return { ok: false, message: errorMessage };
+      try {
+        check(valid);
+        const state = this.states[space];
+        const templates = state.templates.map((template) => ({ ...template }));
+        const message = await action(templates);
+        if (message) return { ok: false, message };
+        if (templates.length > SHELF_LIMITS.templates)
+          return {
+            ok: false,
+            message: "Đã có 100 mẫu. Hãy xóa mẫu trước khi thêm.",
+          };
+        check(valid);
+        const index: Index = {
+          version: 2,
+          revision: state.revision + 1,
+          items: state.items.map((item) => ({ ...item })),
+          templates,
+        };
+        validateIndex(index);
+        await this.atomic(
+          join(this.root, space, "index.enc"),
+          this.encodeIndex(space, index),
+          valid,
+        );
+        this.states[space] = {
+          items: state.items,
+          templates,
+          revision: index.revision,
+          unavailable: false,
+          error: "",
+        };
         return { ok: true, snapshot: this.list(space) };
       } catch (error) {
         if (error instanceof Cancelled)
@@ -484,7 +679,12 @@ export class ShelfStore {
           (await readdir(dir)).some((name) => name !== "blobs")
         )
           throw error;
-        bytes = this.encodeIndex(space, { version: 1, revision: 0, items: [] });
+        bytes = this.encodeIndex(space, {
+          version: 2,
+          revision: 0,
+          items: [],
+          templates: [],
+        });
         await this.atomic(join(dir, "index.enc"), bytes, () => true);
       }
       const index = validateIndex(
@@ -506,6 +706,7 @@ export class ShelfStore {
       }
       this.states[space] = {
         items: index.items,
+        templates: index.templates,
         revision: index.revision,
         unavailable: false,
         error: "",

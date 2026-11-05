@@ -4,6 +4,7 @@ interface PaletteOptions {
   avatar(account: Account): HTMLElement;
   icon(name: string): SVGSVGElement;
   settings(tab: string): void;
+  openReminders(): void;
 }
 type Entry = {
   id: string;
@@ -29,7 +30,13 @@ export function createCommandPalette(options: PaletteOptions) {
   let signature = "";
   const close = () => window.desktop.command(false);
   const afterClose = async (fn: () => unknown) => {
+    const closed = dialog.open
+      ? new Promise<void>((resolve) =>
+          dialog.addEventListener("close", () => resolve(), { once: true }),
+        )
+      : Promise.resolve();
     await close();
+    await closed;
     fn();
   };
   function select(index: number, focus = false, rebuilt = false) {
@@ -66,10 +73,13 @@ export function createCommandPalette(options: PaletteOptions) {
       ...accounts.map((a) => ({
         id: a.id,
         title: a.name,
-        subtitle:
-          (state.providers.find((p) => p.id === a.provider)?.label ||
-            "Website") +
-          (state.presentation.pinned.includes(a.id) ? " · Đã ghim" : ""),
+        subtitle: [
+          state.providers.find((p) => p.id === a.provider)?.label || "Website",
+          a.clientLabel,
+          state.presentation.pinned.includes(a.id) ? "Đã ghim" : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
         account: a,
         run: () => window.desktop.activate(a.id),
       })),
@@ -107,6 +117,13 @@ export function createCommandPalette(options: PaletteOptions) {
         subtitle: "RAM, CPU và tạm ngủ tài khoản",
         icon: "desktop",
         run: () => options.settings("resources"),
+      },
+      {
+        id: "reminders",
+        title: "Tạo nhắc trả lời",
+        subtitle: "Gắn tài khoản và cuộc trò chuyện hiện tại",
+        icon: "bell",
+        run: () => afterClose(options.openReminders),
       },
       {
         id: "notifications",

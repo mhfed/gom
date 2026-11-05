@@ -141,7 +141,7 @@ function providerOf(id: ProviderId) {
   return current.providers.find((provider) => provider.id === id)!;
 }
 function nameOf(a: Account) {
-  return `${providerOf(a.provider).label} · ${a.name}`;
+  return `${providerOf(a.provider).label} · ${a.name}${a.clientLabel ? ` · ${a.clientLabel}` : ""}`;
 }
 function element<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -594,6 +594,8 @@ async function openEditor(a?: Account, provider?: ProviderId) {
   name.value = a?.name || "";
   name.setCustomValidity("");
   $<HTMLInputElement>("account-avatar").value = a?.avatar || "";
+  $<HTMLInputElement>("account-client-label").value = a?.clientLabel || "";
+  $<HTMLInputElement>("account-client-label").setCustomValidity("");
   $("account-editor-error").textContent = "";
   const dialog = $<HTMLDialogElement>("account-editor");
   if (!dialog.open) dialog.showModal();
@@ -676,6 +678,10 @@ function rebuildAccounts(state: AppState) {
       if (a.private)
         meta.append(
           element("small", "private-account-label", "Không gian kín"),
+        );
+      if (a.clientLabel)
+        meta.append(
+          element("small", "account-client-label-value", a.clientLabel),
         );
       label.append(name, meta);
       identity.append(avatar(a), label);
@@ -760,7 +766,11 @@ function rebuildAccounts(state: AppState) {
       const nlabel = element("label");
       nlabel.append(
         element("strong", "", a.name),
-        element("small", "", providerLabel),
+        element(
+          "small",
+          "",
+          `${providerLabel}${a.clientLabel ? ` · ${a.clientLabel}` : ""}`,
+        ),
       );
       nlabel.htmlFor = "notification-" + a.id;
       const select = element("select");
@@ -862,8 +872,9 @@ function renderToolbar(state: AppState, active: Account | undefined) {
     return;
   }
   setProperty(select, "value", active.id);
-  setProperty($("account-select-label"), "textContent", active.name);
-  setAttribute(select, "aria-label", "Tài khoản đang dùng: " + active.name);
+  const displayName = `${active.name}${active.clientLabel ? ` · ${active.clientLabel}` : ""}`;
+  setProperty($("account-select-label"), "textContent", displayName);
+  setAttribute(select, "aria-label", "Tài khoản đang dùng: " + displayName);
   setProperty(
     select,
     "title",
@@ -934,6 +945,7 @@ function renderWelcome(state: AppState) {
       return [
         account.id,
         account.name,
+        account.clientLabel,
         provider.id,
         provider.label,
         provider.logo,
@@ -950,12 +962,15 @@ function renderWelcome(state: AppState) {
       card.type = "button";
       card.setAttribute(
         "aria-label",
-        `Mở ${account.name} trên ${provider.label}`,
+        `Mở ${account.name}${account.clientLabel ? ` · ${account.clientLabel}` : ""} trên ${provider.label}`,
       );
       card.append(providerLogo(provider));
       const details = element("span", "welcome-account-details");
       details.append(
         element("strong", "welcome-account-name", account.name),
+        ...(account.clientLabel
+          ? [element("span", "welcome-account-client-label", account.clientLabel)]
+          : []),
         element("span", "welcome-account-provider", provider.label),
       );
       card.append(details);
@@ -1101,8 +1116,8 @@ function render(state: AppState) {
   } else {
     window.clearTimeout(actionFeedbackTimer);
     actionFeedbackTimer = undefined;
-    actionFeedback.hidden = true;
-    actionFeedback.textContent = "";
+    setProperty(actionFeedback, "hidden", true);
+    setProperty(actionFeedback, "textContent", "");
   }
   privateSpaceUI.sync(state);
   shelfUI.render(state);
@@ -1570,21 +1585,31 @@ $("account-name").oninput = () => {
     name.value && !name.value.trim() ? "Nhập tên để phân biệt tài khoản." : "",
   );
 };
+$("account-client-label").oninput = () => {
+  const label = $<HTMLInputElement>("account-client-label");
+  label.setCustomValidity(
+    Array.from(label.value.trim()).length > 60
+      ? "Nhãn tối đa 60 ký tự Unicode."
+      : "",
+  );
+};
 $("account-form").onsubmit = async (event) => {
   event.preventDefault();
   const generation = privacyGeneration;
   $("account-editor-error").textContent = "";
   const name = $<HTMLInputElement>("account-name").value,
-    avatar = $<HTMLInputElement>("account-avatar").value;
+    avatar = $<HTMLInputElement>("account-avatar").value,
+    clientLabel = $<HTMLInputElement>("account-client-label").value;
   const button = $<HTMLButtonElement>("account-editor-save");
   button.disabled = true;
   try {
     const result = editing
-      ? await window.desktop.editAccount(editing, name, avatar)
+      ? await window.desktop.editAccount(editing, name, avatar, clientLabel)
       : await window.desktop.addAccount(
           $<HTMLSelectElement>("account-provider").value as ProviderId,
           name,
           avatar,
+          clientLabel,
         );
     if (generation !== privacyGeneration) return;
     if (!result.ok) {
@@ -1606,15 +1631,6 @@ $("account-form").onsubmit = async (event) => {
     button.disabled = false;
   }
 };
-const command = createCommandPalette({
-  getState: () => current,
-  avatar,
-  icon,
-  settings: (tab) => {
-    showTab(tab);
-    void window.desktop.settings();
-  },
-});
 const shelfUI = createShelfUI({
   getState: () => current,
   request: (request) => window.desktop.shelf(request),
@@ -1623,6 +1639,16 @@ const privateSpaceUI = createPrivateSpaceUI({
   getState: () => current,
 });
 const reminderUI = createReminderUI({ getState: () => current });
+const command = createCommandPalette({
+  getState: () => current,
+  avatar,
+  icon,
+  settings: (tab) => {
+    showTab(tab);
+    void window.desktop.settings();
+  },
+  openReminders: () => void reminderUI.open(),
+});
 const workspacePresetUI = createWorkspacePresetUI({ getState: () => current });
 const backupUI = createBackupUI({ getState: () => current });
 const resourcesUI = createResourcesUI({

@@ -1130,6 +1130,7 @@ const shelfService = new ShelfService(shelfStore, {
       ]);
     }
   },
+  writeText: (text) => clipboard.writeText(text),
   pickFiles: async () => {
     const result = await dialog.showOpenDialog(win, {
       title: "Thêm tệp vào Khay",
@@ -1865,7 +1866,7 @@ function knownProvider(id: unknown): id is ProviderId {
 }
 function accountLabel(id: AccountId) {
   const a = findAccount(id, true)!;
-  return `${providerDefinition(a.provider).label} · ${a.name}`;
+  return `${providerDefinition(a.provider).label} · ${a.name}${a.clientLabel ? ` · ${a.clientLabel}` : ""}`;
 }
 function isCurrent(id: AccountId, contents: WebContents) {
   return (
@@ -4675,7 +4676,7 @@ async function showAccountMenu(anchor: unknown) {
   let selected: AccountId | null = null;
   const items: Electron.MenuItemConstructorOptions[] = peers.map((account) => ({
     id: "account-" + account.id,
-    label: account.name,
+    label: `${account.name}${account.clientLabel ? ` · ${account.clientLabel}` : ""}`,
     type: "radio" as const,
     checked: account.id === active.id,
     click: () => {
@@ -4765,18 +4766,37 @@ async function changeAccount(
           if (
             !accessibleProvider(data.provider) ||
             typeof data.name !== "string" ||
-            typeof data.avatar !== "string"
+            typeof data.avatar !== "string" ||
+            (data.clientLabel !== undefined &&
+              typeof data.clientLabel !== "string")
           )
             throw Error("invalid-account-name");
           added = {
-            ...createAccount(data.provider, data.name, data.avatar),
+            ...createAccount(
+              data.provider,
+              data.name,
+              data.avatar,
+              undefined,
+              data.clientLabel,
+            ),
             private: privateUnlocked,
           };
           next.push(added);
         } else if (command === "account-edit") {
-          if (typeof data.name !== "string" || typeof data.avatar !== "string")
+          if (
+            typeof data.name !== "string" ||
+            typeof data.avatar !== "string" ||
+            (data.clientLabel !== undefined &&
+              typeof data.clientLabel !== "string")
+          )
             throw Error("invalid-account-name");
-          next = editCatalogAccount(next, id, data.name, data.avatar);
+          next = editCatalogAccount(
+            next,
+            id,
+            data.name,
+            data.avatar,
+            data.clientLabel,
+          );
         } else if (command === "account-move") {
           if (data.direction !== -1 && data.direction !== 1)
             throw Error("invalid-direction");
@@ -4881,9 +4901,11 @@ async function changeAccount(
         layout();
         await persist();
         return { ok: true, accountId: added?.id ?? id };
-      } catch {
+      } catch (error) {
         const message =
-          "Chưa cập nhật được tài khoản. Bạn kiểm tra tên, bảo đảm còn ít nhất một tài khoản đang dùng và thử lại. Các phiên đăng nhập vẫn được giữ.";
+          (error as Error).message === "invalid-client-label"
+            ? "Nhãn khách hàng/brand tối đa 60 ký tự Unicode và không chứa ký tự điều khiển."
+            : "Chưa cập nhật được tài khoản. Bạn kiểm tra tên, bảo đảm còn ít nhất một tài khoản đang dùng và thử lại. Các phiên đăng nhập vẫn được giữ.";
         state.notice = message;
         publish();
         return { ok: false, message };

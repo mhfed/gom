@@ -40,6 +40,45 @@ test("legacy migration keeps exact partition names; new same-platform accounts h
   );
   assert.equal(edited[0].id, "zalo");
 });
+test("account client labels trim, accept 60 Unicode code points, edit, clear, and load old catalogs", () => {
+  const account = createAccount("zalo", "Công việc", "💼", uuid, "  Khách hàng An  ");
+  assert.equal(account.clientLabel, "Khách hàng An");
+  assert.equal(
+    createAccount("zalo", "Cá nhân", "", "22345678-1234-4234-8234-123456789abc", "😀".repeat(60)).clientLabel,
+    "😀".repeat(60),
+  );
+  assert.throws(() =>
+    createAccount("zalo", "Cá nhân", "", "32345678-1234-4234-8234-123456789abc", "😀".repeat(61)),
+  );
+  assert.throws(() =>
+    createAccount("zalo", "Cá nhân", "", "42345678-1234-4234-8234-123456789abc", "Brand\u0000Name"),
+  );
+  const edited = editAccount(
+    [...defaultAccounts(), account],
+    account.id,
+    "Công việc",
+    "W",
+    "  Brand Bloom  ",
+  );
+  assert.equal(edited.at(-1)?.clientLabel, "Brand Bloom");
+  const cleared = editAccount(edited, account.id, "Công việc", "W", "   ");
+  assert.equal("clientLabel" in cleared.at(-1)!, false);
+  const legacy = validateCatalog({ version: 1, accounts: defaultAccounts() });
+  assert.equal(legacy.every((entry) => entry.clientLabel === undefined), true);
+  const catalog = validateCatalog({
+    version: 2,
+    providers: [],
+    accounts: [...defaultAccounts(), { ...account, clientLabel: "  Brand North  " }],
+  });
+  assert.equal(catalog.at(-1)?.clientLabel, "Brand North");
+  assert.throws(() =>
+    validateCatalog({
+      version: 2,
+      providers: [],
+      accounts: [...defaultAccounts(), { ...account, clientLabel: "x".repeat(61) }],
+    }),
+  );
+});
 test("catalog rejects provider reassignment, duplicate IDs, path-like IDs and missing legacy references", () => {
   const accounts = defaultAccounts();
   for (const list of [

@@ -297,6 +297,27 @@
         <p class="shelf-description">
           Gom lại, dùng ở bất kỳ cuộc trò chuyện nào.
         </p>
+        <div class="shelf-tabs" role="tablist" aria-label="Mục trong Khay">
+          <button
+            id="shelf-tab-items"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="shelf-list"
+          >
+            Nội dung
+          </button>
+          <button
+            id="shelf-tab-templates"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="shelf-list"
+            tabindex="-1"
+          >
+            Mẫu
+          </button>
+        </div>
         <label class="shelf-search" for="shelf-search"
           ><svg aria-hidden="true"><use href="#i-search" /></svg
           ><input
@@ -305,7 +326,12 @@
             placeholder="Tìm trong khay"
             autocomplete="off"
         /></label>
-        <div class="shelf-filters" role="group" aria-label="Loại nội dung">
+        <div
+          class="shelf-filters"
+          role="group"
+          aria-label="Loại nội dung"
+          data-shelf-items-only
+        >
           <button type="button" data-shelf-filter="all" aria-pressed="true">
             Tất cả</button
           ><button type="button" data-shelf-filter="text" aria-pressed="false">
@@ -316,7 +342,7 @@
             Tệp
           </button>
         </div>
-        <div class="shelf-compose">
+        <div class="shelf-compose" data-shelf-items-only>
           <label class="sr-only" for="shelf-text">Văn bản thêm vào khay</label>
           <textarea
             id="shelf-text"
@@ -335,12 +361,13 @@
         </div>
         <p id="shelf-status" role="status" aria-live="polite" tabindex="-1"></p>
         <button id="shelf-retry" type="button" hidden>Thử đọc lại khay</button>
-        <p id="shelf-quota" class="shelf-note" hidden>
+        <p id="shelf-quota" class="shelf-note" data-shelf-items-only hidden>
           Khay đã đầy. Xóa vài món để thêm nội dung mới.
         </p>
         <div
           id="shelf-clear-confirm"
           class="shelf-confirm"
+          data-shelf-items-only
           role="group"
           aria-labelledby="shelf-clear-question"
           hidden
@@ -353,8 +380,45 @@
             </button>
           </div>
         </div>
-        <div id="shelf-list" aria-label="Nội dung trong khay"></div>
-        <div class="shelf-footer">
+        <section id="shelf-template-panel" aria-label="Mẫu trả lời" hidden>
+          <div class="shelf-template-heading">
+            <h3>Mẫu trả lời</h3>
+            <button id="shelf-template-add" type="button">Tạo mẫu</button>
+          </div>
+          <form id="shelf-template-editor" class="shelf-template-editor" hidden>
+            <label class="sr-only" for="shelf-template-title">Tên mẫu</label>
+            <input
+              id="shelf-template-title"
+              type="text"
+              maxlength="240"
+              placeholder="Tên mẫu"
+              required
+              autocomplete="off"
+            />
+            <label class="sr-only" for="shelf-template-body"
+              >Nội dung mẫu</label
+            >
+            <textarea
+              id="shelf-template-body"
+              rows="5"
+              placeholder="Nội dung câu trả lời"
+              required
+              spellcheck="false"
+            ></textarea>
+            <p id="shelf-template-error" class="shelf-template-error" role="alert"></p>
+            <div class="shelf-template-editor-actions">
+              <button id="shelf-template-cancel" type="button">Hủy</button>
+              <button id="shelf-template-save" type="submit">Lưu mẫu</button>
+            </div>
+          </form>
+        </section>
+        <div
+          id="shelf-list"
+          role="tabpanel"
+          aria-labelledby="shelf-tab-items"
+          aria-label="Nội dung trong khay"
+        ></div>
+        <div class="shelf-footer" data-shelf-items-only>
           <span id="shelf-capacity"></span
           ><button id="shelf-clear" type="button">Dọn mục chưa ghim</button>
         </div>
@@ -1359,6 +1423,16 @@
           placeholder="Ví dụ: 💼, A"
           autocomplete="off"
         />
+        <label class="field-label" for="account-client-label"
+          >Khách hàng/brand (tùy chọn)</label
+        >
+        <input
+          id="account-client-label"
+          maxlength="120"
+          placeholder="Ví dụ: Khách hàng An, Brand Bloom"
+          autocomplete="off"
+        />
+        <p class="hint">Tối đa 60 ký tự Unicode. Để trống nếu chưa phân nhóm.</p>
         <p class="hint">
           Tài khoản mới đăng nhập riêng trong app. Các tài khoản đang dùng vẫn
           giữ nguyên phiên.
@@ -1440,10 +1514,19 @@
             aria-label="Trạng thái nhắc việc"
           >
             <button
-              id="reminder-pending"
+              id="reminder-triage"
               type="button"
               role="tab"
               aria-selected="true"
+              aria-controls="reminder-results"
+            >
+              Cần xử lý
+            </button>
+            <button
+              id="reminder-pending"
+              type="button"
+              role="tab"
+              aria-selected="false"
               aria-controls="reminder-results"
             >
               Đang chờ
@@ -1461,9 +1544,10 @@
           <div
             id="reminder-results"
             role="tabpanel"
-            aria-labelledby="reminder-pending"
+            aria-labelledby="reminder-triage"
           >
             <div id="reminder-list"></div>
+            <p id="reminder-unread-unavailable" class="hint" hidden></p>
             <p id="reminder-empty" class="hint"></p>
           </div>
         </section>

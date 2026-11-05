@@ -34,6 +34,7 @@ try {
       avatar: id[0].toUpperCase(),
       archived: false,
     }));
+    accounts[1].clientLabel = "Khách hàng An";
     const record = (value) =>
       Object.fromEntries(
         accounts.map(({ id }) => [id, structuredClone(value)]),
@@ -103,6 +104,7 @@ try {
         window.sendState = () => callback(structuredClone(window.fixture));
       },
       commandRequested: () => {},
+      onMacroEditor: () => () => {},
       onProviderLogoEditor: () => {},
       commandClosed: async () => {},
       accountMenu: async () => {},
@@ -192,6 +194,7 @@ try {
         .querySelector("#platform-messenger")
         .getAttribute("aria-selected"),
       account: document.querySelector("#account-select").value,
+      accountLabel: document.querySelector("#account-select-label").textContent,
       dot: document.querySelector("#active-account-status").className,
       theme: document.documentElement.dataset.theme,
       icon: document.querySelector("#navigation-menu use").getAttribute("href"),
@@ -202,6 +205,7 @@ try {
   assert.match(changed.title, /4\+ chưa đọc/);
   assert.equal(changed.selected, "true");
   assert.equal(changed.account, "messenger");
+  assert.equal(changed.accountLabel, "Cá nhân · Khách hàng An");
   assert.equal(changed.dot, "account-status dot needs-login");
   assert.equal(changed.theme, "dark");
   assert.equal(changed.icon, "#i-more");
@@ -263,6 +267,18 @@ try {
     return { mutations: mutations.length, scrolls };
   });
   assert.deepEqual(repeatedPointer, { mutations: 0, scrolls: 0 });
+  await page.locator("#command-search").fill("khach hang an");
+  assert.equal(
+    await page
+      .locator('[role="option"][aria-selected="true"]')
+      .getAttribute("id"),
+    "command-result-messenger",
+    "command search matches the per-account client label",
+  );
+  assert.match(
+    await page.locator("#command-result-messenger").textContent(),
+    /Khách hàng An/,
+  );
   await page.locator("#command-search").fill("telegram");
   assert.equal(
     await page
