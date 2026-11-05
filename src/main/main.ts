@@ -834,6 +834,7 @@ const backgroundWarmups = new WeakMap<WebContents, () => void>();
 const BACKGROUND_HIBERNATION_MS = 15 * 60 * 1000;
 const backgroundSince = new Map<AccountId, number>();
 const hibernatingAccounts = new Set<AccountId>();
+const hibernationDone = new Map<AccountId, Promise<void>>();
 const hibernatedAccounts = new Set<AccountId>();
 const reminderOpenUrls = new Map<AccountId, string>();
 let accountOperationGeneration = 0;
@@ -1894,11 +1895,11 @@ function initializeAccount(a: Account) {
 let dockBadge: string | undefined;
 const statePublisher = new StatePublisher(
   () => {
-    const active = views.peek(state.active);
+    const contents = views.peek(state.active)?.webContents;
     state.canGoBack =
-      !!active &&
-      !active.webContents.isDestroyed() &&
-      active.webContents.navigationHistory.canGoBack();
+      !!contents &&
+      !contents.isDestroyed() &&
+      contents.navigationHistory.canGoBack();
     return visibleState();
   },
   (snapshot) => {
@@ -2701,6 +2702,12 @@ function layout() {
 }
 function activate(id: AccountId, focusPage = true) {
   const version = ++activationVersion;
+  if (hibernatingAccounts.has(id)) {
+    void (hibernationDone.get(id) ?? Promise.resolve()).then(() => {
+      if (version === activationVersion) activate(id, focusPage);
+    });
+    return;
+  }
   if (isAsleep(id)) {
     if (!accessible(id) || accountEditorOpen || reminderSurfaceOpen) return;
     return wakePage(id).then((result) => {
@@ -3071,6 +3078,13 @@ async function hibernateAccount(
     const contents = view.webContents;
     const attached =
       !!win && !win.isDestroyed() && win.contentView.children.includes(view);
+    let finishHibernation!: () => void;
+    hibernationDone.set(
+      id,
+      new Promise<void>((resolve) => {
+        finishHibernation = resolve;
+      }),
+    );
     hibernatingAccounts.add(id);
     try {
       if (attached) win.contentView.removeChildView(view);
@@ -3078,11 +3092,19 @@ async function hibernateAccount(
       backgroundWarmups.get(contents)?.();
       backgroundWarmups.delete(contents);
       epochs.set(id, epoch + 1);
-      if (!contents.isDestroyed()) contents.close();
+      if (!contents.isDestroyed()) {
+        const destroyed = new Promise<void>((resolve) => {
+          contents.once("destroyed", () => resolve());
+        });
+        contents.close();
+        if (!contents.isDestroyed()) await destroyed;
+      }
     } catch {
       // Leave the view available for the next sleep attempt.
     } finally {
       hibernatingAccounts.delete(id);
+      hibernationDone.delete(id);
+      finishHibernation();
     }
     if (!contents.isDestroyed()) {
       if (attached && win && !win.isDestroyed()) {
