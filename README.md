@@ -19,7 +19,7 @@
 
 Gom mở giao diện web của **Zalo, Telegram, Messenger, Gmail, Instagram, Discord, Slack và Tinder**. Bạn có thể thêm nhiều tài khoản cho cùng một nền tảng, đặt tên để phân biệt và chuyển qua lại bằng tab. Gom cũng hỗ trợ thêm website riêng.
 
-Landing page của Gom nằm trong [`website/`](website/), dùng HTML/CSS/JS tĩnh và GitHub Pages. Xem [cách xem trước và xuất bản](docs/github-pages.md).
+Landing page của Gom là [gom-df6.pages.dev](https://gom-df6.pages.dev/). Mã nguồn HTML/CSS/JS tĩnh nằm trong [`website/`](website/), được xuất bản trên Cloudflare Pages. Xem [cách xem trước và xuất bản](docs/github-pages.md).
 
 ## Tải Gom
 
