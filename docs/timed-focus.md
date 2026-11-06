@@ -28,4 +28,4 @@ Thông báo đã phát trước khi bắt đầu có thể còn trong lịch s�
 
 Bộ hẹn giờ hoạt động trong Gom khi cửa sổ bị ẩn. Thời điểm kết thúc được lưu trong cấu hình trên máy. Nếu thoát app rồi mở lại trước khi hết giờ, phiên tiếp tục; mở lại sau giờ kết thúc thì phiên đã kết thúc. Máy thức dậy sẽ kiểm tra lại thời điểm kết thúc ngay, không tải lại trang nền tảng.
 
-Gom không cần chạy để đếm từng giây khi đã thoát; app đối chiếu thời điểm đã lưu khi mở lại. Đồng hồ máy thay đổi thì phiên tuân theo thời điểm kết thúc trên đồng hồ mới. Bản đầu chưa có lịch giờ làm việc lặp theo ngày.
+Gom không cần chạy để đếm từng giây khi đã thoát; app đối chiếu thời điểm đã lưu khi mở lại. Đồng hồ máy thay đổi thì phiên tuân theo thời điểm kết thúc trên đồng hồ mới. Để đặt giờ tắt/bật thông báo lặp theo tuần, xem [Lịch thông báo theo giờ làm việc](notification-work-schedule.md).

@@ -6,13 +6,13 @@ Có từ Gom 0.8.3.
 
 1. Chuyển sang **Không gian thường**, vào **Cài đặt → Sao lưu**. Bảng lệnh `⌘/Ctrl K` cũng có mục **Sao lưu và khôi phục cấu hình**.
 2. Bấm **Xuất cấu hình**, chọn nơi lưu tệp `.gom-config.json`.
-3. Tệp chứa tên/avatar/thứ tự và trạng thái lưu trữ tài khoản thường, nền tảng tự thêm, logo, theme, sidebar, tab/ghim và tùy chọn thông báo/phím tắt/kiểm tra cập nhật.
+3. Tệp chứa tên/avatar/thứ tự và trạng thái lưu trữ tài khoản thường, nền tảng tự thêm, logo, theme, sidebar, tab/ghim, lịch thông báo và tùy chọn thông báo/phím tắt/kiểm tra cập nhật.
 
 Đây là tệp văn bản thường, có tên tài khoản và URL website bạn cấu hình; hãy giữ ở nơi tin tưởng. Không gian kín và mật khẩu khóa, cookie/phiên đăng nhập, nội dung chat, bản nháp, Khay và Nhắc trả lời không nằm trong tệp. Phiên Tập trung đang chạy, lựa chọn ngủ tài khoản, vị trí cửa sổ và tùy chọn chạy cùng hệ điều hành cũng không được chuyển sang máy khác.
 
 ## Khôi phục
 
-1. Bấm **Chọn tệp khôi phục…**, chọn một tệp cấu hình Gom version 1, tối đa **8 MiB**.
+1. Bấm **Chọn tệp khôi phục…**, chọn tệp cấu hình Gom phiên bản 1, 2 hoặc 3, tối đa **8 MiB**.
 2. Xem ngày tạo, số tài khoản mới/cập nhật, nền tảng và logo. Mở **Tài khoản và địa chỉ trong tệp** để kiểm tra chi tiết. Bấm **Hủy** để giữ nguyên cấu hình.
 3. Lưu các bản nháp chưa gửi. Bấm **Khôi phục và khởi động lại**, rồi xác nhận. Gom lưu bản cấu hình hiện tại trước, thoát bình thường và mở lại để áp dụng.
 
@@ -21,6 +21,8 @@ Tài khoản đã có nhưng không nằm trong tệp được giữ. ID trùng 
 Trên máy hiện tại, các account ID/partition còn dùng phiên đã có. Trên máy mới, tệp chỉ dựng danh sách tài khoản và bạn cần đăng nhập lại. Khôi phục không sao chép nội dung hay phiên giữa tài khoản. Các trang được tải lại sau restart, nên bản nháp chưa được website lưu có thể mất.
 
 Tab/ghim và logo của các nền tảng trong tệp được đưa về cấu hình đã lưu, kể cả logo mặc định. Tài khoản/nền tảng ngoài phạm vi nhập và bố trí riêng của Không gian kín được giữ. Tùy chọn dùng chung và logo nền tảng dùng chung áp dụng toàn app. Phiên Tập trung hiện tại và trạng thái ngủ trên máy vẫn theo dữ liệu hiện có.
+
+Bản sao lưu phiên bản 3 có thêm lịch thông báo theo giờ làm việc. Phiên bản 1 và 2 vẫn nhập được; do không có lịch, lịch sau khi nhập được tắt theo mặc định.
 
 ## Bản bảo vệ và xử lý lỗi
 

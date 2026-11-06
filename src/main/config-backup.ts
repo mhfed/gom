@@ -7,6 +7,7 @@ import {
   isBuiltinProviderId,
 } from "./providers.ts";
 import { normalizePreferences } from "./preferences.ts";
+import { isNotificationSchedule } from "../notification-schedule.ts";
 import {
   normalizeWorkspaceNavigation,
   type WorkspaceNavigation,
@@ -76,7 +77,7 @@ export function createConfigurationBackup(
   return parseConfigurationBackup(
     JSON.stringify({
       format: "gom-config",
-      version: 2,
+      version: 3,
       createdAt: now,
       accounts,
       providers: customProviderMetadata(
@@ -87,6 +88,7 @@ export function createConfigurationBackup(
         paused: source.preferences.paused,
         shortcut: source.preferences.shortcut,
         updateChecks: source.preferences.updateChecks,
+        notificationSchedule: source.preferences.notificationSchedule,
         notifications: Object.fromEntries(
           Object.entries(source.preferences.notifications).filter(([id]) =>
             ids.has(id),
@@ -114,7 +116,7 @@ export function parseConfigurationBackup(text: string): ConfigurationBackup {
   ]);
   if (
     raw.format !== "gom-config" ||
-    ![1, 2].includes(raw.version) ||
+    ![1, 2, 3].includes(raw.version) ||
     !Number.isSafeInteger(raw.createdAt) ||
     raw.createdAt <= 0 ||
     !Number.isFinite(new Date(raw.createdAt).getTime())
@@ -144,18 +146,29 @@ export function parseConfigurationBackup(text: string): ConfigurationBackup {
     providerIds = new Set<string>(accounts.map((a) => a.provider));
   if (raw.providers.some((p: any) => !providerIds.has(p.id)))
     throw Error("unreferenced-backup-provider");
-  const preference = keys(raw.preferences, [
-    "paused",
-    "shortcut",
-    "updateChecks",
-    "notifications",
-  ]);
+  const preference = keys(
+    raw.preferences,
+    raw.version >= 3
+      ? [
+          "paused",
+          "shortcut",
+          "updateChecks",
+          "notifications",
+          "notificationSchedule",
+        ]
+      : ["paused", "shortcut", "updateChecks", "notifications"],
+  );
   if (
     ["paused", "shortcut", "updateChecks"].some(
       (k) => typeof preference[k] !== "boolean",
     )
   )
     throw Error("invalid-backup-preferences");
+  if (
+    raw.version >= 3 &&
+    !isNotificationSchedule(preference.notificationSchedule)
+  )
+    throw Error("invalid-backup-notification-schedule");
   const notifications = object(preference.notifications);
   if (
     Object.entries(notifications).some(
@@ -232,7 +245,16 @@ export function mergeConfigurationBackup(
   current: ConfigurationSource,
   backup: ConfigurationBackup,
 ): ConfigurationSource {
-  const document = parseConfigurationBackup(JSON.stringify(backup)),
+  const raw = JSON.parse(JSON.stringify(backup)) as Record<string, any>;
+  if (
+    raw &&
+    [1, 2].includes(raw.version) &&
+    raw.preferences &&
+    typeof raw.preferences === "object" &&
+    !Array.isArray(raw.preferences)
+  )
+    delete raw.preferences.notificationSchedule;
+  const document = parseConfigurationBackup(JSON.stringify(raw)),
     imported = restoreProviders(document.providers);
   const providers = [...current.providers];
   for (const provider of imported) {

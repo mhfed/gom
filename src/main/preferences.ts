@@ -2,12 +2,17 @@ import { mkdir, writeFile, rename } from "node:fs/promises";
 import { dirname } from "node:path";
 import { PROVIDER_ORDER, type Preferences } from "../shared.ts";
 import { normalizeFocus } from "./focus.ts";
+import {
+  defaultNotificationSchedule,
+  normalizeNotificationSchedule,
+} from "../notification-schedule.ts";
 export const defaultPreferences = (
   ids: string[] = [...PROVIDER_ORDER],
 ): Preferences => ({
   paused: false,
   shortcut: false,
   updateChecks: true,
+  notificationSchedule: defaultNotificationSchedule(),
   notifications: Object.fromEntries(ids.map((id) => [id, "ask"])),
 });
 export function normalizePreferences(
@@ -18,6 +23,9 @@ export function normalizePreferences(
   if (!raw || typeof raw !== "object") return out;
   const r = raw as Record<string, unknown>;
   out.paused = r.paused === true;
+  out.notificationSchedule = normalizeNotificationSchedule(
+    r.notificationSchedule,
+  );
   const focus = normalizeFocus(r.focus);
   if (focus) out.focus = focus;
   out.shortcut = r.shortcut === true;

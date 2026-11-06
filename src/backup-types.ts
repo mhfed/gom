@@ -2,7 +2,7 @@ import type { Account, Preferences, ProviderLogoChange } from "./shared.ts";
 export type BackupLogo = Exclude<ProviderLogoChange, null>;
 export interface ConfigurationBackup {
   format: "gom-config";
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   createdAt: number;
   accounts: Account[];
   providers: { id: string; label: string; entry: string }[];

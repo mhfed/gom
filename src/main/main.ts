@@ -37,6 +37,7 @@ import {
 } from "./accounts.ts";
 import { RecoveryPolicy, type FailureReason } from "./recovery.ts";
 import { FocusSchedule } from "./focus.ts";
+import { NotificationWorkSchedule } from "./notification-schedule.ts";
 import { SleepStore, AccountSleepService } from "./account-sleep.ts";
 import { ResourceProjector, ResourceSampler } from "./resources.ts";
 import type { ResourceSnapshot } from "../resource-types.ts";
@@ -67,6 +68,11 @@ import {
 } from "./provider-tabs.ts";
 import { layoutViews, resetViewLayout } from "./layout.ts";
 import { normalizeUnread } from "./unread.ts";
+import {
+  isNotificationSchedule,
+  normalizeNotificationSchedule,
+  notificationScheduleAllows,
+} from "../notification-schedule.ts";
 import { authScript } from "./auth-detection.ts";
 import { pageSnapshotScript } from "./page-snapshot.ts";
 import { StatePublisher } from "./state-publisher.ts";
@@ -2109,6 +2115,41 @@ const focusSchedule = new FocusSchedule((focus) => {
     void reminderService?.tick();
   }
 });
+const notificationWorkSchedule = new NotificationWorkSchedule(
+  () => state.preferences.notificationSchedule,
+  () => {
+    if (closing) return;
+    publish(true);
+    void reminderService?.tick();
+  },
+);
+let notificationScheduleWritePending = false;
+let notificationSchedulePersistenceBarrier: Promise<void> | undefined;
+function beginNotificationScheduleWrite() {
+  let release!: () => void;
+  const barrier = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  notificationScheduleWritePending = true;
+  notificationSchedulePersistenceBarrier = barrier;
+  return () => {
+    if (notificationSchedulePersistenceBarrier !== barrier) return;
+    notificationScheduleWritePending = false;
+    notificationSchedulePersistenceBarrier = undefined;
+    release();
+  };
+}
+function notificationsPausedNow() {
+  return (
+    notificationScheduleWritePending || notificationsPaused(state.preferences)
+  );
+}
+function notificationAllowedNow(id: AccountId) {
+  return (
+    !notificationScheduleWritePending &&
+    notificationAllowed(state.preferences, id)
+  );
+}
 async function focusCommand(arg: unknown): Promise<AccountResult> {
   if (closing || !arg || typeof arg !== "object" || Array.isArray(arg))
     return { ok: false };
@@ -2203,7 +2244,7 @@ function setupSession(ses: Session, id: AccountId) {
         return;
       }
       if (
-        notificationsPaused(state.preferences) ||
+        notificationsPausedNow() ||
         state.preferences.notifications[id] === "mute"
       ) {
         callback(false);
@@ -2263,8 +2304,7 @@ function setupSession(ses: Session, id: AccountId) {
             owned(contents) &&
             r.response === 1 &&
             (permission !== "notifications" ||
-              (publicAccount(id) &&
-                notificationAllowed(state.preferences, id))),
+              (publicAccount(id) && notificationAllowedNow(id))),
         );
       })
       .catch(() => callback(false))
@@ -2285,7 +2325,7 @@ function setupSession(ses: Session, id: AccountId) {
       );
     if (!valid) return false;
     if (permission === "notifications")
-      return publicAccount(id) && notificationAllowed(state.preferences, id);
+      return publicAccount(id) && notificationAllowedNow(id);
     return (
       permission === "geolocation" &&
       providerFor(id) === "tinder" &&
@@ -3396,7 +3436,15 @@ function configureShortcut(enabled: boolean) {
     state.notice = `Phím tắt ${SHORTCUT_DISPLAY} đang được app khác dùng. Bạn có thể bật lại sau.`;
   } else state.preferences.shortcut = true;
 }
-async function persist(forcePublish = false): Promise<boolean> {
+async function persist(
+  forcePublish = false,
+  bypassNotificationScheduleBarrier = false,
+): Promise<boolean> {
+  while (
+    notificationSchedulePersistenceBarrier &&
+    !bypassNotificationScheduleBarrier
+  )
+    await notificationSchedulePersistenceBarrier;
   publish(forcePublish);
   try {
     await save();
@@ -3414,12 +3462,12 @@ function scheduleSave() {
   saveTimer = setTimeout(() => void persist(), 500);
 }
 function testNotification(id: AccountId) {
-  if (
-    !findAccount(id) ||
-    !(publicAccount(id) && notificationAllowed(state.preferences, id))
-  ) {
-    state.notificationStatus =
-      "Bạn chọn Cho phép và bỏ tạm dừng trước khi thử thông báo.";
+  if (!findAccount(id) || !(publicAccount(id) && notificationAllowedNow(id))) {
+    state.notificationStatus = !notificationScheduleAllows(
+      state.preferences.notificationSchedule,
+    )
+      ? "Đang ngoài lịch thông báo."
+      : "Bạn chọn Cho phép và bỏ tạm dừng trước khi thử thông báo.";
     publish();
     return;
   }
@@ -3957,9 +4005,7 @@ async function importProviderSession(
                   "commit-failed",
                   "destination-cookie-read-failed",
                   "invalid-provider-cookies",
-                ].includes(
-                  error.message,
-                )
+                ].includes(error.message)
               ? error.message
               : "import-failed";
     const messages: Record<string, string> = {
@@ -5108,6 +5154,7 @@ async function quit(installUpdate = false, restart = false) {
   privacyDialogs.abort();
   await accountSleep.close();
   focusSchedule.dispose();
+  notificationWorkSchedule.dispose();
   await reminderService?.close();
   floating?.close();
   clearInterval(poll);
@@ -5124,6 +5171,8 @@ async function quit(installUpdate = false, restart = false) {
   await accountOps.close();
   await shelfService.shutdown();
   await shelfStore.flush();
+  while (notificationSchedulePersistenceBarrier)
+    await notificationSchedulePersistenceBarrier;
   await save().catch(() => {});
   const ok = await flushBeforeClose([...configured]);
   if (!ok) {
@@ -5310,6 +5359,7 @@ else {
       state.accounts.map((a) => a.id),
     );
     focusSchedule.restore(state.preferences.focus);
+    notificationWorkSchedule.refresh();
     await privateStore.load(state.accounts.some((a) => a.private));
     await shelfStore.load();
     await reminderStore.load();
@@ -5441,7 +5491,7 @@ else {
       canNotify: (id) =>
         !closing &&
         !sleeping &&
-        !notificationsPaused(state.preferences) &&
+        !notificationsPausedNow() &&
         publicAccount(id) &&
         accessible(id) &&
         Notification.isSupported(),
@@ -5545,7 +5595,7 @@ else {
         ) ||
         !publicAccount(provider) ||
         !accessible(provider) ||
-        !notificationAllowed(state.preferences, provider) ||
+        !notificationAllowedNow(provider) ||
         Date.now() - (lastNotificationClicks.get(provider) ?? 0) < 1000
       )
         return;
@@ -5657,8 +5707,7 @@ else {
                   accessible(id),
                 () => {
                   if (data.enabled) backgroundSince.delete(id);
-                  else if (views.peek(id))
-                    backgroundSince.set(id, Date.now());
+                  else if (views.peek(id)) backgroundSince.set(id, Date.now());
                   else backgroundSince.delete(id);
                 },
               );
@@ -5978,6 +6027,47 @@ else {
             await persist();
           }
           return;
+        case "notification-schedule": {
+          if (closing)
+            return { ok: false, message: "Gom đang đóng. Chưa đổi được lịch." };
+          if (notificationScheduleWritePending)
+            return {
+              ok: false,
+              message: "Lịch đang được lưu. Chờ một chút rồi thử lại.",
+            };
+          if (!isNotificationSchedule(arg))
+            return {
+              ok: false,
+              message:
+                "Lịch thông báo chưa hợp lệ. Kiểm tra ngày và giờ rồi thử lại.",
+            };
+          const previous = state.preferences.notificationSchedule;
+          const releaseWrite = beginNotificationScheduleWrite();
+          state.preferences.notificationSchedule =
+            normalizeNotificationSchedule(arg);
+          try {
+            if (!(await persist(true, true))) {
+              state.preferences.notificationSchedule = previous;
+              return {
+                ok: false,
+                message:
+                  "Chưa lưu được lịch thông báo. Cài đặt cũ đã được giữ lại.",
+              };
+            }
+            return { ok: true };
+          } catch {
+            state.preferences.notificationSchedule = previous;
+            return {
+              ok: false,
+              message:
+                "Chưa lưu được lịch thông báo. Cài đặt cũ đã được giữ lại.",
+            };
+          } finally {
+            releaseWrite();
+            notificationWorkSchedule.refresh();
+            publish(true);
+          }
+        }
         case "test-notification":
           if (findAccount(arg)) testNotification(arg);
           return;
@@ -6191,6 +6281,7 @@ else {
     powerMonitor.on("resume", () => {
       sleeping = false;
       focusSchedule.refresh();
+      notificationWorkSchedule.refresh();
       updateSchedule.resume();
       clearTimeout(wakeTimer);
       wakeTimer = setTimeout(tick, 1200);

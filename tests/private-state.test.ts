@@ -10,6 +10,7 @@ import {
   AccountCatalogStore,
 } from "../src/main/accounts.ts";
 import { defaultProviders } from "../src/main/providers.ts";
+import { defaultNotificationSchedule } from "../src/notification-schedule.ts";
 import type { AppState, Account } from "../src/shared.ts";
 
 function fixture(): AppState {
@@ -54,6 +55,7 @@ function fixture(): AppState {
       paused: false,
       shortcut: false,
       updateChecks: true,
+      notificationSchedule: defaultNotificationSchedule(),
       notifications: { public: "allow", hidden: "allow" },
     },
     connections: {

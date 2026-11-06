@@ -24,16 +24,16 @@ Landing page của Gom nằm trong [`website/`](website/), dùng HTML/CSS/JS tĩ
 
 ## Tải Gom
 
-Phiên bản Mac hiện tại: **0.9.0** cho Apple Silicon. Windows x64 hiện dùng bản **0.8.3**. Chọn bộ cài phù hợp với máy của bạn:
+Phiên bản Mac hiện tại: **0.9.2** cho Apple Silicon. Windows x64 hiện dùng bản **0.8.3**. Chọn bộ cài phù hợp với máy của bạn:
 
-| Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                            |
-| -------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.9.0/Gom-macOS-arm64-0.9.0.dmg)         |
+| Máy của bạn                                              | Yêu cầu                  | Tải xuống                                                                                                         |
+| -------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Mac dùng chip Apple Silicon, như M1, M2, M3 hoặc mới hơn | macOS 13 trở lên · arm64 | [Tải Gom cho Mac (.dmg)](https://github.com/mhfed/gom/releases/download/v0.9.2/Gom-macOS-arm64-0.9.2.dmg)         |
 | Máy tính Windows 64-bit                                  | Windows 10 hoặc 11 · x64 | [Tải Gom cho Windows (.exe)](https://github.com/mhfed/gom/releases/download/v0.8.3/Gom-win32-x64-0.8.3-Setup.exe) |
 
-Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.9.0/Gom-darwin-arm64-0.9.0.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
+Bản Mac có thêm [gói ZIP](https://github.com/mhfed/gom/releases/download/v0.9.2/Gom-darwin-arm64-0.9.2.zip). Hiện chưa có gói dành cho Mac Intel hoặc Linux.
 
-Xem [nội dung bản 0.9.0](https://github.com/mhfed/gom/releases/tag/v0.9.0) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
+Xem [nội dung bản 0.9.2](docs/release-0.9.2.md) hoặc [tất cả phiên bản](https://github.com/mhfed/gom/releases).
 
 <details>
 <summary>Các tệp khác trên trang tải xuống dùng để làm gì?</summary>
@@ -49,7 +49,7 @@ Xem [nội dung bản 0.9.0](https://github.com/mhfed/gom/releases/tag/v0.9.0) h
 
 ### Trên Mac
 
-1. Tải và mở tệp **Gom-macOS-arm64-0.9.0.dmg**.
+1. Tải và mở tệp **Gom-macOS-arm64-0.9.2.dmg**.
 2. Kéo **Gom.app** vào **Applications**.
 3. Đẩy ổ đĩa Gom ra bằng **Eject**, rồi mở Gom từ Applications.
 
@@ -147,13 +147,17 @@ Phiên còn hạn tiếp tục sau khi mở lại Gom; khi hết giờ, app gi�
 
 ### Sao lưu và khôi phục cấu hình
 
-Mở **Cài đặt → Sao lưu** để xuất cấu hình Không gian thường ra tệp, xem trước và khôi phục bằng cách hợp nhất rồi khởi động lại. Có bản cấu hình bảo vệ trước khi áp dụng; giữ tài khoản khác đang có. Tệp mang theo giao diện, tab/ghim, danh sách tài khoản/nền tảng, logo và tùy chọn thông báo; phiên đăng nhập, nội dung chat và cấu hình riêng Không gian kín vẫn ở trên máy. Xem [hướng dẫn](docs/configuration-backup.md).
+Mở **Cài đặt → Sao lưu** để xuất cấu hình Không gian thường ra tệp, xem trước và khôi phục bằng cách hợp nhất rồi khởi động lại. Có bản cấu hình bảo vệ trước khi áp dụng; giữ tài khoản khác đang có. Tệp mang theo giao diện, tab/ghim, danh sách tài khoản/nền tảng, logo, lịch thông báo và tùy chọn thông báo; phiên đăng nhập, nội dung chat và cấu hình riêng Không gian kín vẫn ở trên máy. Xem [hướng dẫn](docs/configuration-backup.md).
 
 ### Quản lý tài nguyên
 
 Mở **Cài đặt → Tài nguyên** để xem RAM/CPU ước tính của Gom và từng tài khoản khi đo được. Có sắp xếp theo RAM, CPU hoặc tên; bộ đo chỉ chạy khi mục này đang mở và cửa sổ đang hiện.
 
-Bấm **Tạm ngủ** để đóng trang tài khoản ít dùng sau khi xác nhận; **Đánh thức** hoặc chọn lại tài khoản để dùng phiên đã có. Lựa chọn ngủ được giữ qua lần mở lại Gom. Khi ngủ, thông báo nền tảng/số chưa đọc ngừng cập nhật và bản nháp chưa lưu có thể mất. Xem [hướng dẫn Quản lý tài nguyên](docs/resource-management.md).
+Bật **Giữ thức** cho tài khoản cần nhận thông báo nền; Gom sẽ bỏ qua tự ngủ sau 15 phút và lưu lựa chọn qua lần mở lại. **Tạm ngủ** thủ công vẫn hoạt động. Khi ngủ, thông báo nền tảng/số chưa đọc ngừng cập nhật và bản nháp chưa lưu có thể mất. Xem [hướng dẫn Quản lý tài nguyên](docs/resource-management.md).
+
+### Lịch thông báo theo giờ làm việc
+
+Đặt lịch tuần chung trong **Cài đặt → Thông báo → Lịch thông báo theo giờ làm việc**. Chọn ngày và giờ theo múi giờ địa phương; lịch hỗ trợ ca qua nửa đêm. Ngoài lịch, Gom chặn thông báo nền tảng và hoãn nhắc trả lời đến hạn, rồi xét lại khi lịch mở. Tạm dừng thủ công, Tập trung và quyền từng tài khoản vẫn được giữ nguyên. Xem [hướng dẫn lịch thông báo](docs/notification-work-schedule.md).
 
 ### Không gian kín
 

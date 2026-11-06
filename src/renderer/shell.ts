@@ -7,6 +7,8 @@ import { createShelfUI } from "./shelf.ts";
 import { createReminderUI } from "./reminders.ts";
 import { createWorkspacePresetUI } from "./workspace-presets.ts";
 import { createFocusUI } from "./focus.ts";
+import { createNotificationScheduleUI } from "./notification-schedule.ts";
+import { notificationScheduleAllows } from "../notification-schedule.ts";
 import { sessionImportState } from "./session-import.ts";
 import { createResourcesUI } from "./resources.ts";
 import {
@@ -1123,6 +1125,7 @@ function render(state: AppState) {
   shelfUI.render(state);
   reminderUI.sync(state);
   focusUI.sync(state);
+  notificationScheduleUI.sync(state);
   resourcesUI.sync(state);
   backupUI.sync(state);
   const rebuilt = rebuildAccounts(state);
@@ -1204,6 +1207,7 @@ function render(state: AppState) {
         "disabled",
         state.preferences.paused ||
           !!state.preferences.focus ||
+          !notificationScheduleAllows(state.preferences.notificationSchedule) ||
           state.preferences.notifications[a.id] !== "allow",
       );
       const hint = $("notification-hint-" + a.id);
@@ -1211,9 +1215,11 @@ function render(state: AppState) {
         ? "Kết thúc Tập trung để gửi thử."
         : state.preferences.paused
           ? "Bật lại thông báo để gửi thử."
-          : state.preferences.notifications[a.id] !== "allow"
-            ? "Chọn “Cho phép” để gửi thử."
-            : "";
+          : !notificationScheduleAllows(state.preferences.notificationSchedule)
+            ? "Đang ngoài lịch thông báo."
+            : state.preferences.notifications[a.id] !== "allow"
+              ? "Chọn “Cho phép” để gửi thử."
+              : "";
       setProperty(hint, "textContent", testHint);
       setProperty(hint, "hidden", !testHint);
     }
@@ -1661,6 +1667,7 @@ const focusUI = createFocusUI(async () => {
   await window.desktop.settings();
   showTab("notifications");
 });
+const notificationScheduleUI = createNotificationScheduleUI();
 function scrubPrivateUI() {
   privacyGeneration++;
   privateSpaceUI.reset();

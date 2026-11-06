@@ -1,6 +1,7 @@
 import type { BackupResult } from "./backup-types.ts";
 import type { UpdateState } from "./update-types.ts";
 import type { ResourceState } from "./resource-types.ts";
+import type { NotificationSchedule } from "./notification-schedule.ts";
 import type { ShelfRequest, ShelfResult, ShelfSummary } from "./shelf-types.ts";
 export type BuiltinProviderId =
   | "zalo"
@@ -193,6 +194,7 @@ export interface FocusSession {
 export interface Preferences {
   paused: boolean;
   focus?: FocusSession;
+  notificationSchedule: NotificationSchedule;
   shortcut: boolean;
   updateChecks: boolean;
   notifications: Record<AccountId, NotificationChoice>;
@@ -409,6 +411,9 @@ export interface DesktopBridge {
     key: "paused" | "shortcut" | "openAtLogin" | "updateChecks",
     value: boolean,
   ): Promise<void>;
+  setNotificationSchedule(
+    schedule: NotificationSchedule,
+  ): Promise<AccountResult>;
   setNotification(id: AccountId, choice: NotificationChoice): Promise<void>;
   testNotification(id: AccountId): Promise<void>;
   notificationSettings(): Promise<void>;

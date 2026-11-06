@@ -51,12 +51,19 @@ test("portable backup omits private accounts, private-only sites and transient s
     assert.equal(encoded.includes(secret), false, secret);
   assert.equal(backup.accounts.length, PROVIDER_ORDER.length);
   assert.equal(backup.format, "gom-config");
-  assert.equal(backup.version, 2);
+  assert.equal(backup.version, 3);
+  assert.equal(backup.preferences.notificationSchedule.enabled, false);
   assert.deepEqual(parseConfigurationBackup(encoded), backup);
 });
-test("v2 backup round-trips ordinary client labels, excludes private labels, and imports v1", () => {
+test("v3 backup round-trips labels and schedule, excludes private labels, and imports v1/v2", () => {
   const current = source();
   current.accounts[0].clientLabel = "  Khách hàng An  ";
+  current.preferences.notificationSchedule = {
+    enabled: true,
+    days: [1, 2, 3, 4, 5],
+    startMinute: 9 * 60,
+    endMinute: 18 * 60,
+  };
   const hidden = {
     ...createAccount("telegram", "Private work"),
     clientLabel: "PRIVATE_BRAND_LABEL",
@@ -64,19 +71,26 @@ test("v2 backup round-trips ordinary client labels, excludes private labels, and
   };
   current.accounts.push(hidden);
   const backup = createConfigurationBackup(current, now);
-  assert.equal(backup.version, 2);
+  assert.equal(backup.version, 3);
   assert.equal(backup.accounts[0].clientLabel, "Khách hàng An");
   assert.equal(JSON.stringify(backup).includes("PRIVATE_BRAND_LABEL"), false);
   assert.equal(
     parseConfigurationBackup(JSON.stringify(backup)).accounts[0].clientLabel,
     "Khách hàng An",
   );
+  assert.deepEqual(
+    parseConfigurationBackup(JSON.stringify(backup)).preferences
+      .notificationSchedule,
+    current.preferences.notificationSchedule,
+  );
   const v1 = structuredClone(backup) as any;
   v1.version = 1;
+  delete v1.preferences.notificationSchedule;
   for (const account of v1.accounts) delete account.clientLabel;
   const importedV1 = parseConfigurationBackup(JSON.stringify(v1));
   assert.equal(importedV1.version, 1);
   assert.equal(importedV1.accounts[0].clientLabel, undefined);
+  assert.equal(importedV1.preferences.notificationSchedule.enabled, false);
   current.accounts[0].clientLabel = "Khách hàng An";
   const mergedV1 = mergeConfigurationBackup(current, importedV1);
   assert.equal(
@@ -86,11 +100,13 @@ test("v2 backup round-trips ordinary client labels, excludes private labels, and
     "v1 restores preserve a local label the older format could not contain",
   );
   const absentV2 = structuredClone(backup) as any;
+  absentV2.version = 2;
+  delete absentV2.preferences.notificationSchedule;
   delete absentV2.accounts[0].clientLabel;
-  const mergedV2 = mergeConfigurationBackup(
-    current,
-    parseConfigurationBackup(JSON.stringify(absentV2)),
-  );
+  const importedV2 = parseConfigurationBackup(JSON.stringify(absentV2));
+  assert.equal(importedV2.version, 2);
+  assert.equal(importedV2.preferences.notificationSchedule.enabled, false);
+  const mergedV2 = mergeConfigurationBackup(current, importedV2);
   assert.equal(
     mergedV2.accounts.find((account) => account.id === current.accounts[0].id)
       ?.clientLabel,
@@ -136,7 +152,11 @@ test("rejects malformed, oversized, future-version, private, bad references and 
   );
   for (const mutate of [
     (b: any) => {
-      b.version = 3;
+      b.version = 4;
+    },
+    (b: any) => {
+      b.preferences.notificationSchedule.enabled = true;
+      b.preferences.notificationSchedule.days = [];
     },
     (b: any) => {
       b.cookies = [];

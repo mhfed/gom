@@ -966,6 +966,66 @@
                     role="switch"
                 /></label>
               </div>
+              <form
+                id="notification-schedule-form"
+                class="settings-group notification-schedule"
+              >
+                <div class="focus-heading">
+                  <h3>Lịch thông báo theo giờ làm việc</h3>
+                  <p id="notification-schedule-status" role="status">
+                    Lịch đang tắt; thông báo theo các cài đặt hiện tại.
+                  </p>
+                </div>
+                <label
+                  class="setting-row"
+                  for="notification-schedule-enabled"
+                >
+                  <span
+                    >Bật lịch lặp<small
+                      >Chỉ cho phép thông báo trong ngày và giờ đã
+                      chọn.</small
+                    ></span
+                  >
+                  <input
+                    id="notification-schedule-enabled"
+                    type="checkbox"
+                    role="switch"
+                  />
+                </label>
+                <fieldset class="notification-schedule-days">
+                  <legend>Ngày bắt đầu ca</legend>
+                  <label><input id="notification-schedule-day-1" type="checkbox" /> Thứ Hai</label>
+                  <label><input id="notification-schedule-day-2" type="checkbox" /> Thứ Ba</label>
+                  <label><input id="notification-schedule-day-3" type="checkbox" /> Thứ Tư</label>
+                  <label><input id="notification-schedule-day-4" type="checkbox" /> Thứ Năm</label>
+                  <label><input id="notification-schedule-day-5" type="checkbox" /> Thứ Sáu</label>
+                  <label><input id="notification-schedule-day-6" type="checkbox" /> Thứ Bảy</label>
+                  <label><input id="notification-schedule-day-0" type="checkbox" /> Chủ nhật</label>
+                </fieldset>
+                <div class="notification-schedule-times">
+                  <label for="notification-schedule-start">
+                    <span>Bắt đầu</span>
+                    <input
+                      id="notification-schedule-start"
+                      type="time"
+                      value="09:00"
+                    />
+                  </label>
+                  <label for="notification-schedule-end">
+                    <span>Kết thúc</span>
+                    <input
+                      id="notification-schedule-end"
+                      type="time"
+                      value="18:00"
+                    />
+                  </label>
+                </div>
+                <p
+                  id="notification-schedule-feedback"
+                  class="hint feedback"
+                  role="status"
+                ></p>
+              </form>
               <form id="focus-form" class="settings-group focus-form">
                 <div class="focus-heading">
                   <h3>Tập trung có hẹn giờ</h3>

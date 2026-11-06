@@ -5,11 +5,16 @@ import type {
   ProviderDefinition,
 } from "../shared.ts";
 import { navigationPolicy } from "./security.ts";
+import { notificationScheduleAllows } from "../notification-schedule.ts";
 export function notificationAllowed(p: Preferences, id: AccountId) {
   return !notificationsPaused(p) && p.notifications[id] === "allow";
 }
 export function notificationsPaused(p: Preferences, now = Date.now()) {
-  return p.paused || !!(p.focus && p.focus.endsAt > now);
+  return (
+    p.paused ||
+    !!(p.focus && p.focus.endsAt > now) ||
+    !notificationScheduleAllows(p.notificationSchedule, now)
+  );
 }
 export function validNotificationFrame(
   id: ProviderId,

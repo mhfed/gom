@@ -16,6 +16,8 @@ const bridge: DesktopBridge = {
     ipcRenderer.invoke("desktop", "resources", { action, data }),
   focus: (action, data) =>
     ipcRenderer.invoke("desktop", "focus", { action, data }),
+  setNotificationSchedule: (schedule) =>
+    ipcRenderer.invoke("desktop", "notification-schedule", schedule),
   shelf: (request) => ipcRenderer.invoke("desktop", "shelf", request),
   reminder: (action, data) =>
     ipcRenderer.invoke("desktop", "reminder", { action, data }),
