@@ -7,6 +7,11 @@ import {
   type ShelfSnapshot,
   type ShelfTemplate,
 } from "../shelf-types.ts";
+import {
+  expandTemplateVariables,
+  scanTemplateVariables,
+  type TemplateVariableField,
+} from "../template-variables.ts";
 
 /** A workspace-scoped drawer; main owns both the data and its visible surface. */
 export function createShelfUI(options: {
@@ -38,6 +43,9 @@ export function createShelfUI(options: {
   const templateForm = $<HTMLFormElement>("shelf-template-editor");
   const templateTitle = $<HTMLInputElement>("shelf-template-title");
   const templateBody = $<HTMLTextAreaElement>("shelf-template-body");
+  const templateFillForm = $<HTMLFormElement>("shelf-template-fill");
+  const templateFillFields = $("shelf-template-fill-fields");
+  const templateFillPreview = $("shelf-template-fill-preview");
   const status = $("shelf-status");
   const confirmation = $("shelf-clear-confirm");
   let epoch = "";
@@ -50,6 +58,13 @@ export function createShelfUI(options: {
   let filter = "all";
   let view: "items" | "templates" = "items";
   let templateEditor: { id?: string } | undefined;
+  let templateFill:
+    | {
+        id: string;
+        body: string;
+        fields: TemplateVariableField[];
+      }
+    | undefined;
   let focusTemplateAfterSave: string | undefined;
   let pendingFocus:
     | { kind: "item" | "template"; id: string; action: string }
@@ -89,6 +104,81 @@ export function createShelfUI(options: {
     setProperty(status, "tabIndex", value ? 0 : -1);
     setClass(status, "is-error", error);
   }
+  function clearTemplateFill(restoreFocus = false) {
+    const id = templateFill?.id;
+    templateFill = undefined;
+    templateFillForm.reset();
+    templateFillFields.replaceChildren();
+    templateFillPreview.textContent = "";
+    $("shelf-template-fill-error").textContent = "";
+    if (!restoreFocus) return;
+    controls();
+    const origin = [...list.children]
+      .map((child) => child as HTMLElement)
+      .find((child) => child.dataset.templateId === id)
+      ?.querySelector<HTMLButtonElement>('[data-template-action="copy"]');
+    (origin ?? search).focus({ preventScroll: true });
+  }
+  function fillValues(): Record<string, string> {
+    return Object.fromEntries(
+      [...templateFillFields.querySelectorAll<HTMLInputElement>("input")].map(
+        (input) => [input.dataset.templateVariableKey!, input.value],
+      ),
+    );
+  }
+  function updateTemplateFillPreview() {
+    if (!templateFill) return;
+    const expanded = expandTemplateVariables(templateFill.body, fillValues());
+    const error = $("shelf-template-fill-error");
+    if (!expanded.ok) {
+      templateFillPreview.textContent = "";
+      error.textContent = expanded.message;
+      setProperty(
+        $<HTMLButtonElement>("shelf-template-fill-copy"),
+        "disabled",
+        true,
+      );
+      return;
+    }
+    error.textContent = "";
+    templateFillPreview.textContent = expanded.text;
+    const unavailable =
+      options.getState()?.shelf?.unavailable || snapshot?.unavailable;
+    setProperty(
+      $<HTMLButtonElement>("shelf-template-fill-copy"),
+      "disabled",
+      busy || loading || !!unavailable,
+    );
+  }
+  function beginTemplateFill(
+    template: ShelfTemplate,
+    fields: TemplateVariableField[],
+  ) {
+    templateFill = { id: template.id, body: template.body, fields };
+    templateFillFields.replaceChildren(
+      ...fields.map((field, index) => {
+        const wrapper = node("div", "shelf-template-fill-field");
+        const label = node("label", "", field.label);
+        const input = node("input") as HTMLInputElement;
+        const id = `shelf-template-fill-field-${index}`;
+        label.htmlFor = id;
+        input.id = id;
+        input.type = "text";
+        input.autocomplete = "off";
+        // HTML maxlength counts UTF-16 code units; allow 500 Unicode code points.
+        input.maxLength = 1000;
+        input.dataset.templateVariableKey = field.key;
+        wrapper.append(label, input);
+        return wrapper;
+      }),
+    );
+    templateFillForm.hidden = false;
+    $("shelf-template-fill-title").textContent = template.title;
+    $("shelf-template-fill-error").textContent = "";
+    controls();
+    updateTemplateFillPreview();
+    templateFillFields.querySelector<HTMLInputElement>("input")?.focus();
+  }
   function reset() {
     generation++;
     snapshot = undefined;
@@ -98,6 +188,7 @@ export function createShelfUI(options: {
     filter = "all";
     view = "items";
     templateEditor = undefined;
+    templateFill = undefined;
     focusTemplateAfterSave = undefined;
     pendingFocus = undefined;
     confirmOpen = false;
@@ -111,6 +202,11 @@ export function createShelfUI(options: {
     templatePanel.hidden = true;
     templateForm.hidden = true;
     templateForm.reset();
+    templateFillForm.hidden = true;
+    templateFillForm.reset();
+    templateFillFields.replaceChildren();
+    templateFillPreview.textContent = "";
+    $("shelf-template-fill-error").textContent = "";
     $("shelf-template-error").textContent = "";
     message("");
     for (const button of panel.querySelectorAll<HTMLButtonElement>(
@@ -192,6 +288,11 @@ export function createShelfUI(options: {
       "hidden",
       view !== "templates" || templateEditor === undefined,
     );
+    setProperty(
+      templateFillForm,
+      "hidden",
+      view !== "templates" || templateFill === undefined,
+    );
     for (const id of [
       "shelf-from-clipboard",
       "shelf-pick-files",
@@ -216,7 +317,11 @@ export function createShelfUI(options: {
         !snapshot?.items.some((item) => !item.pinned),
     );
     for (const button of list.querySelectorAll<HTMLButtonElement>("button"))
-      setProperty(button, "disabled", busy || !!unavailable);
+      setProperty(
+        button,
+        "disabled",
+        busy || !!unavailable || templateFill !== undefined,
+      );
     setProperty($<HTMLButtonElement>("shelf-clear-accept"), "disabled", busy);
     setAttribute(panel, "aria-busy", String(loading || busy));
     setProperty(
@@ -231,8 +336,10 @@ export function createShelfUI(options: {
       busy ||
         loading ||
         !!unavailable ||
+        templateFill !== undefined ||
         (snapshot?.templates.length ?? 0) >= SHELF_LIMITS.templates,
     );
+    setProperty(search, "disabled", templateFill !== undefined);
     setProperty(
       $<HTMLButtonElement>("shelf-template-save"),
       "disabled",
@@ -242,6 +349,23 @@ export function createShelfUI(options: {
       $<HTMLButtonElement>("shelf-template-cancel"),
       "disabled",
       busy,
+    );
+    for (const input of templateFillFields.querySelectorAll<HTMLInputElement>(
+      "input",
+    ))
+      setProperty(input, "disabled", busy || loading || !!unavailable);
+    setProperty(
+      $<HTMLButtonElement>("shelf-template-fill-cancel"),
+      "disabled",
+      busy,
+    );
+    const fillExpansion = templateFill
+      ? expandTemplateVariables(templateFill.body, fillValues())
+      : undefined;
+    setProperty(
+      $<HTMLButtonElement>("shelf-template-fill-copy"),
+      "disabled",
+      busy || loading || !!unavailable || !fillExpansion?.ok,
     );
     const itemsTab = $<HTMLButtonElement>("shelf-tab-items");
     const templatesTab = $<HTMLButtonElement>("shelf-tab-templates");
@@ -345,6 +469,12 @@ export function createShelfUI(options: {
         templateEditor = undefined;
         templateForm.reset();
         $("shelf-template-error").textContent = "";
+      } else if (
+        result.ok &&
+        request.action === "copy-template" &&
+        templateFill?.id === request.templateId
+      ) {
+        clearTemplateFill(true);
       } else if (
         result.ok &&
         request.action === "remove-template" &&
@@ -542,13 +672,27 @@ export function createShelfUI(options: {
       button.onclick = click;
       return button;
     };
-    action("copy", "Sao chép", () =>
+    action("copy", "Sao chép", () => {
+      const variables = scanTemplateVariables(template.body);
+      if (variables.error) {
+        message(variables.error, true);
+        return;
+      }
+      if (variables.fields.length) {
+        if (templateEditor) {
+          message("Lưu hoặc hủy phần sửa mẫu trước khi điền trường.", true);
+          return;
+        }
+        beginTemplateFill(template, variables.fields);
+        return;
+      }
       void perform(
         { action: "copy-template", templateId: template.id },
         "Đã sao chép mẫu.",
-      ),
-    );
+      );
+    });
     action("edit", "Sửa", () => {
+      clearTemplateFill();
       templateEditor = { id: template.id };
       templateTitle.value = template.title;
       templateBody.value = template.body;
@@ -824,6 +968,7 @@ export function createShelfUI(options: {
   ];
   const selectView = (next: "items" | "templates") => {
     if (view === next) return;
+    clearTemplateFill();
     view = next;
     confirmOpen = false;
     listSignature = "";
@@ -848,6 +993,7 @@ export function createShelfUI(options: {
     };
   }
   $("shelf-template-add").onclick = () => {
+    clearTemplateFill();
     templateEditor = {};
     templateForm.reset();
     $("shelf-template-error").textContent = "";
@@ -898,6 +1044,12 @@ export function createShelfUI(options: {
       templateBody.focus();
       return;
     }
+    const variables = scanTemplateVariables(body);
+    if (variables.error) {
+      templateError(variables.error);
+      templateBody.focus();
+      return;
+    }
     const request = templateEditor.id
       ? {
           action: "update-template" as const,
@@ -908,6 +1060,27 @@ export function createShelfUI(options: {
       : { action: "add-template" as const, title, body };
     void perform(request, "Đã lưu mẫu.");
   };
+  templateFillFields.oninput = updateTemplateFillPreview;
+  templateFillForm.onsubmit = (event) => {
+    event.preventDefault();
+    if (busy || !templateFill) return;
+    const values = fillValues();
+    const expanded = expandTemplateVariables(templateFill.body, values);
+    if (!expanded.ok) {
+      $("shelf-template-fill-error").textContent = expanded.message;
+      templateFillFields.querySelector<HTMLInputElement>("input")?.focus();
+      return;
+    }
+    void perform(
+      {
+        action: "copy-template",
+        templateId: templateFill.id,
+        values,
+      },
+      "Đã sao chép mẫu.",
+    );
+  };
+  $("shelf-template-fill-cancel").onclick = () => clearTemplateFill(true);
   for (const button of panel.querySelectorAll<HTMLButtonElement>(
     "[data-shelf-filter]",
   ))
@@ -951,7 +1124,9 @@ export function createShelfUI(options: {
     )
       return;
     event.preventDefault();
-    if (!confirmation.hidden) {
+    if (templateFill) {
+      clearTemplateFill(true);
+    } else if (!confirmation.hidden) {
       confirmOpen = false;
       controls();
       $("shelf-clear").focus();

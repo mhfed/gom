@@ -405,10 +405,46 @@
               required
               spellcheck="false"
             ></textarea>
+            <p class="shelf-template-hint">
+              Dùng {{Tên khách}} để hỏi giá trị khi sao chép.
+            </p>
             <p id="shelf-template-error" class="shelf-template-error" role="alert"></p>
             <div class="shelf-template-editor-actions">
               <button id="shelf-template-cancel" type="button">Hủy</button>
               <button id="shelf-template-save" type="submit">Lưu mẫu</button>
+            </div>
+          </form>
+          <form
+            id="shelf-template-fill"
+            class="shelf-template-fill"
+            aria-labelledby="shelf-template-fill-heading"
+            hidden
+          >
+            <h4 id="shelf-template-fill-heading">Điền thông tin</h4>
+            <p id="shelf-template-fill-title"></p>
+            <div
+              id="shelf-template-fill-fields"
+              class="shelf-template-fill-fields"
+              role="group"
+              aria-label="Thông tin cần điền"
+            ></div>
+            <h5 id="shelf-template-fill-preview-label">Xem trước</h5>
+            <pre
+              id="shelf-template-fill-preview"
+              aria-labelledby="shelf-template-fill-preview-label"
+            ></pre>
+            <p
+              id="shelf-template-fill-error"
+              class="shelf-template-error"
+              role="alert"
+            ></p>
+            <div class="shelf-template-editor-actions">
+              <button id="shelf-template-fill-cancel" type="button">
+                Hủy
+              </button>
+              <button id="shelf-template-fill-copy" type="submit">
+                Sao chép
+              </button>
             </div>
           </form>
         </section>

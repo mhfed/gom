@@ -35,6 +35,8 @@ Mở mục **Mẫu** trong Khay để tạo câu trả lời thường dùng. M�
 
 Bấm **Sao chép** cạnh mẫu để chép nội dung vào clipboard. Sau đó bạn tự chọn cuộc trò chuyện, dán, kiểm tra rồi gửi trong nền tảng. Gom không tự chèn mẫu vào ô soạn và không tự gửi tin.
 
+Để thay thông tin mỗi lần dùng, viết biến trong hai dấu ngoặc nhọn, ví dụ `Chào {{Tên khách}}, đơn {{Mã đơn}} của bạn đã được gửi.`. Mỗi mẫu dùng tối đa 20 nhãn khác nhau; nhãn dài 1–60 ký tự. Khi bấm **Sao chép**, điền giá trị tối đa 500 ký tự cho từng nhãn, xem trước nội dung hoàn chỉnh rồi bấm **Sao chép** lần nữa. Nhãn lặp lại trong cùng mẫu dùng chung một giá trị; nhãn không phân biệt chữ hoa/thường. Bấm **Hủy** hoặc đóng Khay sẽ bỏ các giá trị vừa nhập. Gom không lưu chúng vào mẫu và không tự gửi nội dung.
+
 ## Không gian và dữ liệu
 
 Không gian thường và Không gian kín có Khay và Mẫu riêng. Nội dung được lưu mã hóa trên máy, không đưa vào bản sao lưu cấu hình hay đồng bộ mạng. Khi đổi không gian hoặc khóa, Gom đóng khay, xóa nội dung đang hiển thị và hủy các thao tác chưa hoàn tất thuộc không gian cũ. Di chuyển tài khoản giữa hai không gian không tự di chuyển các món trong khay.

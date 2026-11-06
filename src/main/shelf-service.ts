@@ -9,6 +9,11 @@ import {
   type ShelfResult,
   type ShelfSummary,
 } from "../shelf-types.ts";
+import {
+  expandTemplateVariables,
+  scanTemplateVariables,
+  TEMPLATE_VARIABLE_LIMITS,
+} from "../template-variables.ts";
 import type { ShelfStore, ShelfNamespace } from "./shelf-store.ts";
 
 export interface ShelfContext {
@@ -77,9 +82,19 @@ const keys = new Set([
   "templateId",
   "title",
   "body",
+  "values",
 ]);
 const exactKeys = (raw: object, names: string[]) =>
   Object.keys(raw).sort().join() === names.sort().join();
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return (
+    (prototype === Object.prototype || prototype === null) &&
+    Object.keys(value).length <= TEMPLATE_VARIABLE_LIMITS.fields &&
+    Object.values(value).every((entry) => typeof entry === "string")
+  );
+}
 
 // Read dimensions before asking the native image decoder to allocate pixels.
 // Other formats remain ordinary files; only PNG/JPEG receive image treatment.
@@ -304,6 +319,7 @@ export class ShelfService {
     const r = raw as ShelfRequest;
     if (
       Object.keys(raw).some((k) => !keys.has(k)) ||
+      (Object.hasOwn(raw, "values") && r.action !== "copy-template") ||
       !actions.has(r.action) ||
       !Number.isSafeInteger(r.lockVersion)
     )
@@ -381,8 +397,14 @@ export class ShelfService {
         );
       }
       if (r.action === "copy-template") {
+        const hasValues = Object.hasOwn(raw, "values");
         if (
-          !exactKeys(raw, ["action", "lockVersion", "templateId"]) ||
+          !exactKeys(
+            raw,
+            hasValues
+              ? ["action", "lockVersion", "templateId", "values"]
+              : ["action", "lockVersion", "templateId"],
+          ) ||
           typeof r.templateId !== "string"
         )
           return invalid();
@@ -396,9 +418,25 @@ export class ShelfService {
               ok: false,
               message: "Mẫu không còn trong Khay đang mở.",
             };
+          const variables = scanTemplateVariables(template.body);
+          if (variables.error)
+            return { ok: false, message: variables.error };
+          let text = template.body;
+          if (variables.fields.length) {
+            if (!hasValues || !isStringRecord(r.values)) return invalid();
+            const expanded = expandTemplateVariables(
+              template.body,
+              r.values,
+            );
+            if (!expanded.ok)
+              return { ok: false, message: expanded.message };
+            text = expanded.text;
+          } else if (hasValues) {
+            return invalid();
+          }
           // Keep the final privacy guard and clipboard write in one synchronous turn.
           if (!valid()) return stale();
-          this.env.writeText(template.body);
+          this.env.writeText(text);
           return respond({ ok: true, message: "Đã sao chép mẫu." });
         });
       }

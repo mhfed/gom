@@ -69,6 +69,7 @@ export interface ShelfRequest {
   templateId?: string;
   title?: string;
   body?: string;
+  values?: Record<string, string>;
 }
 export interface ShelfResult {
   ok: boolean;
