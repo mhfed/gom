@@ -40,6 +40,7 @@ export function createResourcesUI(options: {
       provider: HTMLElement;
       status: HTMLElement;
       detail: HTMLElement;
+      keepAwake: HTMLInputElement;
       memory: HTMLElement;
       cpu: HTMLElement;
       meter: HTMLElement;
@@ -170,12 +171,20 @@ export function createResourcesUI(options: {
           meta = document.createElement("div"),
           provider = document.createElement("span"),
           status = document.createElement("span"),
+          keepAwakeLabel = document.createElement("label"),
+          keepAwake = document.createElement("input"),
+          keepAwakeText = document.createElement("span"),
           detail = document.createElement("small");
         meta.className = "resource-account-meta";
         status.className = "resource-state";
         detail.className = "resource-detail";
+        keepAwakeLabel.className = "resource-keep-awake";
+        keepAwake.type = "checkbox";
+        keepAwake.setAttribute("role", "switch");
+        keepAwakeText.textContent = "Giữ thức";
+        keepAwakeLabel.append(keepAwake, keepAwakeText);
         meta.append(provider, status);
-        names.append(title, meta, detail);
+        names.append(title, meta, keepAwakeLabel, detail);
         identity.append(logo, names);
         const ram = document.createElement("div"),
           mem = document.createElement("strong"),
@@ -228,6 +237,36 @@ export function createResourcesUI(options: {
             }
           }
         };
+        keepAwake.onchange = async () => {
+          const current = options.getState(),
+            version = generation;
+          if (!current?.resources) return;
+          keepAwake.disabled = true;
+          text($("resource-feedback"), "");
+          try {
+            const result = await window.desktop.resources("keep-awake", {
+              accountId: account.id,
+              lockVersion: current.privateSpace!.lockVersion!,
+              enabled: keepAwake.checked,
+            });
+            if (version === generation && !result.ok)
+              text(
+                $("resource-feedback"),
+                result.message || "Chưa lưu được lựa chọn giữ thức.",
+              );
+          } catch {
+            if (version === generation)
+              text(
+                $("resource-feedback"),
+                "Chưa lưu được lựa chọn giữ thức. Bạn thử lại nhé.",
+              );
+          } finally {
+            if (version === generation) {
+              rendered = "";
+              render(options.getState());
+            }
+          }
+        };
         node.append(identity, ram, processor, button);
         row = {
           node,
@@ -235,6 +274,7 @@ export function createResourcesUI(options: {
           provider,
           status,
           detail,
+          keepAwake,
           memory: mem,
           cpu: processor,
           meter,
@@ -248,6 +288,8 @@ export function createResourcesUI(options: {
       }
       const asleep = resources.sleeping.includes(account.id),
         busy = resources.busy.includes(account.id),
+        keepAwake = resources.keepAwake?.includes(account.id) ?? false,
+        pageSleeping = asleep || state.statuses[account.id] === "sleeping",
         idle = state.statuses[account.id] === "idle" && !asleep;
       const measurement = snapshot?.accounts[account.id],
         definition = state.providers.find((p) => p.id === account.provider);
@@ -261,6 +303,13 @@ export function createResourcesUI(options: {
       const block = resources.blocked[account.id] || "";
       text(row.title, account.name);
       text(row.provider, definition?.label || "Website");
+      row.keepAwake.checked = keepAwake;
+      row.keepAwake.disabled = busy || resources.unavailable;
+      attribute(row.keepAwake, "aria-label", "Giữ thức " + label(account.id));
+      attribute(row.keepAwake, "aria-checked", String(keepAwake));
+      row.keepAwake.title = pageSleeping
+        ? "Có hiệu lực sau khi bạn đánh thức tài khoản."
+        : "Không cho Gom tự ngủ tài khoản này sau 15 phút.";
       const logoKey = JSON.stringify([account.provider, definition?.logo]);
       if (logoKey !== row.logoKey) {
         row.logoKey = logoKey;

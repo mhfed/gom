@@ -6,6 +6,7 @@ import type { AccountResult } from "../shared.ts";
 /** Separate metadata transaction; never rewrites general preferences. */
 export class SleepStore {
   private ids = new Set<string>();
+  private keepAwakeIds = new Set<string>();
   private known = new Set<string>();
   private ready = false;
   private failed = false;
@@ -31,27 +32,40 @@ export class SleepStore {
   snapshot() {
     return [...this.ids];
   }
+  keepsAwake(id: string) {
+    return this.keepAwakeIds.has(id);
+  }
+  snapshotKeepAwake() {
+    return [...this.keepAwakeIds];
+  }
   async load(known: ReadonlySet<string>) {
     this.known = new Set(known);
     try {
       const raw = JSON.parse(await readFile(this.path, "utf8"));
+      const validIds = (value: unknown) =>
+        Array.isArray(value) &&
+        value.length <= 104 &&
+        value.every((id) => typeof id === "string" && id.length <= 200);
       if (
         !raw ||
-        raw.version !== 1 ||
-        !Array.isArray(raw.sleeping) ||
-        raw.sleeping.length > 104 ||
-        raw.sleeping.some(
-          (id: unknown) => typeof id !== "string" || id.length > 200,
-        )
+        (raw.version !== 1 && raw.version !== 2) ||
+        !validIds(raw.sleeping) ||
+        (raw.version === 2 && !validIds(raw.keepAwake))
       )
         throw Error("invalid-sleep-state");
       this.ids = new Set(
         (raw.sleeping as string[]).filter((id) => known.has(id)),
       );
+      this.keepAwakeIds = new Set(
+        (raw.version === 2 ? (raw.keepAwake as string[]) : []).filter((id) =>
+          known.has(id),
+        ),
+      );
       this.ready = true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         this.ids.clear();
+        this.keepAwakeIds.clear();
         this.ready = true;
       } else this.failed = true;
     }
@@ -73,32 +87,66 @@ export class SleepStore {
         commit?.();
         return true;
       }
-      const next = new Set(this.ids),
-        temporaryPath = this.path + ".tmp";
+      const next = new Set(this.ids);
       if (asleep) next.add(id);
       else next.delete(id);
-      let published = false;
-      try {
-        await mkdir(dirname(this.path), { recursive: true });
-        await this.prepare(temporaryPath, { version: 1, sleeping: [...next] });
-        if (!valid()) return false;
-        // No asynchronous boundary between final validation, publication and
-        // page transition: cancellation never needs a second durable write.
-        renameSync(temporaryPath, this.path);
-        published = true;
-        this.ids = next;
-        commit?.();
-        return true;
-      } catch (error) {
-        this.failed = true;
-        throw error;
-      } finally {
-        if (!published)
-          await rm(temporaryPath, { force: true }).catch(() => {});
-      }
+      return this.persist(next, new Set(this.keepAwakeIds), valid, commit);
     });
     this.queue = operation.catch(() => {});
     return operation;
+  }
+  setKeepAwake(
+    id: string,
+    enabled: boolean,
+    valid = () => true,
+    commit?: () => void,
+  ): Promise<boolean> {
+    const operation = this.queue.then(async () => {
+      if (this.unavailable || !this.known.has(id))
+        throw Error("sleep-store-unavailable");
+      if (!valid()) return false;
+      if (this.keepAwakeIds.has(id) === enabled) {
+        commit?.();
+        return true;
+      }
+      const next = new Set(this.keepAwakeIds);
+      if (enabled) next.add(id);
+      else next.delete(id);
+      return this.persist(new Set(this.ids), next, valid, commit);
+    });
+    this.queue = operation.catch(() => {});
+    return operation;
+  }
+  private async persist(
+    nextSleeping: Set<string>,
+    nextKeepAwake: Set<string>,
+    valid: () => boolean,
+    commit?: () => void,
+  ) {
+    const temporaryPath = this.path + ".tmp";
+    let published = false;
+    try {
+      await mkdir(dirname(this.path), { recursive: true });
+      await this.prepare(temporaryPath, {
+        version: 2,
+        sleeping: [...nextSleeping],
+        keepAwake: [...nextKeepAwake],
+      });
+      if (!valid()) return false;
+      // No asynchronous boundary between final validation, publication and
+      // page transition: cancellation never needs a second durable write.
+      renameSync(temporaryPath, this.path);
+      published = true;
+      this.ids = nextSleeping;
+      this.keepAwakeIds = nextKeepAwake;
+      commit?.();
+      return true;
+    } catch (error) {
+      this.failed = true;
+      throw error;
+    } finally {
+      if (!published) await rm(temporaryPath, { force: true }).catch(() => {});
+    }
   }
 }
 

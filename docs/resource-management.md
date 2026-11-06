@@ -14,6 +14,12 @@ Mở **Cài đặt → Tài nguyên**, hoặc `⌘/Ctrl K` rồi tìm **Quản l
 
 Gom lấy mẫu khoảng mỗi 4 giây khi mục Tài nguyên đang mở và cửa sổ đang hiện. Rời mục này, mở hộp thoại che trang, ẩn/thu nhỏ cửa sổ hoặc máy ngủ sẽ dừng đo. Số liệu làm mới khi quay lại; không lưu lịch sử hoặc gửi dữ liệu đo ra máy chủ.
 
+## Tự ngủ và giữ thức
+
+Trang tài khoản chạy nền tự ngủ sau 15 phút để Gom giải phóng tài nguyên. Trong hàng tài khoản, bật **Giữ thức** để bỏ qua tự ngủ cho riêng tài khoản đó. Lựa chọn được lưu qua lần khởi động lại; tắt nó sẽ bắt đầu lại đủ 15 phút.
+
+Giữ thức không đánh thức trang đang ngủ, không ngăn hệ điều hành ngủ hoặc thay đổi giới hạn xử lý nền của Chromium. **Tạm ngủ** thủ công vẫn dùng được cho tài khoản đã bật Giữ thức. Trang đang ngủ ngừng nhận thông báo nền tảng và có thể mất bản nháp chưa được nền tảng lưu.
+
 ## Tạm ngủ tài khoản
 
 Bấm **Tạm ngủ** cạnh tài khoản đang chạy, đọc xác nhận rồi chọn **Tạm ngủ** để đóng trang đó. Gom ghi dữ liệu phiên xuống đĩa trước khi đóng và nhớ lựa chọn sau khi mở lại ứng dụng.
@@ -34,6 +40,6 @@ Nhắc trả lời của Gom chạy riêng với trang nên vẫn có thể phá
 
 ## Dữ liệu cục bộ
 
-`resource-sleep.json` lưu ID tài khoản đã chọn ngủ, không lưu nội dung chat, bản nháp, mật khẩu hoặc URL hội thoại. Nếu kho không đọc/ghi được, Gom báo lỗi và giữ dữ liệu cũ; xử lý nguyên nhân rồi mở lại app. Không tự xóa tệp để đặt lại trạng thái.
+`resource-sleep.json` lưu ID tài khoản đã chọn ngủ và danh sách tài khoản được giữ thức; không lưu nội dung chat, bản nháp, mật khẩu hoặc URL hội thoại. Nếu kho không đọc/ghi được, Gom báo lỗi và giữ dữ liệu cũ; xử lý nguyên nhân rồi mở lại app. Không tự xóa tệp để đặt lại trạng thái.
 
-Bản đầu chỉ ngủ thủ công; không tự ngủ theo thời gian, không kill tiến trình, không đặt giới hạn RAM cứng và không hứa một mức tiết kiệm tài nguyên cố định.
+Gom tự ngủ trang nền sau 15 phút, trừ tài khoản đã bật Giữ thức. Gom không kill tiến trình, không đặt giới hạn RAM cứng và không hứa một mức tiết kiệm tài nguyên cố định.

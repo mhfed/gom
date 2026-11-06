@@ -310,8 +310,13 @@ export interface DesktopBridge {
     data: { lockVersion: number; token?: string },
   ): Promise<BackupResult>;
   resources(
-    action: "surface" | "sleep" | "wake",
-    data: { open?: boolean; accountId?: string; lockVersion: number },
+    action: "surface" | "sleep" | "wake" | "keep-awake",
+    data: {
+      open?: boolean;
+      accountId?: string;
+      lockVersion: number;
+      enabled?: boolean;
+    },
   ): Promise<AccountResult>;
   focus(action: "start" | "stop", data?: FocusSession): Promise<AccountResult>;
   shelf(request: ShelfRequest): Promise<ShelfResult>;

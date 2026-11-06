@@ -15,6 +15,7 @@ export interface ResourceSnapshot {
 export interface ResourceState {
   open: boolean;
   sleeping: string[];
+  keepAwake: string[];
   busy: string[];
   blocked: Record<string, string>;
   snapshot: ResourceSnapshot | null;

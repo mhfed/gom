@@ -1,6 +1,6 @@
 # Phân phối Gom cho macOS và Windows
 
-[Gom 0.8.3](https://github.com/mhfed/gom/releases/tag/v0.8.3) đã phát hành ngày **30/10/2026** cho macOS Apple Silicon (arm64) và Windows x64. Bộ gói, checksum và kiểm thử trên cả hai nền tảng đã đạt; bản Mac đã được cài trên máy theo yêu cầu. Xem [ghi chú 0.8.3](release-0.8.3.md) và [biên bản kiểm chứng](verification-0.8.3.md).
+[Gom 0.9.1](https://github.com/mhfed/gom/releases/tag/v0.9.1) phát hành ngày **06/11/2026** cho macOS Apple Silicon (arm64); Windows tiếp tục ở bản 0.8.3. DMG, ZIP, checksum và chữ ký ad-hoc đã được kiểm tra; bản Mac 0.9.1 đã được cài trên máy. Xem [ghi chú 0.9.1](release-0.9.1.md) và [ghi chú 0.9.0](release-0.9.0.md).
 
 Bản Mac yêu cầu macOS 13 trở lên, chưa có gói Intel hoặc Universal. App ký ad-hoc, chưa ký Apple Developer ID và chưa notarize. Windows yêu cầu Windows 10/11 x64, chưa ký Authenticode.
 

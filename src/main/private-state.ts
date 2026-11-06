@@ -34,6 +34,9 @@ export function privateState(state: AppState, unlocked: boolean): AppState {
       ? {
           ...state.resources,
           sleeping: state.resources.sleeping.filter((id) => ids.has(id)),
+          keepAwake: (state.resources.keepAwake ?? []).filter((id) =>
+            ids.has(id),
+          ),
           busy: state.resources.busy.filter((id) => ids.has(id)),
           blocked: pick(state.resources.blocked),
           snapshot: state.resources.snapshot

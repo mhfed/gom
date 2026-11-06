@@ -990,6 +990,7 @@ const settingsWriter = new SettingsWriter(settingsPath);
 const sleepStore = new SleepStore(
   join(app.getPath("userData"), "resource-sleep.json"),
 );
+const keepAwakePending = new Set<string>();
 const catalogStore = new AccountCatalogStore(
   join(app.getPath("userData"), "accounts.json"),
 );
@@ -1230,7 +1231,8 @@ function visibleState(): AppState {
   state.resources = {
     open: resourceSurfaceOpen,
     sleeping: sleepStore.snapshot(),
-    busy: accountSleep.busy(),
+    keepAwake: sleepStore.snapshotKeepAwake(),
+    busy: [...new Set([...accountSleep.busy(), ...keepAwakePending])],
     blocked: resourceSurfaceOpen
       ? Object.fromEntries(
           state.accounts
@@ -1241,7 +1243,7 @@ function visibleState(): AppState {
     snapshot: resourceSnapshot,
     unavailable: sleepStore.unavailable,
     error: sleepStore.unavailable
-      ? "Chưa đọc hoặc ghi được trạng thái ngủ. Dữ liệu cũ được giữ nguyên."
+      ? "Chưa đọc hoặc lưu được lựa chọn ngủ/giữ thức. Dữ liệu cũ được giữ nguyên."
       : resourceError,
   };
   state.floating = floating?.snapshot();
@@ -2983,6 +2985,9 @@ function hasAccountPopup(id: AccountId) {
 }
 function hibernationProtected(id: AccountId, account: Account) {
   return (
+    sleepStore.unavailable ||
+    sleepStore.keepsAwake(id) ||
+    keepAwakePending.has(id) ||
     (state.active === id &&
       state.providerTabs.open.includes(account.provider)) ||
     !accessible(id) ||
@@ -3189,6 +3194,9 @@ function hibernationDue(id: AccountId, now: number) {
   const backgroundAt = backgroundSince.get(id);
   return (
     !!account &&
+    !sleepStore.unavailable &&
+    !sleepStore.keepsAwake(id) &&
+    !keepAwakePending.has(id) &&
     !(
       state.active === id && state.providerTabs.open.includes(account.provider)
     ) &&
@@ -5625,6 +5633,52 @@ else {
             return accountSleep.sleep(data.accountId, data.lockVersion);
           if (arg.action === "wake" && isAsleep(data.accountId))
             return wakePage(data.accountId, data.lockVersion);
+          if (arg.action === "keep-awake") {
+            if (typeof data.enabled !== "boolean")
+              return { ok: false, message: "Yêu cầu chưa hợp lệ." };
+            if (keepAwakePending.has(data.accountId))
+              return {
+                ok: false,
+                message: "Đang lưu lựa chọn cho tài khoản này.",
+              };
+            const id = data.accountId,
+              epoch = data.lockVersion;
+            keepAwakePending.add(id);
+            publish(true);
+            try {
+              const saved = await sleepStore.setKeepAwake(
+                id,
+                data.enabled,
+                () =>
+                  !closing &&
+                  !state.accountBusy &&
+                  !state.importing &&
+                  privacyGeneration === epoch &&
+                  accessible(id),
+                () => {
+                  if (data.enabled) backgroundSince.delete(id);
+                  else if (views.peek(id))
+                    backgroundSince.set(id, Date.now());
+                  else backgroundSince.delete(id);
+                },
+              );
+              if (!saved)
+                return {
+                  ok: false,
+                  message: "Không gian đã đổi. Mở lại Tài nguyên để thử lại.",
+                };
+              return { ok: true, accountId: id };
+            } catch {
+              return {
+                ok: false,
+                message:
+                  "Chưa lưu được lựa chọn giữ thức. Tài khoản vẫn được giữ nguyên.",
+              };
+            } finally {
+              keepAwakePending.delete(id);
+              publish(true);
+            }
+          }
           return { ok: false };
         }
         case "shelf": {

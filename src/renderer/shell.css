@@ -3922,6 +3922,29 @@ dialog::backdrop {
   gap: 4px;
   font-size: 9px;
 }
+.resource-keep-awake {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1.3;
+}
+.resource-keep-awake input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.resource-keep-awake input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.resource-keep-awake input:disabled {
+  cursor: default;
+}
 .resource-state::before {
   content: "";
   width: 4px;
